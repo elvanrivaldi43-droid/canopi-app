@@ -1,6 +1,24 @@
 <?php
 if (!isset($_GET['key']) || $_GET['key'] !== 'canopi2026') die('Access Denied');
 
+// Cari PHP binary
+$phpPaths = [
+    '/usr/local/php82/bin/php',
+    '/usr/local/php81/bin/php',
+    '/usr/bin/php82',
+    '/usr/bin/php8.2',
+    '/opt/php82/bin/php',
+    '/usr/local/bin/php',
+];
+
+$phpBin = 'php';
+foreach ($phpPaths as $path) {
+    if (file_exists($path)) {
+        $phpBin = $path;
+        break;
+    }
+}
+
 $base = '/home/u8221523/public_html/app';
 
 function run($label, $cmd) {
@@ -37,29 +55,30 @@ echo '<div style="background:#EF4444;color:white;padding:15px;border-radius:8px;
 ⚠️ HAPUS FILE INI SETELAH SETUP SELESAI!</div>';
 
 echo '<h2>🚀 Pusat Kanopi — Server Setup (proc_open)</h2>';
+echo "<p style='color:#10B981'>PHP Binary: $phpBin</p>";
 
 // 1. Cek PHP
-run('1. PHP Version', 'php8.2 --version');
+run('1. PHP Version', "$phpBin --version");
 
 // 2. Download composer
-run('2. Download Composer', "cd $base && curl -sS https://getcomposer.org/installer | php8.2 -- --install-dir=$base --filename=composer.phar");
+run('2. Download Composer', "cd $base && curl -sS https://getcomposer.org/installer | $phpBin -- --install-dir=$base --filename=composer.phar");
 
 // 3. Install dependencies
-run('3. Composer Install', "cd $base && php8.2 composer.phar install --no-dev --optimize-autoloader --no-interaction 2>&1");
+run('3. Composer Install', "cd $base && $phpBin composer.phar install --no-dev --optimize-autoloader --no-interaction 2>&1");
 
 // 4. Generate key
-run('4. Generate App Key', "cd $base && php8.2 artisan key:generate --force 2>&1");
+run('4. Generate App Key', "cd $base && $phpBin artisan key:generate --force 2>&1");
 
 // 5. Migrate + seed
-run('5. Migrate & Seed', "cd $base && php8.2 artisan migrate --seed --force 2>&1");
+run('5. Migrate & Seed', "cd $base && $phpBin artisan migrate --seed --force 2>&1");
 
 // 6. Storage link
-run('6. Storage Link', "cd $base && php8.2 artisan storage:link --force 2>&1");
+run('6. Storage Link', "cd $base && $phpBin artisan storage:link --force 2>&1");
 
 // 7. Cache
-run('7. Config Cache', "cd $base && php8.2 artisan config:cache 2>&1");
-run('8. Route Cache',  "cd $base && php8.2 artisan route:cache 2>&1");
-run('9. View Cache',   "cd $base && php8.2 artisan view:cache 2>&1");
+run('7. Config Cache', "cd $base && $phpBin artisan config:cache 2>&1");
+run('8. Route Cache',  "cd $base && $phpBin artisan route:cache 2>&1");
+run('9. View Cache',   "cd $base && $phpBin artisan view:cache 2>&1");
 
 // 8. Permissions
 run('10. Permissions', "chmod -R 775 $base/storage $base/bootstrap/cache");
