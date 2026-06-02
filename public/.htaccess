@@ -23,3 +23,22 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Force HTTPS
+<IfModule mod_rewrite.c>
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP_HOST} app.kanopibsd.co.id
+    RewriteRule ^(.*)$ https://app.kanopibsd.co.id/$1 [R=301,L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options SAMEORIGIN
+    Header always set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# PHP 8.4 via handler (Niagahoster)
+<FilesMatch \.php$>
+    SetHandler application/x-httpd-php84
+</FilesMatch>
