@@ -9,6 +9,7 @@ use App\Http\Controllers\IzinAbsenController;
 use App\Http\Controllers\PenggajianController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\KasbonKaryawanController;
+use App\Http\Controllers\PipelineController;
 
 // Halaman utama → redirect ke login
 Route::get('/', function () {
@@ -144,6 +145,19 @@ Route::middleware('auth')->prefix('penggajian')->name('penggajian.')->group(func
     
     Route::post('/kasbon/{kasbon}/approve', [PenggajianController::class, 'kasbonApprove'])->name('kasbon.approve');
 Route::post('/kasbon/{kasbon}/tolak',   [PenggajianController::class, 'kasbonTolak'])->name('kasbon.tolak');
+});
+
+// ─── PIPELINE SURVEY (Level 1, 2, 4) ───────────────────────
+Route::middleware(['auth', 'level:1,2,4'])->prefix('pipeline')->name('pipeline.')->group(function () {
+    Route::get('/',                       [PipelineController::class, 'index'])->name('index');
+    Route::get('/list',                   [PipelineController::class, 'listView'])->name('list');
+    Route::get('/tambah',                 [PipelineController::class, 'create'])->name('create');
+    Route::post('/',                      [PipelineController::class, 'store'])->name('store');
+    Route::get('/{pipeline}',             [PipelineController::class, 'show'])->name('show');
+    Route::get('/{pipeline}/edit',        [PipelineController::class, 'edit'])->name('edit');
+    Route::put('/{pipeline}',             [PipelineController::class, 'update'])->name('update');
+    Route::patch('/{pipeline}/status',    [PipelineController::class, 'updateStatus'])->name('update-status');
+    Route::post('/{pipeline}/followup',   [PipelineController::class, 'storeFollowup'])->name('followup');
 });
 
 // ─── KASBON KARYAWAN ────────────────────────────────────────
