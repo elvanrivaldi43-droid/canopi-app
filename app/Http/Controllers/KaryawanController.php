@@ -1,105 +1,75 @@
-<?php
+﻿<?php
+// FILE: app/Http/Controllers/KaryawanController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\RegistrasiToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class KaryawanController extends Controller
 {
-    // Daftar karyawan
+    private array $levels = ['','Owner','Admin Operasional','Supervisor Lapangan','Marketing','Teknisi','Driver','Admin Toko Besi'];
+    private array $banks  = ['BCA','BCA Syariah','BRI','BNI','Mandiri','BSI','CIMB Niaga','Danamon','Permata','Lainnya'];
+
     public function index(Request $request)
     {
         $query = User::where('id', '!=', auth()->id());
-
-        // Filter level
-        if ($request->level) {
-            $query->where('level', $request->level);
-        }
-
-        // Filter status
-        if ($request->status) {
-            $query->where('status', $request->status);
-        }
-
-        // Search nama
-        if ($request->search) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
+        if ($request->level)  $query->where('level', $request->level);
+        if ($request->status) $query->where('status', $request->status);
+        if ($request->search) $query->where('name', 'like', '%'.$request->search.'%');
         $karyawan = $query->orderBy('level')->orderBy('name')->paginate(15);
-
-        $levels = ['', 'Owner', 'Admin Operasional', 'Supervisor Lapangan', 'Marketing', 'Teknisi', 'Driver', 'Admin Toko Besi'];
-
-        return view('karyawan.index', compact('karyawan', 'levels'));
+        $levels   = $this->levels;
+        return view('karyawan.index', compact('karyawan','levels'));
     }
 
-    // Form tambah karyawan
     public function create()
     {
-        $levels = ['', 'Owner', 'Admin Operasional', 'Supervisor Lapangan', 'Marketing', 'Teknisi', 'Driver', 'Admin Toko Besi'];
+        $levels    = $this->levels;
+        $banks     = $this->banks;
         $tunjangan = \App\Models\TunjanganMaster::where('aktif', true)->get();
-        $banks = ['BCA', 'BRI', 'Mandiri', 'BNI', 'BSI', 'CIMB Niaga', 'Danamon', 'Permata', 'Lainnya'];
-
-        return view('karyawan.create', compact('levels', 'tunjangan', 'banks'));
+        return view('karyawan.create', compact('levels','tunjangan','banks'));
     }
 
-    // Simpan karyawan baru
     public function store(Request $request)
     {
         $request->validate([
-            'name'           => 'required|string|max:255',
-            'email'          => 'required|email|unique:users,email',
-            'password'       => 'required|min:6',
-            'level'          => 'required|integer|between:1,7',
-            'jabatan'        => 'required|string|max:100',
-            'no_hp'          => 'required|string|max:20',
-            'alamat'         => 'nullable|string',
-            'foto'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'tgl_masuk_kerja'=> 'required|date',
-            'jam_masuk'      => 'required',
-            'jam_pulang'     => 'required',
-            'tipe_gaji'      => 'required|in:harian,bulanan,project',
-            'gaji_harian'    => 'nullable|numeric|min:0',
-            'gaji_bulanan'   => 'nullable|numeric|min:0',
-            'uang_makan'     => 'nullable|numeric|min:0',
-            'nama_bank'      => 'nullable|string',
-            'no_rekening'    => 'nullable|string|max:30',
-            'atas_nama'      => 'nullable|string|max:100',
+            'email'           => 'required|email|unique:users,email',
+            'level'           => 'required|integer|between:1,7',
+            'jabatan'         => 'required|string|max:100',
+            'tipe_gaji'       => 'required|in:harian,bulanan,project',
+            'gaji_harian'     => 'nullable|numeric|min:0',
+            'gaji_bulanan'    => 'nullable|numeric|min:0',
+            'uang_makan'      => 'nullable|numeric|min:0',
+            'uang_bonus'      => 'nullable|numeric|min:0',
+            'jam_masuk'       => 'required',
+            'jam_pulang'      => 'required',
+            'tgl_masuk_kerja' => 'required|date',
         ]);
-
-        // Upload foto
-        $fotoPath = null;
-        if ($request->hasFile('foto')) {
-            $fotoPath = $request->file('foto')->store('karyawan/foto', 'public');
-        }
 
         $karyawan = User::create([
-            'name'            => $request->name,
-            'email'           => $request->email,
-            'password'        => Hash::make($request->password),
-            'level'           => $request->level,
-            'jabatan'         => $request->jabatan,
-            'no_hp'           => $request->no_hp,
-            'alamat'          => $request->alamat,
-            'foto'            => $fotoPath,
-            'tgl_masuk_kerja' => $request->tgl_masuk_kerja,
-            'jam_masuk'       => $request->jam_masuk,
-            'jam_pulang'      => $request->jam_pulang,
-            'status'          => 'aktif',
-            'tipe_gaji'       => $request->tipe_gaji,
-            'gaji_harian'     => $request->gaji_harian ?? 0,
-            'gaji_bulanan'    => $request->gaji_bulanan ?? 0,
-            'uang_makan'      => $request->uang_makan ?? 0,
-            'nama_bank'       => $request->nama_bank,
-            'no_rekening'     => $request->no_rekening,
-            'atas_nama'       => $request->atas_nama,
+            'name'              => 'Karyawan Baru',
+            'email'             => $request->email,
+            'password'          => Hash::make(Str::random(20)),
+            'level'             => $request->level,
+            'jabatan'           => $request->jabatan,
+            'tipe_gaji'         => $request->tipe_gaji,
+            'gaji_harian'       => $request->gaji_harian  ?? 0,
+            'gaji_bulanan'      => $request->gaji_bulanan ?? 0,
+            'uang_makan'        => $request->uang_makan   ?? 0,
+            'uang_bonus'        => $request->uang_bonus   ?? 0,
+            'jam_masuk'         => $request->jam_masuk,
+            'jam_pulang'        => $request->jam_pulang,
+            'tgl_masuk_kerja'   => $request->tgl_masuk_kerja,
+            'status'            => 'aktif',
+            'status_registrasi' => 'menunggu',
         ]);
 
-        // Simpan tunjangan
         if ($request->tunjangan) {
             foreach ($request->tunjangan as $tunjId => $nominal) {
                 if ($nominal > 0) {
@@ -108,82 +78,72 @@ class KaryawanController extends Controller
             }
         }
 
+        $token = Str::random(48);
+        RegistrasiToken::create([
+            'user_id'    => $karyawan->id,
+            'token'      => $token,
+            'expired_at' => now()->addHours(24),
+        ]);
+
+        $link = url('/registrasi-karyawan/' . $token);
+        Mail::send('emails.undangan-karyawan', [
+            'link'    => $link,
+            'jabatan' => $request->jabatan,
+            'level'   => $this->levels[$request->level] ?? '',
+        ], function($mail) use ($request) {
+            $mail->to($request->email)
+                 ->subject('Undangan Registrasi — Pusat Kanopi BSD');
+        });
+
         return redirect()->route('karyawan.index')
-            ->with('success', 'Karyawan ' . $karyawan->name . ' berhasil ditambahkan.');
+            ->with('success', 'Undangan registrasi berhasil dikirim ke '.$request->email.'. Link berlaku 24 jam.');
     }
 
-    // Detail karyawan
     public function show(User $karyawan)
     {
-        $levels = ['', 'Owner', 'Admin Operasional', 'Supervisor Lapangan', 'Marketing', 'Teknisi', 'Driver', 'Admin Toko Besi'];
+        $levels = $this->levels;
+        $banks  = $this->banks;
         $karyawan->load('tunjangan');
-
-        return view('karyawan.show', compact('karyawan', 'levels'));
+        return view('karyawan.show', compact('karyawan','levels','banks'));
     }
 
-    // Form edit karyawan
     public function edit(User $karyawan)
     {
-        $levels = ['', 'Owner', 'Admin Operasional', 'Supervisor Lapangan', 'Marketing', 'Teknisi', 'Driver', 'Admin Toko Besi'];
+        $levels    = $this->levels;
+        $banks     = $this->banks;
         $tunjangan = \App\Models\TunjanganMaster::where('aktif', true)->get();
-        $banks = ['BCA', 'BRI', 'Mandiri', 'BNI', 'BSI', 'CIMB Niaga', 'Danamon', 'Permata', 'Lainnya'];
         $karyawan->load('tunjangan');
-
-        return view('karyawan.edit', compact('karyawan', 'levels', 'tunjangan', 'banks'));
+        return view('karyawan.edit', compact('karyawan','levels','tunjangan','banks'));
     }
 
-    // Update karyawan
     public function update(Request $request, User $karyawan)
     {
         $request->validate([
-            'name'           => 'required|string|max:255',
-            'email'          => ['required', 'email', Rule::unique('users')->ignore($karyawan->id)],
-            'level'          => 'required|integer|between:1,7',
-            'jabatan'        => 'required|string|max:100',
-            'no_hp'          => 'required|string|max:20',
-            'alamat'         => 'nullable|string',
-            'foto'           => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'tgl_masuk_kerja'=> 'required|date',
-            'jam_masuk'      => 'required',
-            'jam_pulang'     => 'required',
-            'tipe_gaji'      => 'required|in:harian,bulanan,project',
-            'gaji_harian'    => 'nullable|numeric|min:0',
-            'gaji_bulanan'   => 'nullable|numeric|min:0',
-            'uang_makan'     => 'nullable|numeric|min:0',
-            'nama_bank'      => 'nullable|string',
-            'no_rekening'    => 'nullable|string|max:30',
-            'atas_nama'      => 'nullable|string|max:100',
-            'status'         => 'required|in:aktif,nonaktif,sp1,sp2,sp3',
+            'level'        => 'required|integer|between:1,7',
+            'jabatan'      => 'required|string|max:100',
+            'tipe_gaji'    => 'required|in:harian,bulanan,project',
+            'gaji_harian'  => 'nullable|numeric|min:0',
+            'gaji_bulanan' => 'nullable|numeric|min:0',
+            'uang_makan'   => 'nullable|numeric|min:0',
+            'uang_bonus'   => 'nullable|numeric|min:0',
+            'status'       => 'required|in:aktif,nonaktif,sp1,sp2,sp3',
+            'jam_masuk'    => 'required',
+            'jam_pulang'   => 'required',
         ]);
-
-        // Upload foto baru
-        if ($request->hasFile('foto')) {
-            if ($karyawan->foto) Storage::disk('public')->delete($karyawan->foto);
-            $karyawan->foto = $request->file('foto')->store('karyawan/foto', 'public');
-        }
 
         $karyawan->update([
-            'name'            => $request->name,
-            'email'           => $request->email,
-            'level'           => $request->level,
-            'jabatan'         => $request->jabatan,
-            'no_hp'           => $request->no_hp,
-            'alamat'          => $request->alamat,
-            'foto'            => $karyawan->foto,
-            'tgl_masuk_kerja' => $request->tgl_masuk_kerja,
-            'jam_masuk'       => $request->jam_masuk,
-            'jam_pulang'      => $request->jam_pulang,
-            'status'          => $request->status,
-            'tipe_gaji'       => $request->tipe_gaji,
-            'gaji_harian'     => $request->gaji_harian ?? 0,
-            'gaji_bulanan'    => $request->gaji_bulanan ?? 0,
-            'uang_makan'      => $request->uang_makan ?? 0,
-            'nama_bank'       => $request->nama_bank,
-            'no_rekening'     => $request->no_rekening,
-            'atas_nama'       => $request->atas_nama,
+            'level'        => $request->level,
+            'jabatan'      => $request->jabatan,
+            'tipe_gaji'    => $request->tipe_gaji,
+            'gaji_harian'  => $request->gaji_harian  ?? 0,
+            'gaji_bulanan' => $request->gaji_bulanan ?? 0,
+            'uang_makan'   => $request->uang_makan   ?? 0,
+            'uang_bonus'   => $request->uang_bonus   ?? 0,
+            'status'       => $request->status,
+            'jam_masuk'    => $request->jam_masuk,
+            'jam_pulang'   => $request->jam_pulang,
         ]);
 
-        // Update tunjangan
         $karyawan->tunjangan()->detach();
         if ($request->tunjangan) {
             foreach ($request->tunjangan as $tunjId => $nominal) {
@@ -197,29 +157,46 @@ class KaryawanController extends Controller
             ->with('success', 'Data karyawan berhasil diperbarui.');
     }
 
-    // Reset password oleh owner
-    public function resetPassword(Request $request, User $karyawan)
+    public function kirimUlang(User $karyawan)
     {
-        $request->validate([
-            'password' => 'required|min:6|confirmed',
+        RegistrasiToken::where('user_id', $karyawan->id)->delete();
+
+        $token = Str::random(48);
+        RegistrasiToken::create([
+            'user_id'    => $karyawan->id,
+            'token'      => $token,
+            'expired_at' => now()->addHours(24),
         ]);
 
-        $karyawan->update(['password' => Hash::make($request->password)]);
+        $link = url('/registrasi-karyawan/'.$token);
+        Mail::send('emails.undangan-karyawan', [
+            'link'    => $link,
+            'jabatan' => $karyawan->jabatan,
+            'level'   => $this->levels[$karyawan->level] ?? '',
+        ], function($mail) use ($karyawan) {
+            $mail->to($karyawan->email)
+                 ->subject('Undangan Registrasi (Kirim Ulang) — Pusat Kanopi BSD');
+        });
 
-        return back()->with('success', 'Password ' . $karyawan->name . ' berhasil direset.');
+        return back()->with('success', 'Link registrasi baru berhasil dikirim ke '.$karyawan->email);
     }
 
-    // Nonaktifkan karyawan
+    public function resetPassword(Request $request, User $karyawan)
+    {
+        $request->validate(['password' => 'required|min:6|confirmed']);
+        $karyawan->update(['password' => Hash::make($request->password)]);
+        return back()->with('success', 'Password '.$karyawan->name.' berhasil direset.');
+    }
+
     public function nonaktifkan(User $karyawan)
     {
         $karyawan->update(['status' => 'nonaktif']);
-        return back()->with('success', $karyawan->name . ' berhasil dinonaktifkan.');
+        return back()->with('success', $karyawan->name.' berhasil dinonaktifkan.');
     }
 
-    // Aktifkan kembali
     public function aktifkan(User $karyawan)
     {
         $karyawan->update(['status' => 'aktif']);
-        return back()->with('success', $karyawan->name . ' berhasil diaktifkan kembali.');
+        return back()->with('success', $karyawan->name.' berhasil diaktifkan kembali.');
     }
 }

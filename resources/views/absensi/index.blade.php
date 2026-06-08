@@ -7,7 +7,7 @@
 @endsection
 
 @section('bottom-nav')
-    @include('partials.bottomnav-owner')
+    @include('partials.bottomnav')
 @endsection
 
 @section('content')
@@ -22,6 +22,11 @@
     @if(session('error'))
     <div style="padding:14px 16px;border-radius:12px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);font-size:13px;color:#F87171;display:flex;align-items:center;gap:10px;">
         <span style="font-size:18px;">⚠️</span> {{ session('error') }}
+    </div>
+    @endif
+    @if(session('info'))
+    <div style="padding:14px 16px;border-radius:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);font-size:13px;color:#818CF8;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;">ℹ️</span> {{ session('info') }}
     </div>
     @endif
 
@@ -57,12 +62,31 @@
            style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:14px;font-size:15px;font-weight:700;text-decoration:none;color:#0F1117;background:linear-gradient(135deg,#C9A84C,#A8872E);min-height:54px;">
             📷 ABSEN MASUK SEKARANG
         </a>
-        @elseif($absenHariIni->jam_masuk && !$absenHariIni->jam_pulang)
+
+        @elseif($fase === 'perlu_absen_siang')
+        {{-- Sudah masuk pagi, perlu absen siang --}}
         <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);font-size:13px;color:#10B981;text-align:center;">
                 ✅ Sudah absen masuk pukul {{ substr($absenHariIni->jam_masuk, 0, 5) }}
                 @if($absenHariIni->status === 'telat')
                 · <span style="color:#F59E0B;">⏰ Telat</span>
+                @elseif($absenHariIni->status === 'setengah_hari')
+                · <span style="color:#F59E0B;">⚠️ Setengah Hari</span>
+                @endif
+            </div>
+            <a href="{{ route('absensi.form-siang') }}"
+               style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:14px;font-size:15px;font-weight:700;text-decoration:none;color:#0F1117;background:linear-gradient(135deg,#F59E0B,#D97706);min-height:54px;">
+                🌤️ ABSEN SIANG SEKARANG
+            </a>
+        </div>
+
+        @elseif($fase === 'perlu_pulang')
+        {{-- Sudah masuk & absen siang, perlu pulang --}}
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);font-size:13px;color:#10B981;text-align:center;">
+                ✅ Masuk {{ substr($absenHariIni->jam_masuk, 0, 5) }}
+                @if($absenHariIni->jam_absen_siang)
+                · Siang {{ substr($absenHariIni->jam_absen_siang, 0, 5) }}
                 @endif
             </div>
             <a href="{{ route('absensi.form-pulang') }}"
@@ -70,7 +94,9 @@
                 🏠 ABSEN PULANG SEKARANG
             </a>
         </div>
+
         @else
+        {{-- Lengkap --}}
         <div style="padding:14px;border-radius:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);text-align:center;">
             <div style="font-size:22px;margin-bottom:6px;">🎉</div>
             <div style="font-size:14px;font-weight:700;color:#10B981;">Absensi Hari Ini Lengkap</div>
@@ -90,9 +116,9 @@
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
             @php
             $statCards = [
-                ['label'=>'Hadir',    'value'=>$stats['hadir'],   'color'=>'#10B981','bg'=>'rgba(16,185,129,0.1)',  'icon'=>'✅'],
-                ['label'=>'Alpha',    'value'=>$stats['alpha'],   'color'=>'#EF4444','bg'=>'rgba(239,68,68,0.1)',   'icon'=>'❌'],
-                ['label'=>'Telat',    'value'=>$stats['telat'],   'color'=>'#F59E0B','bg'=>'rgba(245,158,11,0.1)',  'icon'=>'⏰'],
+                ['label'=>'Hadir', 'value'=>$stats['hadir'],  'color'=>'#10B981','icon'=>'✅'],
+                ['label'=>'Alpha', 'value'=>$stats['alpha'],  'color'=>'#EF4444','icon'=>'❌'],
+                ['label'=>'Telat', 'value'=>$stats['telat'],  'color'=>'#F59E0B','icon'=>'⏰'],
             ];
             @endphp
             @foreach($statCards as $sc)
@@ -104,19 +130,21 @@
             @endforeach
         </div>
 
-        {{-- Finansial bulan ini (owner only) --}}
-        @if(auth()->user()->level == 1)
+        {{-- Finansial bulan ini --}}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
             <div class="stat-card" style="padding:14px;">
                 <div style="font-size:11px;color:#64748B;margin-bottom:4px;">Total Uang Makan</div>
-                <div style="font-size:15px;font-weight:700;color:#C9A84C;">Rp {{ number_format($stats['total_uang_makan'],0,',','.') }}</div>
+                <div style="font-size:15px;font-weight:700;color:#C9A84C;">
+                    Rp {{ number_format($stats['total_um'] ?? 0, 0, ',', '.') }}
+                </div>
             </div>
             <div class="stat-card" style="padding:14px;">
                 <div style="font-size:11px;color:#64748B;margin-bottom:4px;">Potongan Telat</div>
-                <div style="font-size:15px;font-weight:700;color:#EF4444;">Rp {{ number_format($stats['total_potongan'],0,',','.') }}</div>
+                <div style="font-size:15px;font-weight:700;color:#EF4444;">
+                    Rp {{ number_format($stats['total_potongan'] ?? 0, 0, ',', '.') }}
+                </div>
             </div>
         </div>
-        @endif
     </div>
 
     {{-- Riwayat 30 Hari --}}
@@ -133,25 +161,30 @@
 
             {{-- Info --}}
             <div style="flex:1;min-width:0;">
-                <div style="font-size:13px;font-weight:600;margin-bottom:3px;" :style="darkMode ? 'color:#F1F5F9' : 'color:#1E293B'">
+                <div style="font-size:13px;font-weight:600;color:#F1F5F9;margin-bottom:3px;">
                     {{ $r->statusLabel() }}
-                    @if($r->dikoreksi)
+                    @if($r->dikoreksi ?? false)
                     <span style="font-size:10px;color:#94A3B8;margin-left:4px;">· dikoreksi</span>
                     @endif
                 </div>
                 <div style="font-size:12px;color:#94A3B8;">
                     @if($r->jam_masuk)
-                    Masuk {{ substr($r->jam_masuk,0,5) }}
-                    @if($r->jam_pulang) · Pulang {{ substr($r->jam_pulang,0,5) }} @endif
+                        Masuk {{ substr($r->jam_masuk,0,5) }}
+                        @if($r->jam_absen_siang) · Siang {{ substr($r->jam_absen_siang,0,5) }} @endif
+                        @if($r->jam_pulang) · Pulang {{ substr($r->jam_pulang,0,5) }} @endif
                     @else
-                    Tidak ada catatan
+                        Tidak ada catatan
                     @endif
                 </div>
             </div>
 
-            {{-- Badge status --}}
+            {{-- Badge potongan --}}
             <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;background:{{ $r->statusColor() }}20;color:{{ $r->statusColor() }};border:1px solid {{ $r->statusColor() }}40;">
-                @if($r->potongan_telat > 0) -Rp{{ number_format($r->potongan_telat/1000,0) }}rb @else &nbsp;&nbsp;&nbsp; @endif
+                @if(($r->potongan_telat ?? 0) > 0)
+                    -Rp{{ number_format($r->potongan_telat/1000,0) }}rb
+                @else
+                    {{ $r->statusLabel() }}
+                @endif
             </span>
         </div>
         @empty

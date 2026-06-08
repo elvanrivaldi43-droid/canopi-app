@@ -38,7 +38,6 @@
     Header always set X-XSS-Protection "1; mode=block"
 </IfModule>
 
-# PHP 8.4 via handler (Niagahoster)
 <FilesMatch \.php$>
-    SetHandler application/x-httpd-php84
+    SetHandler application/x-lsphp83
 </FilesMatch>

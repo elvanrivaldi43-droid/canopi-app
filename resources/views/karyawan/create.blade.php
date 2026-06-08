@@ -13,7 +13,6 @@
 @section('content')
 <div style="max-width:680px;margin:0 auto;">
 
-    {{-- Back --}}
     <a href="{{ route('karyawan.index') }}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:#94A3B8;text-decoration:none;margin-bottom:20px;">
         <svg xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
@@ -21,58 +20,48 @@
         Kembali ke Daftar Karyawan
     </a>
 
-    <form method="POST" action="{{ route('karyawan.store') }}" enctype="multipart/form-data">
+    {{-- Info box --}}
+    <div style="background:rgba(201,168,76,0.1);border:1.5px solid rgba(201,168,76,0.3);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-size:20px;">📧</span>
+        <div>
+            <div style="font-size:13px;font-weight:700;color:#C9A84C;margin-bottom:4px;">Alur Registrasi Karyawan</div>
+            <div style="font-size:12px;color:#94A3B8;line-height:1.6;">Isi data gaji & jabatan di sini, lalu sistem akan mengirim <strong style="color:#E2E8F0;">link registrasi via email</strong> ke karyawan. Karyawan mengisi data diri & membuat password sendiri. Link berlaku <strong style="color:#E2E8F0;">24 jam</strong>.</div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ route('karyawan.store') }}">
         @csrf
 
-        {{-- DATA PRIBADI --}}
+        @if($errors->any())
+        <div style="background:rgba(239,68,68,0.1);border:1.5px solid rgba(239,68,68,0.3);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:700;color:#F87171;margin-bottom:8px;">⚠️ Ada yang perlu diperbaiki:</div>
+            @foreach($errors->all() as $e)
+            <div style="font-size:12px;color:#FCA5A5;margin-bottom:4px;">• {{ $e }}</div>
+            @endforeach
+        </div>
+        @endif
+
+        {{-- IDENTITAS AKUN --}}
         <div class="stat-card" style="margin-bottom:16px;">
             <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);"
-                :style="darkMode ? 'color:#F1F5F9;border-color:rgba(255,255,255,0.06)' : 'color:#1E293B;border-color:#F1F5F9'">
-                👤 Data Pribadi
+                :style="darkMode ? 'color:#F1F5F9' : 'color:#1E293B'">
+                📧 Identitas Akun
             </h3>
 
-            {{-- Foto --}}
-            <div style="margin-bottom:20px;text-align:center;" x-data="{ preview: null }">
-                <div style="width:80px;height:80px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;background:linear-gradient(135deg,#C9A84C,#A8872E);color:white;overflow:hidden;cursor:pointer;" onclick="document.getElementById('foto').click()">
-                    <img x-show="preview" :src="preview" style="width:100%;height:100%;object-fit:cover;">
-                    <span x-show="!preview">+</span>
-                </div>
-                <input type="file" id="foto" name="foto" accept="image/*" style="display:none;"
-                       @change="const file = $event.target.files[0]; if(file) { const reader = new FileReader(); reader.onload = e => preview = e.target.result; reader.readAsDataURL(file); }">
-                <div style="font-size:12px;color:#94A3B8;">Tap untuk upload foto</div>
-                @error('foto')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
-            </div>
-
-            @php
-            $fields = [
-                ['name'=>'name','label'=>'Nama Lengkap','type'=>'text','placeholder'=>'Nama lengkap karyawan','required'=>true],
-                ['name'=>'email','label'=>'Email','type'=>'email','placeholder'=>'email@kanopibsd.co.id','required'=>true],
-                ['name'=>'password','label'=>'Password Awal','type'=>'password','placeholder'=>'Min. 6 karakter','required'=>true],
-                ['name'=>'no_hp','label'=>'No. HP (WhatsApp)','type'=>'text','placeholder'=>'08xxxxxxxxxx','required'=>true],
-                ['name'=>'alamat','label'=>'Alamat','type'=>'text','placeholder'=>'Alamat lengkap','required'=>false],
-            ];
-            @endphp
-
-            @foreach($fields as $f)
             <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">
-                    {{ $f['label'] }} @if($f['required'])<span style="color:#EF4444;">*</span>@endif
-                </label>
-                <input type="{{ $f['type'] }}" name="{{ $f['name'] }}"
-                       value="{{ old($f['name']) }}"
-                       placeholder="{{ $f['placeholder'] }}"
-                       {{ $f['required'] ? 'required' : '' }}
+                <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Email Karyawan <span style="color:#EF4444;">*</span></label>
+                <input type="email" name="email" value="{{ old('email') }}" placeholder="email@kanopibsd.co.id" required
                        style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;"
                        :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
-                @error($f['name'])<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
+                <div style="font-size:11px;color:#64748B;margin-top:4px;">Link registrasi akan dikirim ke email ini</div>
+                @error('email')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
             </div>
-            @endforeach
         </div>
 
         {{-- DATA PEKERJAAN --}}
         <div class="stat-card" style="margin-bottom:16px;">
-            <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid;"
-                :style="darkMode ? 'color:#F1F5F9;border-color:rgba(255,255,255,0.06)' : 'color:#1E293B;border-color:#F1F5F9'">
+            <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);"
+                :style="darkMode ? 'color:#F1F5F9' : 'color:#1E293B'">
                 💼 Data Pekerjaan
             </h3>
 
@@ -83,8 +72,8 @@
                         style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;cursor:pointer;"
                         :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
                     <option value="">Pilih level</option>
-                    @foreach([1=>'Owner',2=>'Admin Operasional',3=>'Supervisor Lapangan',4=>'Marketing',5=>'Teknisi',6=>'Driver',7=>'Admin Toko Besi'] as $l => $n)
-                    <option value="{{ $l }}" {{ old('level') == $l ? 'selected' : '' }}>Level {{ $l }} — {{ $n }}</option>
+                    @foreach([2=>'Admin Operasional',3=>'Supervisor Lapangan',4=>'Marketing',5=>'Teknisi',6=>'Driver',7=>'Admin Toko Besi'] as $l => $n)
+                    <option value="{{ $l }}" {{ old('level') == $l ? 'selected' : '' }}>{{ $n }}</option>
                     @endforeach
                 </select>
                 @error('level')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
@@ -124,12 +113,11 @@
             </div>
         </div>
 
-        {{-- DATA GAJI (Owner only) --}}
-        @if(auth()->user()->level == 1)
+        {{-- DATA GAJI --}}
         <div class="stat-card" style="margin-bottom:16px;">
-            <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid;"
-                :style="darkMode ? 'color:#F1F5F9;border-color:rgba(255,255,255,0.06)' : 'color:#1E293B;border-color:#F1F5F9'">
-                💰 Data Gaji <span style="font-size:11px;font-weight:400;color:#94A3B8;">(Hanya Owner yang bisa lihat)</span>
+            <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);"
+                :style="darkMode ? 'color:#F1F5F9' : 'color:#1E293B'">
+                💰 Data Gaji
             </h3>
 
             {{-- Tipe Gaji --}}
@@ -137,9 +125,8 @@
                 <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Tipe Gaji</label>
                 <div style="display:flex;gap:8px;">
                     @foreach(['harian'=>'Per Hari','bulanan'=>'Per Bulan','project'=>'Per Project'] as $val => $label)
-                    <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;border:1.5px solid;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;"
-                           :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#94A3B8' : 'border-color:#E2E8F0;color:#64748B'"
-                           x-bind:style="'{{ $val }}' === $el.querySelector('input').checked ? 'border-color:#C9A84C;color:#C9A84C;background:rgba(201,168,76,0.1)' : ''">
+                    <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:10px;border:1.5px solid;cursor:pointer;font-size:12px;font-weight:600;"
+                           :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#94A3B8' : 'border-color:#E2E8F0;color:#64748B'">
                         <input type="radio" name="tipe_gaji" value="{{ $val }}" {{ old('tipe_gaji','harian') == $val ? 'checked' : '' }} style="accent-color:#C9A84C;">
                         {{ $label }}
                     </label>
@@ -163,11 +150,19 @@
                 </div>
             </div>
 
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Uang Makan Per Hari (Rp)</label>
-                <input type="number" name="uang_makan" value="{{ old('uang_makan', 0) }}" min="0"
-                       style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;"
-                       :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Uang Makan/Hari (Rp)</label>
+                    <input type="number" name="uang_makan" value="{{ old('uang_makan', 0) }}" min="0"
+                           style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;"
+                           :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
+                </div>
+                <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Uang Bonus (Rp)</label>
+                    <input type="number" name="uang_bonus" value="{{ old('uang_bonus', 0) }}" min="0"
+                           style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;"
+                           :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
+                </div>
             </div>
 
             {{-- Tunjangan --}}
@@ -180,7 +175,7 @@
                          :style="darkMode ? 'border-color:rgba(255,255,255,0.06)' : 'border-color:#F1F5F9'">
                         <div style="flex:1;">
                             <div style="font-size:12px;font-weight:600;" :style="darkMode ? 'color:#E2E8F0' : 'color:#1E293B'">{{ $t->nama_tunjangan }}</div>
-                            <div style="font-size:11px;color:#94A3B8;">Per {{ $t->tipe == 'harian' ? 'hari' : 'bulan' }}</div>
+                            <div style="font-size:11px;color:#94A3B8;">Per {{ $t->tipe == 'harian' ? 'hari' : 'bulan' }} · Default: Rp {{ number_format($t->nominal_default) }}</div>
                         </div>
                         <input type="number" name="tunjangan[{{ $t->id }}]"
                                value="{{ old('tunjangan.'.$t->id, $t->nominal_default) }}"
@@ -193,42 +188,6 @@
             </div>
             @endif
         </div>
-        @endif
-
-        {{-- DATA REKENING --}}
-        <div class="stat-card" style="margin-bottom:16px;">
-            <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid;"
-                :style="darkMode ? 'color:#F1F5F9;border-color:rgba(255,255,255,0.06)' : 'color:#1E293B;border-color:#F1F5F9'">
-                🏦 Data Rekening Bank
-            </h3>
-
-            {{-- Bank --}}
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Nama Bank</label>
-                <select name="nama_bank"
-                        style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;cursor:pointer;"
-                        :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
-                    <option value="">Pilih bank</option>
-                    @foreach($banks as $bank)
-                    <option value="{{ $bank }}" {{ old('nama_bank') == $bank ? 'selected' : '' }}>{{ $bank }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div style="margin-bottom:16px;">
-                <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Nomor Rekening</label>
-                <input type="text" name="no_rekening" value="{{ old('no_rekening') }}" placeholder="xxxx xxxx xxxx"
-                       style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;"
-                       :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
-            </div>
-
-            <div>
-                <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Atas Nama</label>
-                <input type="text" name="atas_nama" value="{{ old('atas_nama') }}" placeholder="Nama sesuai buku tabungan"
-                       style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;"
-                       :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
-            </div>
-        </div>
 
         {{-- Submit --}}
         <div style="display:flex;gap:10px;">
@@ -239,7 +198,7 @@
             </a>
             <button type="submit"
                     style="flex:2;padding:14px;border-radius:12px;font-size:13px;font-weight:700;border:none;cursor:pointer;color:#0F1117;background:linear-gradient(135deg,#C9A84C,#A8872E);">
-                Simpan Karyawan
+                📧 Kirim Undangan Registrasi
             </button>
         </div>
 

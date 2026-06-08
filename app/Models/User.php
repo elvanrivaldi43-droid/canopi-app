@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Models;
 
@@ -17,6 +17,8 @@ class User extends Authenticatable
         'jam_masuk', 'jam_pulang', 'status',
         'tgl_masuk_kerja', 'tipe_gaji',
         'nama_bank', 'no_rekening', 'atas_nama',
+        'alamat', 'nama_kontak_darurat', 'no_kontak_darurat',
+        'tanggal_bergabung',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -85,6 +87,21 @@ class User extends Authenticatable
     {
         return $this->hasOne(Absensi::class)->whereDate('tanggal', today());
     }
+    
+    public function slipGaji()
+{
+    return $this->hasMany(\App\Models\SlipGaji::class);
+}
+
+public function kasbon()
+{
+    return $this->hasMany(\App\Models\Kasbon::class);
+}
+
+public function tabungan()
+{
+    return $this->hasOne(\App\Models\TabunganKaryawan::class);
+}
 
     // Helper: masa kerja
     public function masaKerja(): string

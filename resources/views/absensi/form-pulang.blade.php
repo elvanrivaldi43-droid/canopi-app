@@ -7,7 +7,7 @@
 @endsection
 
 @section('bottom-nav')
-    @include('partials.bottomnav-owner')
+    @include('partials.bottomnav-karyawan')
 @endsection
 
 @section('content')
@@ -38,6 +38,15 @@
                 <div style="font-size:16px;font-weight:700;color:#C9A84C;" x-text="jamSekarang"></div>
             </div>
         </div>
+    </div>
+
+    {{-- Alert GPS di luar radius --}}
+    <div x-show="gpsDiLuar" style="padding:14px 16px;border-radius:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;color:#EF4444;margin-bottom:4px;">❌ Lokasi di luar radius!</div>
+        <div style="font-size:12px;color:#94A3B8;" x-text="lokasiDetail"></div>
+        <button @click="getGPS()" type="button" style="margin-top:8px;padding:6px 14px;border-radius:8px;border:1px solid rgba(239,68,68,0.4);background:transparent;color:#EF4444;font-size:12px;cursor:pointer;">
+            🔄 Refresh GPS
+        </button>
     </div>
 
     {{-- Kamera Preview --}}
@@ -83,37 +92,28 @@
 
     {{-- Warning pulang awal --}}
     <div x-show="pulangAwal" style="padding:14px 16px;border-radius:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:600;color:#F59E0B;margin-bottom:8px;">⚠️ Kamu pulang lebih awal dari jam normal</div>
-        <div style="font-size:12px;color:#94A3B8;">Ini akan dihitung sebagai Setengah Hari jika ada alasan. Jika tidak ada alasan, status tetap Hadir/Telat.</div>
+        <div style="font-size:13px;font-weight:600;color:#F59E0B;margin-bottom:4px;">⚠️ Pulang lebih awal dari jam normal</div>
+        <div style="font-size:12px;color:#94A3B8;">Jika kurang dari 50% jam kerja, akan dihitung Setengah Hari.</div>
     </div>
 
     {{-- Form Submit --}}
-    <form method="POST" action="{{ route('absensi.absen-pulang') }}" id="formAbsenPulang">
+    <form method="POST" action="{{ route('absensi.pulang') }}" id="formAbsenPulang">
         @csrf
         <input type="hidden" name="foto" x-model="fotoBase64">
-        <input type="hidden" name="latitude" x-model="latitude">
-        <input type="hidden" name="longitude" x-model="longitude">
-
-        {{-- Field alasan pulang awal (muncul otomatis jika pulang awal) --}}
-        <div x-show="pulangAwal" style="margin-bottom:16px;">
-            <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Alasan Pulang Lebih Awal</label>
-            <textarea name="alasan_pulang_awal" rows="3"
-                      placeholder="Contoh: Ada keperluan keluarga mendesak..."
-                      style="width:100%;padding:12px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;resize:none;box-sizing:border-box;"
-                      :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'"></textarea>
-        </div>
+        <input type="hidden" name="lat" x-model="lat">
+        <input type="hidden" name="lng" x-model="lng">
 
         <button type="submit"
-                :disabled="!fotoCaptured || !latitude"
+                :disabled="!fotoCaptured || !gpsValid"
                 @click.prevent="submitAbsen()"
-                style="width:100%;padding:18px;border-radius:14px;font-size:16px;font-weight:700;border:none;cursor:pointer;color:white;background:linear-gradient(135deg,#3B82F6,#1D4ED8);min-height:58px;letter-spacing:0.5px;"
-                :style="(!fotoCaptured || !latitude) ? 'opacity:0.4;cursor:not-allowed;' : ''">
+                style="width:100%;padding:18px;border-radius:14px;font-size:16px;font-weight:700;border:none;cursor:pointer;color:white;background:linear-gradient(135deg,#3B82F6,#1D4ED8);min-height:58px;"
+                :style="(!fotoCaptured || !gpsValid) ? 'opacity:0.4;cursor:not-allowed;' : ''">
             🏠 Absen Pulang Sekarang
         </button>
 
-        <div x-show="!fotoCaptured || !latitude" style="text-align:center;margin-top:10px;font-size:12px;color:#64748B;">
+        <div x-show="!fotoCaptured || !gpsValid" style="text-align:center;margin-top:10px;font-size:12px;color:#64748B;">
             <span x-show="!fotoCaptured">Ambil foto selfie dulu · </span>
-            <span x-show="!latitude">Menunggu GPS...</span>
+            <span x-show="!gpsValid">Menunggu GPS valid...</span>
         </div>
     </form>
 
@@ -122,7 +122,8 @@
 <script>
 function absenPulang() {
     const jamMasuk = '{{ substr($absenHariIni->jam_masuk, 0, 5) }}';
-    const jamPulangNormal = '{{ auth()->user()->jam_pulang ? substr(auth()->user()->jam_pulang, 0, 5) : "17:00" }}';
+    const jamPulangNormal = '{{ auth()->user()->jam_pulang ? substr(auth()->user()->jam_pulang, 0, 5) : "16:30" }}';
+    const csrfToken = '{{ csrf_token() }}';
 
     return {
         fotoBase64: '',
@@ -131,9 +132,12 @@ function absenPulang() {
         kameraError: false,
         kameraErrorMsg: '',
         kameraReady: false,
-        latitude: null,
-        longitude: null,
+        lat: null,
+        lng: null,
+        gpsValid: false,
+        gpsDiLuar: false,
         lokasiText: 'Mendapatkan lokasi...',
+        lokasiDetail: '',
         lokasiIcon: '🔄',
         jamSekarang: '',
         durasiKerja: '-',
@@ -202,6 +206,15 @@ function absenPulang() {
             ctx.translate(canvas.width, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Timestamp di foto
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+            ctx.fillStyle = '#fff';
+            ctx.font = '14px monospace';
+            ctx.fillText(new Date().toLocaleString('id-ID'), 10, canvas.height - 15);
+
             this.fotoBase64  = canvas.toDataURL('image/jpeg', 0.85);
             this.fotoPreview = this.fotoBase64;
             this.fotoCaptured = true;
@@ -218,41 +231,45 @@ function absenPulang() {
         getGPS() {
             this.lokasiText = 'Mendapatkan lokasi...';
             this.lokasiIcon = '🔄';
+            this.gpsValid   = false;
+            this.gpsDiLuar  = false;
+
             if (!navigator.geolocation) {
                 this.lokasiText = 'GPS tidak didukung';
                 this.lokasiIcon = '❌';
                 return;
             }
+
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    this.latitude  = pos.coords.latitude;
-                    this.longitude = pos.coords.longitude;
-                    const jarak = this.hitungJarak(this.latitude, this.longitude, -6.3269, 106.6882);
-                    this.lokasiText = jarak <= 100
-                        ? `Di kantor (${Math.round(jarak)} m dari workshop)`
-                        : `${Math.round(jarak)} m dari kantor`;
-                    this.lokasiIcon = jarak <= 100 ? '✅' : '📍';
+                    this.lat = pos.coords.latitude;
+                    this.lng = pos.coords.longitude;
+
+                    // Cek GPS ke server
+                    fetch('/absensi/cek-gps', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify({ lat: this.lat, lng: this.lng })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        this.gpsValid  = data.valid;
+                        this.gpsDiLuar = !data.valid;
+                        this.lokasiText   = data.valid ? `Lokasi valid ✓ (${data.jarak})` : `Di luar radius!`;
+                        this.lokasiDetail = `${data.jarak} dari kantor (maks 100m)`;
+                        this.lokasiIcon   = data.valid ? '✅' : '❌';
+                    });
                 },
                 () => {
                     this.lokasiText = 'GPS tidak tersedia';
                     this.lokasiIcon = '⚠️';
-                    this.latitude  = -6.3269;
-                    this.longitude = 106.6882;
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
         },
 
-        hitungJarak(lat1, lng1, lat2, lng2) {
-            const R = 6371000;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        },
-
         submitAbsen() {
-            if (!this.fotoCaptured || !this.latitude) return;
+            if (!this.fotoCaptured || !this.gpsValid) return;
             document.getElementById('formAbsenPulang').submit();
         }
     }
