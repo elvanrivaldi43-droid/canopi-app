@@ -375,6 +375,16 @@ class CuttingController extends Controller
                     if ($h <= 0) $warn[] = "Harga besi \"{$m['material']}\" belum diisi";
                 }
                 unset($m);
+                // BESI TAMBAHAN manual (support/reng/besi lain di luar cutting otomatis)
+                foreach ((array) ($b['besi_extra'] ?? []) as $bx) {
+                    $bx = (array) $bx;
+                    $nm = trim((string) ($bx['material'] ?? '')); $bt = (float) ($bx['batang'] ?? 0);
+                    if ($nm === '' || $bt <= 0) continue;
+                    $h = isset($harga[$nm]) ? (float) $harga[$nm] : 0;
+                    $besi += $bt * $h;
+                    $cutting['per_material'][] = ['material' => $nm, 'jumlah_batang' => $bt, 'harga_pokok' => $h, 'subtotal_besi' => $h * $bt];
+                    if ($h <= 0) $warn[] = "Harga besi tambahan \"{$nm}\" belum diisi";
+                }
             }
             $rincian = $cutting['per_material'];
         } else {

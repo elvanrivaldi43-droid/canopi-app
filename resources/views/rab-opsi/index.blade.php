@@ -2,11 +2,7 @@
 @section('title', 'RAB Multi-Opsi')
 @section('page-title', 'RAB Multi-Opsi')
 @section('sidebar-menu')
-    @if(auth()->user()->level == 1)
-        @include('partials.sidebar-owner')
-    @else
-        @include('partials.sidebar-pipeline')
-    @endif
+    @include('partials.sidebar-owner')
 @endsection
 @section('content')
 <style>
@@ -421,6 +417,12 @@ function tambahBlok(pane, tipe, data){
             '<label class="ckf" style="color:#fbbf24"><input type="checkbox" class="b-fTengah" checked> + Tengah</label>'+
           '</div>'+
         '</div>'+
+        '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
+          '<div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:8px">Besi Tambahan (support/reng/besi lain)</div>'+
+          '<div class="b-besiExtra"></div>'+
+          '<button type="button" class="btn btn-grey" style="padding:9px" onclick="addBesiRow(this)">+ Besi Tambahan</button>'+
+          '<div style="font-size:10px;color:#64748b;margin-top:6px">Untuk hollow/besi yang tak tercakup rangka otomatis (mis. reng 3x3, gording 4x8, besi beton). Pilih jenis + jumlah batang.</div>'+
+        '</div>'+
         (LIHAT_HARGA ? (
         '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
           '<div class="subhead" style="margin-top:0">Upah</div>'+
@@ -483,6 +485,8 @@ function isiBlok(card, d){
         setVal(card.querySelector('.b-tinggi'), d.tinggi_cm); setVal(card.querySelector('.b-kotak'), d.kotak_cm);
         setVal(card.querySelector('.b-arah'), d.arah_support); setVal(card.querySelector('.b-tiang'), d.jml_tiang);
         setVal(card.querySelector('.b-matFrame'), d.mat_frame); setVal(card.querySelector('.b-matSupport'), d.mat_support); setVal(card.querySelector('.b-matTiang'), d.mat_tiang);
+        var bx=d.besi_extra||[];
+        bx.forEach(function(x){ var r=addBesiRowTo(card); setVal(r.querySelector('.bx-jenis'), x.material); setVal(r.querySelector('.bx-batang'), x.batang); });
         setChk(card.querySelector('.b-fDepan'), d.frame_depan); setChk(card.querySelector('.b-fBelakang'), d.frame_belakang);
         setChk(card.querySelector('.b-fKiri'), d.frame_kiri); setChk(card.querySelector('.b-fKanan'), d.frame_kanan); setChk(card.querySelector('.b-fTengah'), d.frame_tengah);
         setVal(card.querySelector('.b-jk'), d.jenis_kerja_id);
@@ -499,6 +503,15 @@ function isiBlok(card, d){
 }
 
 // ---- baris atap/addon/manual (versi "To card" + versi tombol) ----
+function addBesiRowTo(card){
+    var box=card.querySelector('.b-besiExtra'); if(!box) return document.createElement('div');
+    var r=document.createElement('div'); r.className='row3'; r.style.flexWrap='wrap';
+    r.innerHTML='<select class="bx-jenis" style="flex:2;min-width:130px">'+besiSemuaOpts()+'</select>'+
+                '<input type="number" class="bx-batang" style="flex:1;min-width:70px" placeholder="jml batang" min="0" step="0.5">'+
+                '<button type="button" class="del" onclick="this.closest(\'.row3\').remove()">✕</button>';
+    box.appendChild(r); return r;
+}
+function addBesiRow(btn){ addBesiRowTo(btn.closest('.blok-card')); }
 function addAtapRowTo(card){
     const box=card.querySelector('.b-atapRows'); if(!box) return document.createElement('div');
     const r=document.createElement('div'); r.className='row3'; r.style.flexWrap='wrap';
@@ -550,6 +563,12 @@ function bacaBlok(card){
     if(tipe==='kanopi'){
         const mf=g('.b-matFrame'), ms=g('.b-matSupport'), mt=g('.b-matTiang');
         const harga={}; [mf,ms,mt].forEach(function(n){ if(n) harga[n]=hargaOf(n); });
+        b.besi_extra=[];
+        [].slice.call(card.querySelectorAll('.b-besiExtra .row3')).forEach(function(r){
+            var j=r.querySelector('.bx-jenis'), q=r.querySelector('.bx-batang');
+            var nm=j?j.value:''; var bt=q?(+q.value||0):0;
+            if(nm && bt>0){ b.besi_extra.push({material:nm, batang:bt}); harga[nm]=hargaOf(nm); }
+        });
         b.lebar_cm=+g('.b-lebar'); b.panjang_cm=+g('.b-panjang'); b.tinggi_cm=+g('.b-tinggi');
         b.kotak_cm=+g('.b-kotak'); b.arah_support=+g('.b-arah'); b.jml_tiang=+g('.b-tiang');
         b.mat_frame=mf||'Frame'; b.mat_support=ms||'Support'; b.mat_tiang=mt||'Tiang';
