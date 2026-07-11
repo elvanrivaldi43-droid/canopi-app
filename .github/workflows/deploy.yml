@@ -1,8 +1,9 @@
 name: Deploy to Niagahoster
 
 on:
-  workflow_dispatch:
-
+  push:
+    branches:
+      - main
 jobs:
   deploy:
     name: Deploy via FTP
