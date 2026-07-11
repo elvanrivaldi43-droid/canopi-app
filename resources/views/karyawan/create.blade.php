@@ -3,7 +3,11 @@
 @section('page-title', 'Tambah Karyawan')
 
 @section('sidebar-menu')
-    @include('partials.sidebar-owner')
+    @if(auth()->user()->level == 1)
+        @include('partials.sidebar-owner')
+    @else
+        @include('partials.sidebar-pipeline')
+    @endif
 @endsection
 
 @section('bottom-nav')
@@ -178,7 +182,7 @@
                             <div style="font-size:11px;color:#94A3B8;">Per {{ $t->tipe == 'harian' ? 'hari' : 'bulan' }} · Default: Rp {{ number_format($t->nominal_default) }}</div>
                         </div>
                         <input type="number" name="tunjangan[{{ $t->id }}]"
-                               value="{{ old('tunjangan.'.$t->id, $t->nominal_default) }}"
+                               value="{{ old('tunjangan.'.$t->id, 0) }}"
                                min="0" placeholder="0"
                                style="width:120px;padding:8px 12px;border-radius:8px;font-size:12px;outline:none;border:1.5px solid;background:transparent;text-align:right;"
                                :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">

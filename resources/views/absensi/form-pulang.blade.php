@@ -3,7 +3,11 @@
 @section('page-title', 'Absen Pulang')
 
 @section('sidebar-menu')
-    @include('partials.sidebar-owner')
+    @if(auth()->user()->level == 1)
+        @include('partials.sidebar-owner')
+    @else
+        @include('partials.sidebar-pipeline')
+    @endif
 @endsection
 
 @section('bottom-nav')
@@ -11,7 +15,7 @@
 @endsection
 
 @section('content')
-<div style="max-width:480px;margin:0 auto;" x-data="absenPulang()" x-init="init()">
+<div style="max-width:480px;margin:0 auto;padding-bottom:120px;" x-data="absenPulang()" x-init="init()">
 
     {{-- Header --}}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
@@ -104,11 +108,12 @@
         <input type="hidden" name="lng" x-model="lng">
 
         <button type="submit"
-                :disabled="!fotoCaptured || !gpsValid"
+                :disabled="!fotoCaptured || !gpsValid || sedangKirim"
                 @click.prevent="submitAbsen()"
                 style="width:100%;padding:18px;border-radius:14px;font-size:16px;font-weight:700;border:none;cursor:pointer;color:white;background:linear-gradient(135deg,#3B82F6,#1D4ED8);min-height:58px;"
-                :style="(!fotoCaptured || !gpsValid) ? 'opacity:0.4;cursor:not-allowed;' : ''">
-            🏠 Absen Pulang Sekarang
+                :style="(!fotoCaptured || !gpsValid || sedangKirim) ? 'opacity:0.4;cursor:not-allowed;' : ''">
+            <span x-show="!sedangKirim">🏠 Absen Pulang Sekarang</span>
+            <span x-show="sedangKirim">⏳ Menyimpan...</span>
         </button>
 
         <div x-show="!fotoCaptured || !gpsValid" style="text-align:center;margin-top:10px;font-size:12px;color:#64748B;">
@@ -143,6 +148,7 @@ function absenPulang() {
         durasiKerja: '-',
         pulangAwal: false,
         stream: null,
+        sedangKirim: false,
 
         async init() {
             this.updateJam();
@@ -270,7 +276,31 @@ function absenPulang() {
 
         submitAbsen() {
             if (!this.fotoCaptured || !this.gpsValid) return;
-            document.getElementById('formAbsenPulang').submit();
+            if (this.sedangKirim) return;
+            this.sedangKirim = true;
+
+            var self = this;
+            var form = document.getElementById('formAbsenPulang');
+            var formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data && data.success) {
+                    window.location.href = data.redirect ? data.redirect : '/absensi';
+                } else {
+                    self.sedangKirim = false;
+                    alert(data && data.message ? data.message : 'Absen gagal, coba lagi.');
+                }
+            })
+            .catch(function () {
+                self.sedangKirim = false;
+                alert('Koneksi bermasalah. Cek internet lalu coba lagi.');
+            });
         }
     }
 }

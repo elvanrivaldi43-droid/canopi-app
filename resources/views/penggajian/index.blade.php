@@ -4,7 +4,11 @@
 @section('page-title', 'Penggajian')
 
 @section('sidebar-menu')
-    @include('partials.sidebar-owner')
+    @if(auth()->user()->level == 1)
+        @include('partials.sidebar-owner')
+    @else
+        @include('partials.sidebar-pipeline')
+    @endif
 @endsection
 
 @section('bottom-nav')

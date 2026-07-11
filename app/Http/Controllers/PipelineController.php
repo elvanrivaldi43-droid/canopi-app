@@ -1,194 +1,162 @@
 <?php
+// FILE: app/Http/Controllers/PipelineController.php
 
 namespace App\Http\Controllers;
 
-use App\Models\PipelineLead;
-use App\Models\PipelineFollowup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\PipelineLead;
+use App\Models\PipelineFollowup;
 
 class PipelineController extends Controller
 {
-    private function baseQuery()
-    {
-        $user = Auth::user();
-        $q = PipelineLead::with(['user', 'followups']);
-        if ($user->level === 4) {
-            $q->where('user_id', $user->id);
-        }
-        return $q;
-    }
-
     public function index()
-    {
-        $leads      = $this->baseQuery()->orderBy('last_activity_at', 'desc')->get();
-        $statusList = PipelineLead::statusList();
-        $colors     = PipelineLead::statusColors();
-        $grouped    = collect($statusList)->mapWithKeys(
-            fn($label, $key) => [$key => $leads->where('status', $key)->values()]
-        );
-        $totalNilai = $leads->whereNotIn('status', ['tidak_jadi'])->sum('estimasi_nilai');
-        $totalDeal  = $leads->where('status', 'deal')->sum('estimasi_nilai');
-        $totalLead  = $leads->whereNotIn('status', ['tidak_jadi', 'deal'])->count();
-        return view('pipeline.index', compact('grouped', 'colors', 'statusList', 'totalNilai', 'totalDeal', 'totalLead'));
+{
+    $user  = Auth::user();
+    $query = PipelineLead::with(['inputOleh', 'followups']);
+    if ($user->level == 4) $query->where('input_oleh', $user->id);
+    $leads    = $query->orderBy('updated_at', 'desc')->get();
+    $statuses = PipelineLead::statusList();
+    $colors   = PipelineLead::statusColors();
+    $grouped  = [];
+    foreach ($statuses as $key => $label) {
+        $grouped[$key] = $leads->where('status', $key);
     }
+    $totalNilai = $leads->whereNotIn('status',['tidak_jadi'])->sum('estimasi_nilai');
+    $totalLead  = $leads->count();
+    $statusList = $statuses;
+
+    return view('pipeline.index', compact('grouped','statuses','colors','totalNilai','totalLead','statusList'));
+}
 
     public function listView(Request $request)
     {
-        $q = $this->baseQuery();
-        if ($request->filled('status')) $q->where('status', $request->status);
-        if ($request->filled('produk'))  $q->where('produk', $request->produk);
-        if ($request->filled('sumber'))  $q->where('sumber_lead', $request->sumber);
-        if ($request->filled('search')) {
-            $s = $request->search;
-            $q->where(fn($q2) => $q2->where('nama_customer', 'like', "%{$s}%")
-                                    ->orWhere('no_hp', 'like', "%{$s}%")
-                                    ->orWhere('alamat', 'like', "%{$s}%"));
-        }
-        $leads      = $q->orderBy('last_activity_at', 'desc')->paginate(25)->withQueryString();
-        $statusList = PipelineLead::statusList();
-        $colors     = PipelineLead::statusColors();
-        return view('pipeline.list', compact('leads', 'statusList', 'colors'));
+        $user  = Auth::user();
+        $query = PipelineLead::with('inputOleh');
+        if ($user->level == 4) $query->where('input_oleh', $user->id);
+        if ($request->status) $query->where('status', $request->status);
+        if ($request->produk) $query->where('produk', $request->produk);
+        if ($request->search) $query->where(function($q) use ($request) {
+            $q->where('nama_customer', 'like', "%{$request->search}%")
+              ->orWhere('no_hp', 'like', "%{$request->search}%");
+        });
+        $leads      = $query->orderBy('updated_at','desc')->paginate(20);
+        $statuses   = PipelineLead::statusList();
+        $produkList = PipelineLead::produkList();
+        return view('pipeline.list', compact('leads','statuses','produkList'));
     }
 
     public function create()
     {
-        return view('pipeline.create', [
-            'statusList' => PipelineLead::statusList(),
-            'produkList' => PipelineLead::produkList(),
-            'sumberList' => PipelineLead::sumberList(),
-        ]);
+        $statuses   = PipelineLead::statusList();
+        $produkList = PipelineLead::produkList();
+        $sumberList = PipelineLead::sumberList();
+        return view('pipeline.create', compact('statuses','produkList','sumberList'));
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'nama_customer'  => 'required|string|max:255',
-            'no_hp'          => 'required|string|max:20',
-            'alamat'         => 'nullable|string',
-            'produk'         => 'required|in:kanopi,pagar,tralis,tenda',
-            'sumber_lead'    => 'required|in:Instagram,WhatsApp,Referensi,Google,Spanduk,Lainnya',
-            'estimasi_nilai' => 'nullable|numeric|min:0',
-            'catatan'        => 'nullable|string',
-            'status'         => 'required|in:lead,dihubungi,dijadwalkan,dikunjungi,ditawar,deal,tidak_jadi',
-            'tanggal_jadwal' => 'nullable|date|required_if:status,dijadwalkan',
-            'jam_jadwal'     => 'nullable|date_format:H:i|required_if:status,dijadwalkan',
+        $request->validate([
+            'nama_customer' => 'required|string|max:255',
+            'no_hp'         => 'required|string|max:20',
+            'produk'        => 'required',
+            'sumber_lead'   => 'required',
+            'status'        => 'required',
+            'estimasi_nilai'=> 'nullable|numeric|min:0',
+            'tgl_kunjungan' => 'nullable|date',
         ]);
 
-        $data['user_id']          = Auth::id();
-        $data['last_activity_at'] = now();
-        $lead = PipelineLead::create($data);
-
-        PipelineFollowup::create([
-            'pipeline_lead_id' => $lead->id,
-            'user_id'          => Auth::id(),
-            'catatan'          => 'Lead baru dibuat.',
-            'status_sesudah'   => $data['status'],
+        PipelineLead::create([
+            'nama_customer'   => $request->nama_customer,
+            'no_hp'           => $request->no_hp,
+            'alamat'          => $request->alamat,
+            'produk'          => $request->produk,
+            'sumber_lead'     => $request->sumber_lead,
+            'status'          => $request->status,
+            'estimasi_nilai'  => $request->estimasi_nilai ?? 0,
+            'catatan'         => $request->catatan,
+            'tgl_kunjungan'   => $request->tgl_kunjungan,
+            'last_activity_at'=> now(),
+            'input_oleh'      => Auth::id(),
         ]);
 
-        return redirect()->route('pipeline.show', $lead)->with('success', 'Lead berhasil ditambahkan.');
+        return redirect()->route('pipeline.index')->with('success', 'Lead berhasil ditambahkan!');
     }
 
     public function show(PipelineLead $pipeline)
     {
-        $this->gate($pipeline);
-        $pipeline->load(['user', 'followups.user']);
-        return view('pipeline.show', [
-            'lead'       => $pipeline,
-            'statusList' => PipelineLead::statusList(),
-            'colors'     => PipelineLead::statusColors(),
-            'produkList' => PipelineLead::produkList(),
-            'sumberList' => PipelineLead::sumberList(),
-        ]);
+        $pipeline->load(['inputOleh', 'followups.user']);
+        $statuses   = PipelineLead::statusList();
+        $colors     = PipelineLead::statusColors();
+        $metodeList = ['whatsapp'=>'💬 WhatsApp','telepon'=>'📞 Telepon','email'=>'📧 Email','kunjungan'=>'🚗 Kunjungan','lainnya'=>'📝 Lainnya'];
+        return view('pipeline.show', compact('pipeline','statuses','colors','metodeList'));
     }
 
     public function edit(PipelineLead $pipeline)
     {
-        $this->gate($pipeline);
-        return view('pipeline.edit', [
-            'lead'       => $pipeline,
-            'statusList' => PipelineLead::statusList(),
-            'produkList' => PipelineLead::produkList(),
-            'sumberList' => PipelineLead::sumberList(),
-        ]);
+        $statuses   = PipelineLead::statusList();
+        $produkList = PipelineLead::produkList();
+        $sumberList = PipelineLead::sumberList();
+        return view('pipeline.edit', compact('pipeline','statuses','produkList','sumberList'));
     }
 
     public function update(Request $request, PipelineLead $pipeline)
     {
-        $this->gate($pipeline);
-        $data = $request->validate([
-            'nama_customer'  => 'required|string|max:255',
-            'no_hp'          => 'required|string|max:20',
-            'alamat'         => 'nullable|string',
-            'produk'         => 'required|in:kanopi,pagar,tralis,tenda',
-            'sumber_lead'    => 'required|in:Instagram,WhatsApp,Referensi,Google,Spanduk,Lainnya',
-            'estimasi_nilai' => 'nullable|numeric|min:0',
-            'catatan'        => 'nullable|string',
-            'status'         => 'required|in:lead,dihubungi,dijadwalkan,dikunjungi,ditawar,deal,tidak_jadi',
-            'tanggal_jadwal' => 'nullable|date|required_if:status,dijadwalkan',
-            'jam_jadwal'     => 'nullable|date_format:H:i|required_if:status,dijadwalkan',
+        $request->validate([
+            'nama_customer' => 'required|string|max:255',
+            'no_hp'         => 'required|string|max:20',
+            'produk'        => 'required',
+            'sumber_lead'   => 'required',
+            'status'        => 'required',
+            'estimasi_nilai'=> 'nullable|numeric|min:0',
+            'tgl_kunjungan' => 'nullable|date',
         ]);
 
-        $statusLama = $pipeline->status;
-        $data['last_activity_at'] = now();
-        $pipeline->update($data);
-
-        $sl      = PipelineLead::statusList();
-        $catatan = $statusLama !== $data['status']
-            ? "Status diubah: {$sl[$statusLama]} → {$sl[$data['status']]}"
-            : 'Data lead diupdate.';
-
-        PipelineFollowup::create([
-            'pipeline_lead_id' => $pipeline->id,
-            'user_id'          => Auth::id(),
-            'catatan'          => $catatan,
-            'status_sebelum'   => $statusLama,
-            'status_sesudah'   => $data['status'],
+        $pipeline->update([
+            'nama_customer'   => $request->nama_customer,
+            'no_hp'           => $request->no_hp,
+            'alamat'          => $request->alamat,
+            'produk'          => $request->produk,
+            'sumber_lead'     => $request->sumber_lead,
+            'status'          => $request->status,
+            'estimasi_nilai'  => $request->estimasi_nilai ?? 0,
+            'catatan'         => $request->catatan,
+            'tgl_kunjungan'   => $request->tgl_kunjungan,
+            'last_activity_at'=> now(),
         ]);
 
-        return redirect()->route('pipeline.show', $pipeline)->with('success', 'Lead berhasil diupdate.');
+        return redirect()->route('pipeline.show', $pipeline)->with('success', 'Lead berhasil diupdate!');
     }
 
     public function updateStatus(Request $request, PipelineLead $pipeline)
     {
-        $this->gate($pipeline);
-        $request->validate(['status' => 'required|in:lead,dihubungi,dijadwalkan,dikunjungi,ditawar,deal,tidak_jadi']);
-
-        $statusLama = $pipeline->status;
-        $sl = PipelineLead::statusList();
-        $pipeline->update(['status' => $request->status, 'last_activity_at' => now()]);
-
-        PipelineFollowup::create([
-            'pipeline_lead_id' => $pipeline->id,
-            'user_id'          => Auth::id(),
-            'catatan'          => "Status diubah: {$sl[$statusLama]} → {$sl[$request->status]}",
-            'status_sebelum'   => $statusLama,
-            'status_sesudah'   => $request->status,
+        $request->validate([
+            'status'       => 'required|in:lead,dihubungi,dijadwalkan,dikunjungi,ditawar,deal,tidak_jadi',
+            'tgl_kunjungan'=> 'nullable|date',
         ]);
-
-        return back()->with('success', 'Status berhasil diupdate.');
+        $pipeline->update([
+            'status'          => $request->status,
+            'tgl_kunjungan'   => $request->tgl_kunjungan,
+            'last_activity_at'=> now(),
+        ]);
+        return response()->json(['success' => true, 'message' => 'Status berhasil diupdate!']);
     }
 
     public function storeFollowup(Request $request, PipelineLead $pipeline)
     {
-        $this->gate($pipeline);
-        $request->validate(['catatan' => 'required|string|max:1000']);
-
+        $request->validate([
+            'metode'                  => 'required|in:whatsapp,telepon,email,kunjungan,lainnya',
+            'catatan'                 => 'required|string',
+            'tgl_followup_berikutnya' => 'nullable|date',
+        ]);
         PipelineFollowup::create([
-            'pipeline_lead_id' => $pipeline->id,
-            'user_id'          => Auth::id(),
-            'catatan'          => $request->catatan,
+            'pipeline_lead_id'        => $pipeline->id,
+            'user_id'                 => Auth::id(),
+            'metode'                  => $request->metode,
+            'catatan'                 => $request->catatan,
+            'tgl_followup_berikutnya' => $request->tgl_followup_berikutnya,
         ]);
         $pipeline->update(['last_activity_at' => now()]);
-
-        return back()->with('success', 'Follow-up berhasil dicatat.');
-    }
-
-    private function gate(PipelineLead $pipeline): void
-    {
-        $user = Auth::user();
-        if ($user->level === 4 && $pipeline->user_id !== $user->id) {
-            abort(403, 'Akses ditolak.');
-        }
+        return back()->with('success', 'Follow-up berhasil dicatat!');
     }
 }

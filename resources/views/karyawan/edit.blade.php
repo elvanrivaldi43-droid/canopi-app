@@ -3,7 +3,11 @@
 @section('page-title', 'Edit Karyawan')
 
 @section('sidebar-menu')
-    @include('partials.sidebar-owner')
+    @if(auth()->user()->level == 1)
+        @include('partials.sidebar-owner')
+    @else
+        @include('partials.sidebar-pipeline')
+    @endif
 @endsection
 
 @section('bottom-nav')
@@ -108,6 +112,15 @@
                        :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
             </div>
 
+            {{-- Tanggal Bergabung (dasar hitung syarat 1 tahun untuk Kasbon) --}}
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Tanggal Bergabung <span style="font-size:11px;font-weight:400;color:#64748B;">(dasar syarat kasbon min. 1 tahun)</span></label>
+                <input type="date" name="tanggal_bergabung" value="{{ old('tanggal_bergabung', $karyawan->tanggal_bergabung?->format('Y-m-d')) }}"
+                       style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;"
+                       :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
+                @error('tanggal_bergabung')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
+            </div>
+
             {{-- Jam Kerja --}}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
                 <div>
@@ -177,7 +190,7 @@
                 <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:10px;">Tunjangan Tambahan</label>
                 <div style="display:flex;flex-direction:column;gap:10px;">
                     @foreach($tunjangan as $t)
-                    @php $existingNominal = $karyawan->tunjangan->find($t->id)?->pivot->nominal ?? $t->nominal_default; @endphp
+                    @php $existingNominal = $karyawan->tunjangan->find($t->id)?->pivot->nominal ?? 0; @endphp
                     <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;border:1.5px solid;"
                          :style="darkMode ? 'border-color:rgba(255,255,255,0.06)' : 'border-color:#F1F5F9'">
                         <div style="flex:1;">

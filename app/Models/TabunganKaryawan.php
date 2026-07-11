@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // FILE: app/Models/TabunganKaryawan.php
 
 namespace App\Models;

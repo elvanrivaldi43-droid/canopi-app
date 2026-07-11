@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // FILE: app/Http/Controllers/KaryawanController.php
 
 namespace App\Http\Controllers;
@@ -119,29 +119,36 @@ class KaryawanController extends Controller
     public function update(Request $request, User $karyawan)
     {
         $request->validate([
-            'level'        => 'required|integer|between:1,7',
-            'jabatan'      => 'required|string|max:100',
-            'tipe_gaji'    => 'required|in:harian,bulanan,project',
-            'gaji_harian'  => 'nullable|numeric|min:0',
-            'gaji_bulanan' => 'nullable|numeric|min:0',
-            'uang_makan'   => 'nullable|numeric|min:0',
-            'uang_bonus'   => 'nullable|numeric|min:0',
-            'status'       => 'required|in:aktif,nonaktif,sp1,sp2,sp3',
-            'jam_masuk'    => 'required',
-            'jam_pulang'   => 'required',
+            'level'           => 'required|integer|between:1,7',
+            'jabatan'         => 'required|string|max:100',
+            'tipe_gaji'       => 'required|in:harian,bulanan,project',
+            'gaji_harian'     => 'nullable|numeric|min:0',
+            'gaji_bulanan'    => 'nullable|numeric|min:0',
+            'uang_makan'      => 'nullable|numeric|min:0',
+            'uang_bonus'      => 'nullable|numeric|min:0',
+            'jam_masuk'       => 'required',
+            'jam_pulang'      => 'required',
+            'tgl_masuk_kerja' => 'required|date',
         ]);
 
         $karyawan->update([
-            'level'        => $request->level,
-            'jabatan'      => $request->jabatan,
-            'tipe_gaji'    => $request->tipe_gaji,
-            'gaji_harian'  => $request->gaji_harian  ?? 0,
-            'gaji_bulanan' => $request->gaji_bulanan ?? 0,
-            'uang_makan'   => $request->uang_makan   ?? 0,
-            'uang_bonus'   => $request->uang_bonus   ?? 0,
-            'status'       => $request->status,
-            'jam_masuk'    => $request->jam_masuk,
-            'jam_pulang'   => $request->jam_pulang,
+            'name'              => $request->name ?? $karyawan->name,
+            'no_hp'             => $request->no_hp,
+            'level'             => $request->level,
+            'jabatan'           => $request->jabatan,
+            'tipe_gaji'         => $request->tipe_gaji,
+            'gaji_harian'       => $request->gaji_harian  ?? 0,
+            'gaji_bulanan'      => $request->gaji_bulanan ?? 0,
+            'uang_makan'        => $request->uang_makan   ?? 0,
+            'uang_bonus'        => $request->uang_bonus   ?? 0,
+            'jam_masuk'         => $request->jam_masuk,
+            'jam_pulang'        => $request->jam_pulang,
+            'tgl_masuk_kerja'   => $request->tgl_masuk_kerja,
+            'nama_bank'         => $request->nama_bank,
+            'no_rekening'       => $request->no_rekening,
+            'atas_nama'         => $request->atas_nama,
+            'tanggal_bergabung' => $request->tanggal_bergabung,
+            'alamat'            => $request->alamat,
         ]);
 
         $karyawan->tunjangan()->detach();

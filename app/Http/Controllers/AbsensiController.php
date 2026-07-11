@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // FILE: app/Http/Controllers/AbsensiController.php
 
 namespace App\Http\Controllers;
@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Absensi;
 use App\Models\User;
+use App\Models\LuarKota;
 
 class AbsensiController extends Controller
 {
@@ -79,8 +80,10 @@ class AbsensiController extends Controller
             'total_gaji'     => $bulanIni->sum('gaji_hari_ini'),
         ];
 
-        $fase = $this->getFaseAbsen($absenHariIni);
-        return view('absensi.index', compact('user','absenHariIni','riwayat','stats','fase'));
+        $fase          = $this->getFaseAbsen($absenHariIni);
+        $luarKotaAktif = LuarKota::getAktif($user->id);
+
+        return view('absensi.index', compact('user','absenHariIni','riwayat','stats','fase','luarKotaAktif'));
     }
 
     public function formMasuk()
@@ -91,9 +94,11 @@ class AbsensiController extends Controller
         if ($absen?->jam_masuk) return redirect()->route('absensi.index')->with('info','Kamu sudah absen masuk hari ini.');
         if (now()->format('H:i') < self::JAM_BUKA_ABSEN) return redirect()->route('absensi.index')->with('error','Absen masuk baru bisa mulai jam 06:30');
 
-        $lokasi       = $this->getLokasiUser($user->level);
-        $setengahHari = now()->format('H:i') >= self::JAM_SETENGAH;
-        return view('absensi.form-masuk', compact('user','lokasi','setengahHari'));
+        $lokasi        = $this->getLokasiUser($user->level);
+        $setengahHari  = now()->format('H:i') >= self::JAM_SETENGAH;
+        $luarKotaAktif = LuarKota::getAktif($user->id);
+
+        return view('absensi.form-masuk', compact('user','lokasi','setengahHari','luarKotaAktif'));
     }
 
     public function absenMasuk(Request $request)
@@ -106,13 +111,18 @@ class AbsensiController extends Controller
             'kode' => 'required|string',
         ]);
 
+        // ── CEK MODE LUAR KOTA ──────────────────────────────────────────
+        $sedangLuarKota = LuarKota::sedangLuarKota($user->id);
+
+        // Validasi GPS — skip kalau luar kota
         $lokasi = $this->getLokasiUser($user->level);
-        $jarak  = $this->hitungJarak($request->lat,$request->lng,$lokasi['lat'],$lokasi['lng']);
-        if ($jarak > self::RADIUS_MASUK_PULANG) {
+        $jarak  = $this->hitungJarak($request->lat, $request->lng, $lokasi['lat'], $lokasi['lng']);
+        if ($jarak > self::RADIUS_MASUK_PULANG && !$sedangLuarKota) {
             return response()->json(['success'=>false,'message'=>"📍 Lokasi terlalu jauh ({$this->formatJarak($jarak)}). Pastikan kamu sudah berada di lokasi kerja."]);
         }
 
-        $kode = strtoupper(trim($request->kode));
+        // Validasi kode absen (tetap wajib walau luar kota)
+        $kode      = strtoupper(trim($request->kode));
         $kodeValid = \App\Models\KodeAbsen::whereDate('tanggal', today())
                                           ->where('kode', $kode)
                                           ->exists();
@@ -139,7 +149,17 @@ class AbsensiController extends Controller
 
         Absensi::updateOrCreate(
             ['user_id'=>$user->id,'tanggal'=>today()],
-            ['jam_masuk'=>now()->format('H:i:s'),'foto_masuk'=>$fotoPath,'lat_masuk'=>$request->lat,'lng_masuk'=>$request->lng,'gps_valid_masuk'=>true,'status'=>$status,'potongan_telat'=>$potongan,'gaji_hari_ini'=>$gajiHariIni,'uang_makan_hari_ini'=>$uangMakan]
+            [
+                'jam_masuk'       => now()->format('H:i:s'),
+                'foto_masuk'      => $fotoPath,
+                'lat_masuk'       => $request->lat,
+                'lng_masuk'       => $request->lng,
+                'gps_valid_masuk' => true, // selalu true, GPS tetap dicatat
+                'status'          => $status,
+                'potongan_telat'  => $potongan,
+                'gaji_hari_ini'   => $gajiHariIni,
+                'uang_makan_hari_ini' => $uangMakan,
+            ]
         );
 
         $pesan = match($status) {
@@ -147,6 +167,11 @@ class AbsensiController extends Controller
             'telat'         => "✅ Absen masuk berhasil. Telat {$menitTelat} menit — potongan Rp ".number_format($potongan,0,',','.'),
             default         => "✅ Absen masuk berhasil jam ".now()->format('H:i'),
         };
+
+        if ($sedangLuarKota) {
+            $pesan .= "\n✈️ Mode luar kota aktif — GPS tidak divalidasi.";
+        }
+
         return response()->json(['success'=>true,'message'=>$pesan,'redirect'=>route('absensi.index')]);
     }
 
@@ -163,10 +188,16 @@ class AbsensiController extends Controller
     {
         $user   = Auth::user();
         $tipe   = $request->tipe ?? 'masuk';
+
+        // Kalau luar kota — langsung valid
+        if (LuarKota::sedangLuarKota($user->id)) {
+            return response()->json(['valid'=>true,'jarak'=>'0m','meter'=>0,'luar_kota'=>true]);
+        }
+
         $lokasi = $this->getLokasiCek($user->level, $tipe);
         $radius = $tipe==='siang' ? self::RADIUS_SIANG : self::RADIUS_MASUK_PULANG;
         $jarak  = $this->hitungJarak($request->lat,$request->lng,$lokasi['lat'],$lokasi['lng']);
-        return response()->json(['valid'=>$jarak<=$radius,'jarak'=>$this->formatJarak($jarak),'meter'=>round($jarak)]);
+        return response()->json(['valid'=>$jarak<=$radius,'jarak'=>$this->formatJarak($jarak),'meter'=>round($jarak),'luar_kota'=>false]);
     }
 
     public function formSiang()
@@ -180,7 +211,9 @@ class AbsensiController extends Controller
         $statusPekerjaan = self::STATUS_PEKERJAAN;
         $jenisKendala    = self::JENIS_KENDALA;
         $gpsWajib        = in_array($user->level, self::LEVEL_KANTOR);
-        return view('absensi.form-siang', compact('user','lokasi','statusPekerjaan','jenisKendala','gpsWajib'));
+        $luarKotaAktif   = LuarKota::getAktif($user->id);
+
+        return view('absensi.form-siang', compact('user','lokasi','statusPekerjaan','jenisKendala','gpsWajib','luarKotaAktif'));
     }
 
     public function absenSiang(Request $request)
@@ -190,17 +223,26 @@ class AbsensiController extends Controller
         if (!$absen) return response()->json(['success'=>false,'message'=>'Belum absen masuk pagi.']);
 
         $request->validate([
-            'foto_1'=>'required|string','lat'=>'required|numeric','lng'=>'required|numeric',
-            'status_pekerjaan'=>'required|string','ada_kendala'=>'required',
-            'jenis_kendala'=>'required_if:ada_kendala,1','deskripsi_kendala'=>'required_if:ada_kendala,1',
+            'foto_1'             => 'required|string',
+            'lat'                => 'required|numeric',
+            'lng'                => 'required|numeric',
+            'status_pekerjaan'   => 'required|string',
+            'ada_kendala'        => 'required',
+            'jenis_kendala'      => 'required_if:ada_kendala,1',
+            'deskripsi_kendala'  => 'required_if:ada_kendala,1',
         ]);
 
+        // ── CEK MODE LUAR KOTA ──────────────────────────────────────────
+        $sedangLuarKota = LuarKota::sedangLuarKota($user->id);
+
         $gpsValid = true;
-        if (in_array($user->level, self::LEVEL_KANTOR)) {
+        if (in_array($user->level, self::LEVEL_KANTOR) && !$sedangLuarKota) {
             $lokasi   = $this->getLokasiCek($user->level,'siang');
             $jarak    = $this->hitungJarak($request->lat,$request->lng,$lokasi['lat'],$lokasi['lng']);
             $gpsValid = $jarak <= self::RADIUS_SIANG;
-            if (!$gpsValid) return response()->json(['success'=>false,'message'=>"📍 Lokasi terlalu jauh ({$this->formatJarak($jarak)})."]);
+            if (!$gpsValid) {
+                return response()->json(['success'=>false,'message'=>"📍 Lokasi terlalu jauh ({$this->formatJarak($jarak)})."]);
+            }
         }
 
         $jamSekarang   = now()->format('H:i');
@@ -214,7 +256,7 @@ class AbsensiController extends Controller
             'foto_siang_3'           => $request->foto_3 ? $this->simpanFotoBase64($request->foto_3,$folder) : null,
             'lat_siang'              => $request->lat,
             'lng_siang'              => $request->lng,
-            'gps_valid_siang'        => $gpsValid,
+            'gps_valid_siang'        => true, // selalu true, GPS tetap dicatat
             'jam_absen_siang'        => now()->format('H:i:s'),
             'status_pekerjaan'       => $request->status_pekerjaan,
             'ada_kendala'            => $request->ada_kendala,
@@ -230,6 +272,9 @@ class AbsensiController extends Controller
         $pesan = $menitTelat>0
             ? "✅ Absen siang berhasil. Telat {$menitTelat} menit — potongan Rp ".number_format($potonganSiang,0,',','.')
             : "✅ Absen siang berhasil.";
+
+        if ($sedangLuarKota) $pesan .= "\n✈️ Mode luar kota aktif.";
+
         return response()->json(['success'=>true,'message'=>$pesan,'redirect'=>route('absensi.index')]);
     }
 
@@ -240,11 +285,13 @@ class AbsensiController extends Controller
         if (!$absen?->jam_masuk) return redirect()->route('absensi.index')->with('error','Kamu belum absen masuk.');
         if ($absen?->jam_pulang) return redirect()->route('absensi.index')->with('info','Kamu sudah absen pulang.');
 
-        $lokasi       = $this->getLokasiUser($user->level);
-        $adaLembur    = $absen->lembur_approved ?? false;
-        $jamLemburMax = self::JAM_LEMBUR;
-        $absenHariIni = $absen;
-        return view('absensi.form-pulang', compact('user','lokasi','absen','absenHariIni','adaLembur','jamLemburMax'));
+        $lokasi        = $this->getLokasiUser($user->level);
+        $adaLembur     = $absen->lembur_approved ?? false;
+        $jamLemburMax  = self::JAM_LEMBUR;
+        $absenHariIni  = $absen;
+        $luarKotaAktif = LuarKota::getAktif($user->id);
+
+        return view('absensi.form-pulang', compact('user','lokasi','absen','absenHariIni','adaLembur','jamLemburMax','luarKotaAktif'));
     }
 
     public function absenPulang(Request $request)
@@ -255,9 +302,13 @@ class AbsensiController extends Controller
 
         $request->validate(['foto'=>'required|string','lat'=>'required|numeric','lng'=>'required|numeric']);
 
+        // ── CEK MODE LUAR KOTA ──────────────────────────────────────────
+        $sedangLuarKota = LuarKota::sedangLuarKota($user->id);
+
+        // Validasi GPS pulang — skip kalau luar kota
         $lokasi = $this->getLokasiUser($user->level);
         $jarak  = $this->hitungJarak($request->lat,$request->lng,$lokasi['lat'],$lokasi['lng']);
-        if ($jarak > self::RADIUS_MASUK_PULANG) {
+        if ($jarak > self::RADIUS_MASUK_PULANG && !$sedangLuarKota) {
             return response()->json(['success'=>false,'message'=>"📍 Lokasi terlalu jauh ({$this->formatJarak($jarak)})."]);
         }
 
@@ -280,15 +331,22 @@ class AbsensiController extends Controller
             :($absen->gaji_hari_ini??0)+$gajiLembur;
 
         $absen->update([
-            'jam_pulang'=>$jamPulang,'foto_pulang'=>$fotoPath,
-            'lat_pulang'=>$request->lat,'lng_pulang'=>$request->lng,
-            'gps_valid_pulang'=>true,'status'=>$statusBaru,
-            'uang_makan_hari_ini'=>$umHariIni,'gaji_hari_ini'=>$gajiBersih,'lembur_jam'=>$lemburJam,
+            'jam_pulang'          => $jamPulang,
+            'foto_pulang'         => $fotoPath,
+            'lat_pulang'          => $request->lat,
+            'lng_pulang'          => $request->lng,
+            'gps_valid_pulang'    => true, // selalu true, GPS tetap dicatat
+            'status'              => $statusBaru,
+            'uang_makan_hari_ini' => $umHariIni,
+            'gaji_hari_ini'       => $gajiBersih,
+            'lembur_jam'          => $lemburJam,
         ]);
 
         $pesan = "✅ Absen pulang berhasil jam ".now()->format('H:i');
         if ($setengahHari) $pesan .= " (setengah hari)";
         if ($lemburJam>0) $pesan .= " + lembur {$lemburJam} jam";
+        if ($sedangLuarKota) $pesan .= "\n✈️ Mode luar kota aktif.";
+
         return response()->json(['success'=>true,'message'=>$pesan,'redirect'=>route('absensi.index')]);
     }
 
@@ -304,7 +362,11 @@ class AbsensiController extends Controller
         if ($levelFilter > 0) $query->where('level', $levelFilter);
 
         $karyawan = $query->orderBy('level')->orderBy('name')->get();
-        return view('absensi.rekap', compact('karyawan', 'tanggal', 'levelFilter'));
+
+        // Siapa yang sedang luar kota hari ini
+        $sedangLuarKota = LuarKota::aktifPadaTanggal()->pluck('user_id')->toArray();
+
+        return view('absensi.rekap', compact('karyawan', 'tanggal', 'levelFilter', 'sedangLuarKota'));
     }
 
     public function rekapBulanan(Request $request)
@@ -314,23 +376,15 @@ class AbsensiController extends Controller
         $userId = $request->user_id;
         $user   = Auth::user();
 
-        // Karyawan hanya lihat diri sendiri
-        if ($user->level > 2) {
-            $userId = $user->id;
-        }
+        if ($user->level > 2) $userId = $user->id;
 
         $hariDalamBulan = \Carbon\Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
 
-        // Daftar karyawan untuk filter (owner & admin)
         $daftarKaryawan = collect();
         if ($user->level <= 2) {
-            $daftarKaryawan = User::where('level','!=',1)
-                                  ->where('status','aktif')
-                                  ->orderBy('name')
-                                  ->get();
+            $daftarKaryawan = User::where('level','!=',1)->where('status','aktif')->orderBy('name')->get();
         }
 
-        // Tentukan karyawan yang ditampilkan
         if ($userId) {
             $karyawanList = User::where('id', $userId)->get();
         } elseif ($user->level <= 2) {
@@ -339,7 +393,6 @@ class AbsensiController extends Controller
             $karyawanList = User::where('id', $user->id)->get();
         }
 
-        // Build rekap data
         $rekapData = [];
         foreach ($karyawanList as $k) {
             $absensiRaw = Absensi::where('user_id', $k->id)
@@ -366,9 +419,7 @@ class AbsensiController extends Controller
             ];
         }
 
-        return view('absensi.rekap-bulanan', compact(
-            'rekapData','bulan','tahun','userId','daftarKaryawan'
-        ));
+        return view('absensi.rekap-bulanan', compact('rekapData','bulan','tahun','userId','daftarKaryawan'));
     }
 
     public function koreksi(Request $request, $id)

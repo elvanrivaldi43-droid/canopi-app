@@ -67,9 +67,9 @@
                 </div>
 
                 {{-- Cards Container --}}
-                <div style="padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px;max-height:65vh;overflow-y:auto;">
+                <div class="kanban-cards" data-status="{{ $key }}" style="padding:10px;display:flex;flex-direction:column;gap:8px;min-height:60px;max-height:65vh;overflow-y:auto;">
                     @forelse($col as $lead)
-                    <a href="{{ route('pipeline.show', $lead) }}" style="display:block;text-decoration:none;">
+                    <div class="lead-card" data-id="{{ $lead->id }}" data-href="{{ route('pipeline.show', $lead) }}" style="display:block;text-decoration:none;">
                         <div style="background:#0f172a;border-radius:12px;padding:12px;border:1px solid {{ $lead->is_aging ? '#ef444488' : '#1e293b' }};transition:all 0.15s;cursor:pointer;">
 
                             {{-- Aging badge --}}
@@ -109,7 +109,7 @@
                                 <span style="font-size:10px;color:#334155;">{{ ($lead->last_activity_at ?? $lead->updated_at)->diffForHumans() }}</span>
                             </div>
                         </div>
-                    </a>
+                    </div>
                     @empty
                     <div style="text-align:center;padding:20px 0;color:#334155;font-size:11px;">— kosong —</div>
                     @endforelse
@@ -120,4 +120,82 @@
     </div>
 
 </div>
+
+<style>
+.lead-card {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+.drag-ghost {
+    opacity: 0.4;
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+(function(){
+    if (typeof Sortable === 'undefined') { return; }
+    var CSRF = '{{ csrf_token() }}';
+    var cols = document.querySelectorAll('.kanban-cards');
+    for (var i = 0; i < cols.length; i++) {
+        new Sortable(cols[i], {
+            group: 'pipeline',
+            animation: 150,
+            delay: 150,
+            delayOnTouchOnly: true,
+            draggable: '.lead-card',
+            ghostClass: 'drag-ghost',
+            scroll: true,
+            scrollSensitivity: 100,
+            scrollSpeed: 12,
+            bubbleScroll: true,
+            onEnd: function(evt){
+                if (evt.from === evt.to) return;
+                var id = evt.item.getAttribute('data-id');
+                var status = evt.to.getAttribute('data-status');
+                fetch('{{ url("/pipeline") }}/' + id + '/status', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': CSRF,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ status: status })
+                }).then(function(r){ return r.json(); })
+                  .then(function(res){
+                      if (!res || res.success === false) {
+                          alert('Gagal ubah status, halaman dimuat ulang.');
+                          location.reload();
+                      }
+                  })
+                  .catch(function(){
+                      alert('Gagal ubah status, halaman dimuat ulang.');
+                      location.reload();
+                  });
+            }
+        });
+    }
+
+    // Tap singkat = buka detail lead. Tekan-geser = pindah kolom (drag).
+    // Mencegah menu "Buka di tab baru" bawaan browser yang muncul kalau kartu berupa link asli.
+    document.querySelectorAll('.lead-card').forEach(function(card){
+        var startX = 0, startY = 0, moved = false;
+        card.addEventListener('touchstart', function(e){
+            var t = e.touches[0];
+            startX = t.clientX; startY = t.clientY; moved = false;
+        }, { passive: true });
+        card.addEventListener('touchmove', function(e){
+            var t = e.touches[0];
+            if (Math.abs(t.clientX - startX) > 8 || Math.abs(t.clientY - startY) > 8) moved = true;
+        }, { passive: true });
+        card.addEventListener('click', function(e){
+            if (moved) { moved = false; return; }
+            var href = card.getAttribute('data-href');
+            if (href) window.location.href = href;
+        });
+        card.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    });
+})();
+</script>
 @endsection

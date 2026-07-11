@@ -19,6 +19,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        putenv('FONNTE_TOKEN=ei3UqxbKS1rcxWsbGxqG');
     }
 }

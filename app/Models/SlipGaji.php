@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // FILE: app/Models/SlipGaji.php
 
 namespace App\Models;

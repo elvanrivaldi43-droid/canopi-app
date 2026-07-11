@@ -1,13 +1,15 @@
-﻿<?php
+<?php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Absensi;
 use App\Models\IzinAbsen;
 use App\Models\SlipGaji;
 use App\Models\Kasbon;
 use App\Models\User;
+use App\Models\TugasAssignee;
 
 class DashboardController extends Controller
 {
@@ -95,27 +97,52 @@ class DashboardController extends Controller
 
     public function admin()
     {
-        return view('dashboard.admin');
+        $tugasHariIni = TugasAssignee::with('tugas')
+            ->where('user_id', Auth::id())
+            ->whereHas('tugas', fn($q) => $q->whereDate('tanggal', today()))
+            ->get();
+
+        return view('dashboard.admin', compact('tugasHariIni'));
     }
 
     public function supervisor()
     {
-        return view('dashboard.supervisor');
+        $tugasHariIni = TugasAssignee::with('tugas')
+            ->where('user_id', Auth::id())
+            ->whereHas('tugas', fn($q) => $q->whereDate('tanggal', today()))
+            ->get();
+
+        return view('dashboard.supervisor', compact('tugasHariIni'));
     }
 
     public function marketing()
     {
-        return view('dashboard.marketing');
+        $tugasHariIni = TugasAssignee::with('tugas')
+            ->where('user_id', Auth::id())
+            ->whereHas('tugas', fn($q) => $q->whereDate('tanggal', today()))
+            ->get();
+
+        return view('dashboard.marketing', compact('tugasHariIni'));
     }
 
     public function teknisi()
     {
-        return view('dashboard.teknisi');
+        $tugasHariIni = TugasAssignee::with('tugas')
+            ->where('user_id', Auth::id())
+            ->whereHas('tugas', fn($q) => $q->whereDate('tanggal', today()))
+            ->get();
+
+        return view('dashboard.teknisi', compact('tugasHariIni'));
     }
 
     public function driver()
     {
-        return view('dashboard.driver');
+        $tugasHariIni = TugasAssignee::with('tugas')
+            ->where('user_id', Auth::id())
+            ->whereHas('tugas', fn($q) => $q->whereDate('tanggal', today()))
+            ->get();
+
+        return view('dashboard.driver', compact('tugasHariIni'));
     }
 
     public function toko()

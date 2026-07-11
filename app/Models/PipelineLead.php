@@ -1,44 +1,50 @@
 <?php
+// FILE: app/Models/PipelineLead.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class PipelineLead extends Model
 {
+    protected $table = 'pipeline_leads';
+
     protected $fillable = [
-        'user_id', 'nama_customer', 'no_hp', 'alamat', 'produk',
+        'nama_customer', 'no_hp', 'alamat', 'produk',
         'sumber_lead', 'status', 'estimasi_nilai', 'catatan',
-        'tanggal_jadwal', 'jam_jadwal', 'last_activity_at',
+        'tgl_kunjungan', 'last_activity_at', 'input_oleh',
     ];
 
     protected $casts = [
-        'tanggal_jadwal'   => 'date',
+        'tgl_kunjungan'    => 'datetime',
         'last_activity_at' => 'datetime',
-        'estimasi_nilai'   => 'decimal:2',
+        'estimasi_nilai'   => 'integer',
     ];
 
-    public function user()
+    // ── Relasi ────────────────────────────────────────────
+    public function inputOleh()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'input_oleh');
     }
 
     public function followups()
     {
-        return $this->hasMany(PipelineFollowup::class)->orderBy('created_at', 'desc');
+        return $this->hasMany(PipelineFollowup::class, 'pipeline_lead_id')->orderBy('created_at', 'desc');
     }
 
+    // ── Accessor ──────────────────────────────────────────
     public function getAgingAttribute(): int
     {
-        $ref = $this->last_activity_at ?? $this->updated_at;
-        return (int) now()->diffInDays($ref);
+        return (int) ($this->last_activity_at ?? $this->created_at)?->diffInDays(now());
     }
 
     public function getIsAgingAttribute(): bool
     {
-        return $this->aging > 7;
+        return $this->aging >= 7;
     }
 
+    // ── Static helpers ────────────────────────────────────
     public static function statusList(): array
     {
         return [
@@ -56,22 +62,55 @@ class PipelineLead extends Model
     {
         return [
             'lead'        => '#64748b',
-            'dihubungi'   => '#3b82f6',
+            'dihubungi'   => '#06b6d4',
             'dijadwalkan' => '#8b5cf6',
             'dikunjungi'  => '#f59e0b',
-            'ditawar'     => '#f97316',
-            'deal'        => '#22c55e',
+            'ditawar'     => '#3b82f6',
+            'deal'        => '#10b981',
             'tidak_jadi'  => '#ef4444',
         ];
     }
 
     public static function produkList(): array
     {
-        return ['kanopi', 'pagar', 'tralis', 'tenda'];
+        return [
+            'kanopi'         => '🏠 Kanopi',
+            'pagar'          => '🔒 Pagar',
+            'tralis'         => '🔧 Tralis',
+            'tenda_membrane' => '⛺ Tenda Membrane',
+            'lainnya'        => '📦 Lainnya',
+        ];
     }
 
     public static function sumberList(): array
     {
-        return ['Instagram', 'WhatsApp', 'Referensi', 'Google', 'Spanduk', 'Lainnya'];
+        return [
+            'instagram'  => '📸 Instagram',
+            'whatsapp'   => '💬 WhatsApp',
+            'referensi'  => '👥 Referensi',
+            'google'     => '🔍 Google',
+            'spanduk'    => '🪧 Spanduk',
+            'lainnya'    => '📝 Lainnya',
+        ];
+    }
+
+    public function statusLabel(): string
+    {
+        return self::statusList()[$this->status] ?? $this->status;
+    }
+
+    public function statusColor(): string
+    {
+        return self::statusColors()[$this->status] ?? '#64748b';
+    }
+
+    public function produkLabel(): string
+    {
+        return self::produkList()[$this->produk] ?? $this->produk;
+    }
+
+    public function sumberLabel(): string
+    {
+        return self::sumberList()[$this->sumber_lead] ?? $this->sumber_lead;
     }
 }

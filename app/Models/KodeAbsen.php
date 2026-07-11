@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // FILE: app/Models/KodeAbsen.php
 
 namespace App\Models;

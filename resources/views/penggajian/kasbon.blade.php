@@ -4,7 +4,11 @@
 @section('page-title', 'Kasbon')
 
 @section('sidebar-menu')
-    @include('partials.sidebar-owner')
+    @if(auth()->user()->level == 1)
+        @include('partials.sidebar-owner')
+    @else
+        @include('partials.sidebar-pipeline')
+    @endif
 @endsection
 
 @section('bottom-nav')
@@ -104,11 +108,30 @@
                                 </div>
                             </td>
                             <td style="padding:12px 8px;text-align:center;">
+                                @if($kb->status === 'pending')
+                                <div style="display:flex;gap:6px;justify-content:center;">
+                                    <form method="POST" action="{{ route('penggajian.kasbon.approve', $kb) }}" style="display:inline;">
+                                        @csrf
+                                        <button type="submit"
+                                            style="font-size:11px;background:#10b981;color:#0f172a;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-weight:600;">
+                                            ✅ Approve
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ route('penggajian.kasbon.tolak', $kb) }}" style="display:inline;" onsubmit="return confirm('Yakin tolak kasbon {{ $k->name }} ini?');">
+                                        @csrf
+                                        <button type="submit"
+                                            style="font-size:11px;background:#ef4444;color:#f1f5f9;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-weight:600;">
+                                            ❌ Tolak
+                                        </button>
+                                    </form>
+                                </div>
+                                @else
                                 {{-- Form tunda --}}
                                 <button onclick="bukaTunda({{ $kb->id }}, '{{ $k->name }}')"
                                     style="font-size:11px;background:#f59e0b;color:#0f172a;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;">
                                     ⏸ Tunda
                                 </button>
+                                @endif
                             </td>
                         </tr>
                         @endforeach

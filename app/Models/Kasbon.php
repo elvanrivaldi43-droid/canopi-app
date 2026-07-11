@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // FILE: app/Models/Kasbon.php
 
 namespace App\Models;

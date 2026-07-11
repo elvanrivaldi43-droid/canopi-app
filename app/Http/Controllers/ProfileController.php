@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // FILE: app/Http/Controllers/ProfileController.php
 // INI adalah controller bawaan Laravel Breeze — JANGAN TIMPA LAGI!
 
