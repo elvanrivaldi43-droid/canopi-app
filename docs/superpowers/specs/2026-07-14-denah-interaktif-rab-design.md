@@ -39,7 +39,8 @@ Kesimpulan: yang perlu dibangun adalah **editor denah + penghubung denah→dafta
 | 3 | Cakupan | **Multi-blok langsung** — 1 denah = 1 blok; N blok = N denah, dijumlah |
 | 4 | Cara ganti | **Ganti baru**: input parameter-kotak lama diganti editor denah (dengan migrasi aman, lihat §8) |
 | 5 | Bentuk denah | **Poligon titik-sudut bisa diseret** (bentuk tidak beraturan / miring), tambah/kurang sudut, **snap ke grid** (10/20/25/50 cm) |
-| 6 | Ukur sisi | Bisa **ketik panjang sisi (cm) pasti**, bukan cuma seret |
+| 6 | Ukur sisi | Bisa **ketik panjang sisi (cm) pasti** (desimal, mis. 148,5), bukan cuma seret |
+| 6b | Input lapangan | **Rantai ukur sisi + diagonal kipas dari 1 sudut acuan → triangulasi** (lihat §4a). Bentuk asimetris/miring/L pas **tanpa derajat**. Dukung L / banyak lekukan sejak awal. |
 | 7 | Tiang | Bisa ditaruh **di titik mana saja** (snap grid), bukan cuma di sudut |
 | 8 | Arah support | **3 pilihan**: Grid 2 arah / 1 arah horizontal (melintang) / 1 arah vertikal (membujur). ("1 arah" lama dipecah jadi 2 pilihan eksplisit.) |
 | 9 | Kotak support | **Disarankan mesin** — dari lebar, cari jarak yang membagi simetris (mendekati target ~100cm). Prefill & editable; kalau surveyor ubah → denah + support ikut berubah live. Tombol "pakai saran" untuk balik ke rekomendasi. |
@@ -48,7 +49,7 @@ Kesimpulan: yang perlu dibangun adalah **editor denah + penghubung denah→dafta
 | 12 | Warna & legenda | **Tiap besi beda warna** dalam satu denah; **legenda (warna → nama besi) tampil di bawah denah**. Warna diassign per besi yang benar-benar dipakai. |
 | 13 | Label denah | Tiap bagian berlabel di denah (sisi frame F1..Fn + ukuran cm, tiang T1..Tn); support diidentifikasi lewat warna. |
 | 14 | Kurva/lengkung | **Tidak didukung** — didekati dengan beberapa sudut lurus (sesuai fabrikasi asli) |
-| 15 | Input sudut derajat | **Ditunda** — cukup titik bebas + ketik panjang sisi; tambah nanti kalau kepakai |
+| 15 | Input sudut derajat | **Tidak perlu** — bentuk miring dikunci lewat diagonal (triangulasi), bukan derajat |
 | 16 | Nasib `/rangka-desain` | **Dibuang** (halaman, controller, rute, menu owner) — lebur ke RAB opsi |
 | 17 | Stok potong | **Per-material** (hollow 600, WF s/d 1200) — bukan `const 600` |
 | 18 | UI | Responsif PC + HP; ikut gaya app (slate + amber), kanvas denah bergaya blueprint |
@@ -69,6 +70,20 @@ Di RAB opsi, tiap blok jadi kartu berisi **denah + panel material + rincian bata
 6. **Rincian batang + biaya blok** muncul langsung. **Tambah blok** → denah baru. Semua blok dijumlah; **margin di level opsi** (tak berubah).
 
 Semua interaksi **snap ke grid** + target ketuk besar → nyaman di HP.
+
+---
+
+## 4a. Input lapangan (surveyor) — rantai ukur + triangulasi
+
+Cara **utama** surveyor menangkap bentuk asimetris/L di lapangan (seret manual = cara sekunder buat menghalusin):
+
+- Surveyor pilih **1 sudut acuan**, lalu keliling: tiap sudut catat **panjang sisi** (ke sudut berikutnya) + **diagonal dari sudut acuan** ke sudut itu. Persis cara ukur pakai meteran (sisi + diagonal kipas).
+- Butuh: **n sisi + (n−3) diagonal** — segi-4 = 4 sisi + 1 diagonal; L 6-sudut = 6 sisi + 3 diagonal.
+- **Rekonstruksi (triangulasi kipas):** taruh sudut acuan di (0,0), sudut ke-2 di sumbu-x sejauh sisi pertama, tiap sudut berikutnya = **perpotongan 2 lingkaran** (jari-jari = diagonal dari acuan & sisi dari sudut sebelumnya). Keliling → semua titik ketemu. Bentuk **pas termasuk sudut miring, TANPA derajat**.
+- **Metode kipas menangani L / banyak lekukan dengan algoritma yang sama** — cuma nambah diagonal, bukan nambah kerumitan mesin.
+- **Ambiguitas cermin** (2 solusi perpotongan) diatasi dengan menjaga arah putar konsisten; kalau kebalik, surveyor **flip**.
+- **Cek-silang:** kalau surveyor ukur diagonal ekstra (mis. 2 diagonal di segi-4), sistem bandingkan; selisih besar → peringatan kemungkinan salah ukur.
+- **Desimal didukung penuh** (mis. 148,5). Angka ketik selalu menang atas snap grid. Setelah tersusun, denah bisa dihalusin dengan seret sudut.
 
 ---
 
@@ -125,6 +140,11 @@ Dipecah jadi unit kecil dengan tanggung jawab tunggal:
 
 ---
 
+### 5.8 Rekonstruksi triangulasi (baru, murni)
+- Fungsi murni: input `{ sisi[], diagonalKipas[], sudutAcuan }` → output `verts[{x,y}]`. Algoritma perpotongan 2-lingkaran berantai (lihat §4a). Resolusi cermin via arah putar konsisten + tombol flip. Terpisah & mudah diuji (feed ukuran → cek koordinat).
+
+---
+
 ## 6. Alur data
 
 ```
@@ -166,6 +186,7 @@ RAB opsi dipakai untuk penawaran nyata, jadi **jangan cabut input lama sebelum y
 ## 9. Testing
 
 - **Reproduksi PA-DUTA (kunci):** gambar denah proyek alderon PA-DUTA → konverter → `RangkaDesignService.hitung` harus mendekati cutting list asli (frame 5x10 ≈ 10 batang, dst., dengan stok per-material aktif). Tes PHP standalone (pola `tests/rangka/test_hitung.php` yang sudah ada).
+- **Triangulasi kipas:** dari sisi + diagonal yang diketahui (segi-4 & bentuk L) → titik sudut hasil rekonstruksi cocok dengan koordinat asli (assert jarak). Termasuk kasus cermin (flip) & cek-silang diagonal ekstra.
 - **Konverter denah→members:** denah kotak sederhana + denah L → jumlah & panjang member sesuai hitungan tangan (assert).
 - **Scanline support:** bentuk cekung (L) → segmen support benar (tidak bocor keluar poligon).
 - **Stok per-material:** member 1000cm dari WF-1200 → 1 batang 0 sambungan; dari hollow-600 → 2 batang 1 sambungan.
