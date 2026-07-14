@@ -61,7 +61,7 @@ Kesimpulan: yang perlu dibangun adalah **editor denah + penghubung denah→dafta
 
 Di RAB opsi, tiap blok jadi kartu berisi **denah + panel material + rincian batang**:
 
-1. Denah mulai dari kotak default. User membentuk: **seret sudut**, **tap "+ Sudut"** untuk sisipkan sudut (bikin L/berlekuk), **tap "− Sudut"** untuk hapus, atau **ketuk sisi lalu ketik cm** untuk ukuran pasti.
+1. Denah mulai sebagai kotak dari **input Lebar & Panjang (cm)** — cara tercepat mulai. Dari situ user membentuk: **seret sudut**, **tap "+ Sudut"** untuk sisipkan sudut (bikin L/berlekuk), **tap "− Sudut"** untuk hapus, atau **ketuk sisi lalu ketik cm** untuk ukuran pasti. Input Lebar/Panjang mencerminkan kotak pembatas denah (ikut berubah saat sudut diseret).
 2. Pilih **arah support** (2 arah / horizontal / vertikal). **Kotak support** sudah diisi saran mesin (simetris dari lebar); surveyor bisa ubah → support langsung menyesuaikan. Yang berlebih **dihapus** (mode Support); yang khusus (gawang/WF melintang) **ditambah/digeser** manual.
 3. **Taruh tiang** di titik beban mana pun (mode Tiang).
 4. Set **besi default** per peran (frame/support/tiang) = warna dasar. Untuk beda per bagian: **mode Ganti besi → klik bagian di denah** → Ganti / Tambah / Hapus. Tiap besi punya **warna sendiri**, dan **legenda warna→besi ada di bawah denah**.
