@@ -14,6 +14,23 @@ class CuttingController extends Controller
         return in_array(Auth::user()->level, [1, 2, 3]); // owner, admin, surveyor
     }
 
+    /**
+     * Panjang batang (stok potong) per material dari master_material.
+     * Map ['<nama>' => panjang_cm]; kolom kosong/absen -> default 600 di hilir.
+     */
+    private function stokMap(): array
+    {
+        try {
+            return DB::table('master_material')
+                ->where('aktif', 1)
+                ->get(['nama', 'panjang_batang_cm'])
+                ->mapWithKeys(fn ($m) => [$m->nama => (float) ($m->panjang_batang_cm ?: 600)])
+                ->toArray();
+        } catch (\Throwable $e) {
+            return []; // kolom belum ada / DB error -> semua default 600 di hilir
+        }
+    }
+
     public function index()
     {
         abort_if(!$this->bolehAkses(), 403);
