@@ -19,7 +19,7 @@ class RangkaDesignService
      * @param array $members  tiap: ['nama'=>string,'panjang'=>float,'material'=>string, ...]
      * @param array $harga    ['<material>' => <harga_pokok>]
      */
-    public function hitung(array $members, array $harga = [], bool $lihatHarga = false): array
+    public function hitung(array $members, array $harga = [], bool $lihatHarga = false, array $stok = []): array
     {
         // Kelompokkan panjang per besi
         $byMat = [];
@@ -36,7 +36,7 @@ class RangkaDesignService
         $totalBiaya = 0.0;
 
         foreach ($byMat as $mat => $pieces) {
-            $bars = $this->cutting->potong($pieces);
+            $bars = $this->cutting->potong($pieces, $stok[$mat] ?? null);
             $segPerJid = [];
             foreach ($bars as $b) {
                 foreach ($b['seg'] as $s) {
