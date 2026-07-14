@@ -208,7 +208,18 @@ Fix potong >600cm sudah LIVE di produksi (commit di main, terverifikasi lewat cu
 
 **Prototype UX SUDAH DIVALIDASI Elvan (cocok).** File `tests/rangka/denah_prototype.html` (di-commit sbg referensi bangun DenahEditor asli). Standalone, disajikan lewat harness `tests/rangka/preview_server.php` (untracked, gitignore) di `http://187.77.143.121:8892/denah`. Fitur teruji: seret sudut mulus (rAF, tanpa render ulang saat drag, snap saat lepas), +/− sudut, panel "Ukur sisi" ketik cm presisi (koma diterima, tak di-snap), Undo 40-langkah, arah support + kotak saran, support manual dengan titik geser, tiang, besi per-bagian + warna/legenda. Konverter denah→members client-side → POST `/rangka-desain/hitung` (engine asli) → biaya real-time.
 
-**SEDANG DIKERJAKAN: Tahap 1A (backend), task-per-task + tes standalone tiap task.** Nol risiko deploy (murni PHP, `php tests/rangka/*.php`, tak sentuh production). Urutan besar sesudahnya: **1A mesin → 1B DenahEditor di RAB opsi (di belakang tab, jalur kotak lama tetap jalan) → 1C validasi PA-DUTA end-to-end lalu sapih+hapus `/rangka-desain` (deploy di sini) → 1D kalibrasi ulang support (target 9 bukan 14) + retune consumable/finishing pakai luas ~40 m²**.
+**TAHAP 1A (backend) SELESAI — 5 task, semua tes standalone hijau** (`php tests/rangka/test_{hitung,stok,stok_material,denah_blok,paduta}.php`). Nol risiko deploy (murni PHP, tak sentuh production):
+- T1 `CuttingService::potong($pieces, $stock=null)` — stok potong per-panggilan (default 600).
+- T2 `RangkaDesignService::hitung(..., array $stok=[])` — stok per-material (WF s/d 1200).
+- T3 `CuttingController::stokMap()` — baca kolom `panjang_batang_cm` master_material (try/catch → `[]` bila kolom absen, aman).
+- T4 cabang `tipe:'denah'` di `hitungSatuBlok` (members → RangkaDesignService, luas dari denah); jalur `kanopi`/`manual` TIDAK berubah.
+- T5 reproduksi PA-DUTA: **5x10=10, 3x3=4, 4x6=4 REPRODUKSI PERSIS** dari cutting list asli (foto `/root/inbox`).
+
+**2 utang 1A (butuh Elvan):**
+1. **SQL belum dijalankan** (VPS ini tak ada DB) — jalankan di phpMyAdmin production: `ALTER TABLE master_material ADD COLUMN IF NOT EXISTS panjang_batang_cm INT NOT NULL DEFAULT 600;` lalu isi WF = 1200. Selama belum → stokMap() balik `[]`, semua default 600 (tak crash).
+2. **PA-DUTA 4x8=9 belum ter-reproduksi** — bar #12 cutting list tak terekam di 2 screenshot (`inbox/*cutting list*kalibarasi*`). Potongan terlihat baru 8 batang. Butuh foto bar #12 buat menutup. (Catatan: temuan lama "support 14 vs 9" itu soal MODEL auto-layout = 1D, bukan engine cutting.)
+
+Urutan besar sesudahnya: **1B DenahEditor di RAB opsi (di belakang tab, jalur kotak lama tetap jalan; baca `resources/views/rab-opsi/index.blade.php` dulu) → 1C validasi PA-DUTA end-to-end lalu sapih+hapus `/rangka-desain` (deploy di sini) → 1D kalibrasi ulang support (target 9) + retune consumable/finishing pakai luas ~40 m²**.
 
 **Status git:** `main` ahead `origin/main`, **BELUM di-push** (keputusan Elvan: deploy hanya setelah bukti PA-DUTA end-to-end di 1C). Fase 1 lama (`/rangka-desain` + fix potong >600cm) sudah ter-merge di `main`.
 
