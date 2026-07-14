@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prototype Denah Interaktif — RAB Opsi (v2)</title>
+<style>
+  :root{--slate:#1e293b;--slate2:#334155;--amber:#f59e0b;--line:#cbd5e1;--bg:#f8fafc}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,sans-serif;margin:0;background:var(--bg);color:var(--slate)}
+  .banner{background:var(--amber);color:#000;text-align:center;padding:6px;font-size:12px;font-weight:700}
+  .wrap{max-width:980px;margin:0 auto;padding:12px}
+  h1{font-size:17px;margin:10px 2px}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .row>label{font-size:12px;display:flex;flex-direction:column;gap:3px}
+  input[type=number]{width:78px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:13px}
+  select{padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff}
+  .tools{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .tool{padding:7px 11px;border:1px solid var(--slate2);background:#fff;border-radius:8px;font-size:13px;cursor:pointer;user-select:none}
+  .tool.on{background:var(--slate);color:#fff}
+  .mini{padding:6px 9px;border:1px solid var(--line);background:#fff;border-radius:7px;font-size:12px;cursor:pointer}
+  .hint{font-size:12px;color:#64748b;margin:6px 2px;min-height:16px}
+  /* blueprint canvas */
+  #svgWrap{background:#0f2740;border-radius:10px;padding:6px;overflow:auto}
+  svg{max-width:100%;touch-action:none;display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:#475569}
+  .legend b{font-weight:600}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th,td{border-bottom:1px solid #eef2f7;padding:5px 6px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  .tot{font-weight:700}
+  .warn{color:#b91c1c;font-size:12px;margin-top:6px}
+  .matbar{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+  .matbar label{font-size:12px;display:flex;flex-direction:column;gap:3px}
+  #matMenu{position:absolute;z-index:20;display:none;background:#fff;border:1px solid var(--slate2);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:8px}
+  #matMenu select{width:150px}
+  #matMenu .mrow{display:flex;gap:6px;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="banner">PROTOTYPE UX — untuk validasi denah interaktif v2. Biaya dari engine asli (stok 600, per-material menyusul Tahap 1A). Bukan production.</div>
+<div class="wrap">
+  <h1>Denah Interaktif — Blok RAB (prototype)</h1>
+
+  <div class="card">
+    <div class="row">
+      <label>Lebar (cm)<input type="number" id="inL" value="700" step="10"></label>
+      <label>Panjang (cm)<input type="number" id="inP" value="730" step="10"></label>
+      <label>Tinggi tiang (cm)<input type="number" id="inT" value="300" step="10"></label>
+      <label>Snap grid<select id="inGrid"><option>10</option><option selected>20</option><option>25</option><option>50</option></select></label>
+      <button class="mini" id="btnReset">Reset kotak dari Lebar×Panjang</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>Arah support
+        <select id="inArah"><option value="2">Grid 2 arah</option><option value="h">1 arah horizontal (melintang)</option><option value="v">1 arah vertikal (membujur)</option></select>
+      </label>
+      <label>Kotak support (cm)<input type="number" id="inKotak" value="100" step="5"></label>
+      <button class="mini" id="btnSaran">Pakai saran</button>
+      <span class="hint" id="saranHint"></span>
+    </div>
+
+    <div class="matbar">
+      <label>Besi frame<select id="matFrame" class="matdef"></select></label>
+      <label>Besi support<select id="matSupport" class="matdef"></select></label>
+      <label>Besi tiang<select id="matTiang" class="matdef"></select></label>
+    </div>
+
+    <div class="tools">
+      <span class="tool on" data-mode="bentuk">✎ Bentuk</span>
+      <span class="tool" data-mode="besi">🎨 Ganti besi</span>
+      <span class="tool" data-mode="support">▤ Support</span>
+      <span class="tool" data-mode="tiang">● Tiang</span>
+      <span style="width:10px"></span>
+      <span class="mini" id="btnAddV">+ Sudut</span>
+      <span class="mini" id="btnDelV">− Sudut</span>
+      <span class="mini" id="btnUndo">↶ Undo</span>
+    </div>
+    <div class="hint" id="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
+
+    <div id="svgWrap"><svg id="svg"></svg></div>
+    <div class="legend" id="legend"></div>
+    <div class="legend" id="sisiPanel" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <b>Rincian batang &amp; biaya blok</b>
+      <span style="font-size:12px;color:#64748b">m² denah: <b id="luas">–</b></span>
+    </div>
+    <table id="tbl"><thead><tr><th>Besi</th><th>Potong</th><th>Batang</th><th>Sambungan</th><th>Harga/batang</th><th>Subtotal</th></tr></thead><tbody></tbody></table>
+    <div class="warn" id="warn"></div>
+  </div>
+</div>
+
+<div id="matMenu">
+  <select id="matPick"></select>
+  <div class="mrow"><button class="mini" id="matApply">Ganti</button><button class="mini" id="matClear">Pakai default</button></div>
+</div>
+
+<script>
+// ---- Data besi (contoh, seperti harness preview) ----
+const BESI = [
+  {nama:'Hollow 5x10', harga:120000},
+  {nama:'Hollow 4x8',  harga:90000},
+  {nama:'WF 150',      harga:320000},
+  {nama:'Hollow 3x3',  harga:45000},
+  {nama:'Hollow 4x6',  harga:70000},
+];
+const HARGA = Object.fromEntries(BESI.map(b=>[b.nama,b.harga]));
+const PALET = ['#f59e0b','#38bdf8','#a3e635','#f472b6','#c084fc','#fb7185','#2dd4bf','#facc15'];
+
+// ---- State (model denah §5.1) ----
+const S = {
+  verts: [], grid:20, target:100, kotak:100, autoKotak:true,
+  arah:'2', supportsManual:[], removed:{}, tiang:[],
+  tinggi:300,
+  matDefault:{frame:'Hollow 5x10', support:'Hollow 4x8', tiang:'Hollow 5x10'},
+  matOverride:{},
+};
+let mode='bentuk', armed=null; // armed: 'addV' | 'delV' | 'addSupport'
+let addSupportPt=null;
+
+// ---- Geometri ----
+const snap=(v)=>Math.round(v/S.grid)*S.grid;
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function bbox(){let xs=S.verts.map(v=>v.x),ys=S.verts.map(v=>v.y);
+  return {x0:Math.min(...xs),y0:Math.min(...ys),x1:Math.max(...xs),y1:Math.max(...ys)};}
+function shoelace(){let a=0,n=S.verts.length;for(let i=0;i<n;i++){let p=S.verts[i],q=S.verts[(i+1)%n];a+=p.x*q.y-q.x*p.y;}return Math.abs(a)/2;}
+
+// Perpotongan garis mendatar y=Y dengan poligon → array x (even-odd)
+function scanX(Y){let xs=[],n=S.verts.length;
+  for(let i=0;i<n;i++){let a=S.verts[i],b=S.verts[(i+1)%n];
+    if((a.y<=Y&&b.y>Y)||(b.y<=Y&&a.y>Y)){xs.push(a.x+(Y-a.y)/(b.y-a.y)*(b.x-a.x));}}
+  return xs.sort((p,q)=>p-q);}
+function scanY(X){let ys=[],n=S.verts.length;
+  for(let i=0;i<n;i++){let a=S.verts[i],b=S.verts[(i+1)%n];
+    if((a.x<=X&&b.x>X)||(b.x<=X&&a.x>X)){ys.push(a.y+(X-a.x)/(b.x-a.x)*(b.y-a.y));}}
+  return ys.sort((p,q)=>p-q);}
+
+// ---- Konverter denah → members (§5.2) ----
+function buildMembers(){
+  const mem=[]; const bb=bbox();
+  // frame: tiap sisi poligon
+  S.verts.forEach((v,i)=>{const w=S.verts[(i+1)%S.verts.length];
+    const id='F'+i, mat=S.matOverride[id]||S.matDefault.frame;
+    mem.push({id, nama:'F'+(i+1), jenis:'frame', panjang:Math.round(dist(v,w)*10)/10, material:mat, geom:{a:v,b:w}});});
+  // support otomatis: scanline
+  const K=S.kotak; let removedRef=S.removed;
+  const addSeg=(id,a,b)=>{if(removedRef[id])return;const mat=S.matOverride[id]||S.matDefault.support;
+    mem.push({id, nama:'S', jenis:'support', panjang:Math.round(dist(a,b)), material:mat, geom:{a,b}});};
+  if(S.arah==='h'||S.arah==='2'){let li=0;
+    for(let Y=bb.y0+K;Y<bb.y1-1;Y+=K,li++){let xs=scanX(Y);
+      for(let s=0;s+1<xs.length;s+=2)addSeg('Sh_'+li+'_'+s,{x:xs[s],y:Y},{x:xs[s+1],y:Y});}}
+  if(S.arah==='v'||S.arah==='2'){let li=0;
+    for(let X=bb.x0+K;X<bb.x1-1;X+=K,li++){let ys=scanY(X);
+      for(let s=0;s+1<ys.length;s+=2)addSeg('Sv_'+li+'_'+s,{x:X,y:ys[s]},{x:X,y:ys[s+1]});}}
+  // support manual
+  S.supportsManual.forEach((m,i)=>{const id='Sm_'+i;const mat=S.matOverride[id]||S.matDefault.support;
+    mem.push({id, nama:'S', jenis:'support', panjang:Math.round(dist(m.a,m.b)), material:mat, geom:{a:m.a,b:m.b}});});
+  // tiang
+  S.tiang.forEach((t,i)=>{const id='T'+i;const mat=S.matOverride[id]||S.matDefault.tiang;
+    mem.push({id, nama:'T'+(i+1), jenis:'tiang', panjang:S.tinggi, material:mat, geom:{p:t}});});
+  return mem;
+}
+
+// warna per besi yang dipakai (stabil, urut kemunculan)
+function colorMap(mem){const used=[];mem.forEach(m=>{if(!used.includes(m.material))used.push(m.material);});
+  const map={};used.forEach((n,i)=>map[n]=PALET[i%PALET.length]);return map;}
+
+// ---- Render SVG ----
+const svg=document.getElementById('svg');
+let SC=1, PAD=44, ORG={x:0,y:0};
+let curMembers=[];
+function render(){
+  const mem=buildMembers(); curMembers=mem;
+  const cmap=colorMap(mem);
+  const bb=bbox();
+  const domW=Math.max(bb.x1, +inL.value)*1.12+20, domH=Math.max(bb.y1, +inP.value)*1.12+20;
+  SC=Math.min(560/domW, 400/domH); if(!isFinite(SC)||SC<=0)SC=0.5;
+  const W=domW*SC+PAD*2, H=domH*SC+PAD*2;
+  const X=x=>PAD+x*SC, Y=y=>PAD+y*SC;
+  const gpx=S.grid*SC;
+  let s=`<svg id="svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  s+=`<defs><pattern id="grid" width="${gpx}" height="${gpx}" patternUnits="userSpaceOnUse" x="${PAD}" y="${PAD}"><path d="M ${gpx} 0 L 0 0 0 ${gpx}" fill="none" stroke="#1e3a5f" stroke-width="0.5"/></pattern></defs>`;
+  s+=`<rect x="0" y="0" width="${W}" height="${H}" fill="#0f2740"/>`;
+  s+=`<rect x="${PAD}" y="${PAD}" width="${domW*SC}" height="${domH*SC}" fill="url(#grid)"/>`;
+  // support (grup — diredupkan saat seret sudut). Support manual dapat titik ujung yang bisa digeser.
+  s+='<g id="supLayer">';
+  mem.filter(m=>m.jenis==='support').forEach(m=>{const c=cmap[m.material];const manual=m.id.startsWith('Sm_');
+    s+=`<line ${manual?`id="sm${m.id.slice(3)}"`:''} x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="${c}" stroke-width="${manual?3:2}" data-id="${m.id}" class="hit"><title>${m.material} • ${m.panjang}cm</title></line>`;});
+  if(mode==='support') mem.filter(m=>m.jenis==='support'&&m.id.startsWith('Sm_')).forEach(m=>{const i=m.id.slice(3);
+    ['a','b'].forEach(end=>{const p=m.geom[end],cx=X(p.x),cy=Y(p.y);
+      s+=`<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;
+      s+=`<circle id="smh${i}${end}" cx="${cx}" cy="${cy}" r="8" fill="#0f2740" stroke="#38bdf8" stroke-width="2.5" style="pointer-events:none"/>`;});});
+  s+='</g>';
+  // frame (tebal) + label sisi — tiap sisi id fl{i}/fll{i} biar bisa diupdate saat seret
+  mem.filter(m=>m.jenis==='frame').forEach((m,i)=>{const c=cmap[m.material];const a=m.geom.a,b=m.geom.b;
+    s+=`<line id="fl${i}" x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="${c}" stroke-width="4" data-id="${m.id}" class="hit" stroke-linecap="round"><title>${m.material} • ${m.panjang}cm</title></line>`;
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    s+=`<text id="fll${i}" x="${X(mx)}" y="${Y(my)-5}" fill="#e2e8f0" font-size="10" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">F${i+1} · ${m.panjang}</text>`;});
+  // tiang
+  mem.filter(m=>m.jenis==='tiang').forEach((m,i)=>{const c=cmap[m.material];const p=m.geom.p;
+    s+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="6" fill="${c}" stroke="#0f2740" stroke-width="1.5" data-id="${m.id}" class="hit"><title>Tiang ${m.material} • ${m.panjang}cm</title></circle>`;
+    s+=`<text x="${X(p.x)+9}" y="${Y(p.y)+4}" fill="#fbbf24" font-size="10" paint-order="stroke" stroke="#0f2740" stroke-width="3">T${i+1}</text>`;});
+  // vertex: hit-area besar transparan (mudah ditekan di HP) + bulatan tampak (tak makan event)
+  S.verts.forEach((v,i)=>{const cx=X(v.x),cy=Y(v.y);
+    s+=`<circle cx="${cx}" cy="${cy}" r="24" fill="transparent" data-vert="${i}" class="vhit" style="cursor:grab"/>`;
+    s+=`<circle id="vh${i}" cx="${cx}" cy="${cy}" r="10" fill="#fff" stroke="#f59e0b" stroke-width="2.5" class="vh" style="pointer-events:none"/>`;});
+  s+='</svg>';
+  document.getElementById('svgWrap').innerHTML=s;
+  bindSvg(document.getElementById('svgWrap').querySelector('svg'));
+  // legend
+  const used=Object.keys(cmap);
+  document.getElementById('legend').innerHTML = used.length
+    ? used.map(n=>`<span><span class="sw" style="background:${cmap[n]}"></span><b>${n}</b></span>`).join('')
+    : '<span style="color:#94a3b8">Belum ada batang</span>';
+  document.getElementById('luas').textContent = (shoelace()/10000).toFixed(2)+' m²';
+  renderSides(mem);
+  hitung(mem);
+}
+
+// screen→cm
+function toCm(evt, el){const pt=el.createSVGPoint();pt.x=evt.clientX;pt.y=evt.clientY;
+  const m=el.getScreenCTM().inverse();const p=pt.matrixTransform(m);
+  return {x:(p.x-PAD)/SC, y:(p.y-PAD)/SC};}
+
+function bindSvg(el){
+  let drag=null, raf=0, pend=null;
+  const X=x=>PAD+x*SC, Y=y=>PAD+y*SC;
+  el.addEventListener('pointerdown',e=>{
+    const t=e.target; const cm=toCm(e,el);
+    if(mode==='bentuk'){
+      if(armed==='delV' && t.dataset.vert!=null){ if(S.verts.length>3){pushUndo();S.verts.splice(+t.dataset.vert,1);} armed=null;setHint();render();return;}
+      if(armed==='addV' && t.dataset.id?.startsWith('F')){
+        pushUndo();const i=+t.dataset.id.slice(1); S.verts.splice(i+1,0,{x:snap(cm.x),y:snap(cm.y)}); armed=null;setHint();render();return;}
+      if(t.dataset.vert!=null){
+        pushUndo();
+        const vi=+t.dataset.vert, n=S.verts.length;
+        drag={type:'vert',vi, vh:el.querySelector('#vh'+vi), vhit:t,
+              lPrev:el.querySelector('#fl'+((vi-1+n)%n)), lThis:el.querySelector('#fl'+vi),
+              tPrev:el.querySelector('#fll'+((vi-1+n)%n)), tThis:el.querySelector('#fll'+vi)};
+        el.setPointerCapture(e.pointerId); e.preventDefault();
+        const sup=el.querySelector('#supLayer'); if(sup)sup.style.opacity='0.25';
+      } else if(t.dataset.id?.startsWith('F')){ typeSide(+t.dataset.id.slice(1)); }
+    } else if(mode==='tiang'){
+      pushUndo();
+      const hit=S.tiang.findIndex(p=>dist(p,cm)<S.grid*1.5);
+      if(hit>=0)S.tiang.splice(hit,1); else S.tiang.push({x:snap(cm.x),y:snap(cm.y)});
+      render();
+    } else if(mode==='support'){
+      if(t.dataset.sm!=null){
+        pushUndo();
+        const i=+t.dataset.sm, end=t.dataset.end;
+        drag={type:'sup',i,end,hit:t, h:el.querySelector('#smh'+i+end), line:el.querySelector('#sm'+i)};
+        el.setPointerCapture(e.pointerId); e.preventDefault(); return;
+      }
+      if(armed==='addSupport'){
+        if(!addSupportPt){addSupportPt={x:snap(cm.x),y:snap(cm.y)};setHint('Titik ke-2 support…');}
+        else{pushUndo();S.supportsManual.push({a:addSupportPt,b:{x:snap(cm.x),y:snap(cm.y)}});addSupportPt=null;armed=null;setHint();render();}
+        return;
+      }
+      if(t.dataset.id && t.dataset.id.startsWith('S')){
+        pushUndo();const id=t.dataset.id;
+        if(id.startsWith('Sm_')){S.supportsManual.splice(+id.slice(3),1);}
+        else {S.removed[id]=!S.removed[id];}
+        render();
+      }
+    } else if(mode==='besi'){
+      if(t.dataset.id) openMatMenu(e, t.dataset.id);
+    }
+  });
+  // Seret mulus: hanya ubah atribut node terkait, TANPA render ulang. Ikuti jari (tak snap); snap saat lepas.
+  el.addEventListener('pointermove',e=>{
+    if(!drag)return; pend=toCm(e,el); if(raf)return;
+    raf=requestAnimationFrame(()=>{raf=0; const cm=pend, px=PAD+cm.x*SC, py=PAD+cm.y*SC;
+      if(drag.type==='vert'){const vi=drag.vi, n=S.verts.length;
+        S.verts[vi]={x:cm.x,y:cm.y};
+        drag.vh.setAttribute('cx',px); drag.vh.setAttribute('cy',py);
+        drag.vhit.setAttribute('cx',px); drag.vhit.setAttribute('cy',py);
+        if(drag.lPrev){drag.lPrev.setAttribute('x2',px);drag.lPrev.setAttribute('y2',py);}
+        if(drag.lThis){drag.lThis.setAttribute('x1',px);drag.lThis.setAttribute('y1',py);}
+        const upLbl=(elx,i)=>{if(!elx)return;const a=S.verts[i],b=S.verts[(i+1)%n];
+          elx.setAttribute('x',X((a.x+b.x)/2));elx.setAttribute('y',Y((a.y+b.y)/2)-5);
+          elx.textContent='F'+(i+1)+' · '+(Math.round(dist(a,b)*10)/10);};
+        upLbl(drag.tPrev,(vi-1+n)%n); upLbl(drag.tThis,vi); syncLP();
+      } else if(drag.type==='sup'){
+        S.supportsManual[drag.i][drag.end]={x:cm.x,y:cm.y};
+        drag.line.setAttribute(drag.end==='a'?'x1':'x2',px);
+        drag.line.setAttribute(drag.end==='a'?'y1':'y2',py);
+        drag.h.setAttribute('cx',px);drag.h.setAttribute('cy',py);
+        drag.hit.setAttribute('cx',px);drag.hit.setAttribute('cy',py);
+      }
+    });
+  });
+  const end=()=>{ if(!drag)return;
+    if(drag.type==='vert'){const vi=drag.vi;S.verts[vi]={x:snap(S.verts[vi].x),y:snap(S.verts[vi].y)};}
+    else if(drag.type==='sup'){const p=S.supportsManual[drag.i][drag.end];S.supportsManual[drag.i][drag.end]={x:snap(p.x),y:snap(p.y)};}
+    drag=null; if(raf){cancelAnimationFrame(raf);raf=0;} render(); };
+  el.addEventListener('pointerup',end);
+  el.addEventListener('pointercancel',end);
+}
+
+// Set panjang sisi F(i) ke nilai pasti: geser vertex tujuan sepanjang arah sisi.
+// PRESISI: terima koma (148,5), TIDAK di-snap ke grid (kalau di-snap, 148,5→140).
+function setSideLength(i, raw){
+  const L=parseFloat(String(raw).replace(',','.'));
+  if(!(L>0))return;
+  const n=S.verts.length, a=S.verts[i], b=S.verts[(i+1)%n];
+  const cur=dist(a,b)||1, ux=(b.x-a.x)/cur, uy=(b.y-a.y)/cur;
+  pushUndo();
+  S.verts[(i+1)%n]={x:a.x+ux*L, y:a.y+uy*L};
+  syncLP(); render();
+}
+function typeSide(i){
+  const n=S.verts.length, a=S.verts[i], b=S.verts[(i+1)%n];
+  const val=prompt(`Panjang sisi F${i+1} (cm):`, Math.round(dist(a,b)*10)/10);
+  if(val!=null) setSideLength(i, val);
+}
+// Panel input sisi (mudah di HP — tak perlu tap garis)
+function renderSides(mem){
+  const fr=mem.filter(m=>m.jenis==='frame');
+  document.getElementById('sisiPanel').innerHTML=
+    '<b style="width:100%;font-size:12px;color:#334155">Ukur sisi (cm) — ketik angka pasti:</b>'+
+    fr.map((m,i)=>`<label style="font-size:11px;color:#475569">F${i+1}<input type="text" inputmode="decimal" value="${m.panjang}" data-side="${i}" style="width:66px;margin-left:4px;padding:6px 6px;border:1px solid #cbd5e1;border-radius:6px"></label>`).join('');
+  document.querySelectorAll('#sisiPanel input').forEach(inp=>inp.onchange=e=>setSideLength(+e.target.dataset.side, e.target.value));
+}
+// ---- Undo ----
+let undoStack=[];
+function pushUndo(){undoStack.push(JSON.stringify(S)); if(undoStack.length>40)undoStack.shift();}
+function undo(){if(!undoStack.length){setHint('Tak ada langkah untuk di-undo');return;}
+  Object.assign(S, JSON.parse(undoStack.pop())); syncInputs(); render();}
+function syncInputs(){inArah.value=S.arah;inKotak.value=S.kotak;inGrid.value=S.grid;inT.value=S.tinggi;
+  matFrame.value=S.matDefault.frame;matSupport.value=S.matDefault.support;matTiang.value=S.matDefault.tiang;syncLP();}
+
+// ---- Kotak saran (§5.1) ----
+function saranKotak(){const L=+inL.value||0; if(L<=0)return S.kotak;
+  const n=Math.max(1,Math.round(L/S.target)); return Math.round(L/n);}
+function applySaran(){S.autoKotak=true;S.kotak=saranKotak();inKotak.value=S.kotak;updSaranHint();render();}
+function updSaranHint(){const sug=saranKotak();
+  saranHint.textContent = `saran ~${S.target}cm → ${sug}cm (${Math.max(1,Math.round((+inL.value||0)/S.target))} bagian simetris)`;}
+
+// sinkron Lebar/Panjang = bbox
+function syncLP(){const bb=bbox();inL.value=Math.round(bb.x1-bb.x0);inP.value=Math.round(bb.y1-bb.y0);updSaranHint();}
+
+// ---- Biaya via engine asli ----
+let tmr=null;
+function hitung(mem){clearTimeout(tmr);tmr=setTimeout(async()=>{
+  const body={members:mem.map(m=>({nama:m.nama,jenis:m.jenis,panjang:m.panjang,material:m.material})), harga:HARGA};
+  let d;
+  try{const r=await fetch('/rangka-desain/hitung',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    d=(await r.json()).data;}catch(e){document.getElementById('warn').textContent='(engine offline — jalankan lewat server preview)';return;}
+  const tb=document.querySelector('#tbl tbody');
+  tb.innerHTML=(d.per_material||[]).map(m=>`<tr><td>${m.material}</td><td>${m.jml_potong}</td><td>${m.jumlah_batang}</td><td>${m.sambungan}</td><td>${m.harga_pokok?rp(m.harga_pokok):'–'}</td><td>${m.subtotal_besi?rp(m.subtotal_besi):'–'}</td></tr>`).join('')
+    + `<tr class="tot"><td>Total</td><td></td><td>${d.total_batang}</td><td></td><td></td><td>${d.total_biaya_besi?rp(d.total_biaya_besi):'–'}</td></tr>`;
+  document.getElementById('warn').innerHTML=(d.warn||[]).map(w=>'⚠ '+w).join('<br>');
+},180);}
+const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
+
+// ---- Menu ganti besi ----
+const matMenu=document.getElementById('matMenu');let menuId=null;
+function openMatMenu(evt,id){menuId=id;const cur=S.matOverride[id]||'';
+  matPick.value=cur||(id[0]==='F'?S.matDefault.frame:id[0]==='T'?S.matDefault.tiang:S.matDefault.support);
+  matMenu.style.left=(evt.pageX+6)+'px';matMenu.style.top=(evt.pageY+6)+'px';matMenu.style.display='block';}
+matApply.onclick=()=>{if(menuId){pushUndo();S.matOverride[menuId]=matPick.value;matMenu.style.display='none';render();}};
+matClear.onclick=()=>{if(menuId){pushUndo();delete S.matOverride[menuId];matMenu.style.display='none';render();}};
+document.addEventListener('pointerdown',e=>{if(!matMenu.contains(e.target)&&!e.target.closest('#svgWrap'))matMenu.style.display='none';});
+
+// ---- UI wiring ----
+function fillSel(sel){sel.innerHTML=BESI.map(b=>`<option>${b.nama}</option>`).join('');}
+[matFrame,matSupport,matTiang,matPick].forEach(fillSel);
+matFrame.value=S.matDefault.frame;matSupport.value=S.matDefault.support;matTiang.value=S.matDefault.tiang;
+matFrame.onchange=e=>{pushUndo();S.matDefault.frame=e.target.value;render();};
+matSupport.onchange=e=>{pushUndo();S.matDefault.support=e.target.value;render();};
+matTiang.onchange=e=>{pushUndo();S.matDefault.tiang=e.target.value;render();};
+
+document.querySelectorAll('.tool').forEach(el=>el.onclick=()=>{
+  document.querySelectorAll('.tool').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');mode=el.dataset.mode;armed=null;addSupportPt=null;setHint();render();});
+document.getElementById('btnUndo').onclick=undo;
+
+const HINTS={bentuk:'Mode Bentuk: seret bulatan sudut. Ketuk sisi frame untuk ketik panjang cm. "+ Sudut"/"− Sudut" untuk L/lekuk.',
+  besi:'Mode Ganti besi: klik batang/tiang di denah → pilih besi (atau balik ke default).',
+  support:'Mode Support: klik garis support untuk hapus/kembalikan. "Tambah manual" untuk gawang/WF melintang.',
+  tiang:'Mode Tiang: klik untuk taruh tiang (snap grid). Klik tiang lagi untuk hapus.'};
+function setHint(extra){document.getElementById('hint').textContent=extra||HINTS[mode];}
+
+btnAddV.onclick=()=>{if(mode!=='bentuk')return;armed='addV';setHint('Klik sisi frame untuk sisipkan sudut baru.');};
+btnDelV.onclick=()=>{if(mode!=='bentuk')return;armed='delV';setHint('Klik sudut untuk menghapus (min 3 sudut).');};
+// tombol tambah support manual (muncul sbg mini di mode support via hint) — pakai key: klik tool support lalu tombol
+const btnAddS=document.createElement('span');btnAddS.className='mini';btnAddS.textContent='+ Support manual';
+btnAddS.style.marginLeft='6px';btnAddS.onclick=()=>{if(mode!=='support')return;armed='addSupport';addSupportPt=null;setHint('Klik titik ke-1 support…');};
+document.querySelector('.tools').appendChild(btnAddS);
+
+inArah.onchange=e=>{S.arah=e.target.value;render();};
+inKotak.oninput=e=>{S.kotak=+e.target.value||S.kotak;S.autoKotak=false;render();};
+inGrid.onchange=e=>{S.grid=+e.target.value;render();};
+inT.oninput=e=>{S.tinggi=+e.target.value||300;render();};
+inL.oninput=updSaranHint;
+btnSaran.onclick=applySaran;
+btnReset.onclick=resetBox;
+
+function resetBox(){undoStack=[];const L=+inL.value||700,P=+inP.value||730;
+  S.verts=[{x:0,y:0},{x:L,y:0},{x:L,y:P},{x:0,y:P}];
+  S.removed={};S.supportsManual=[];S.matOverride={};
+  S.tiang=[{x:0,y:0},{x:L,y:0},{x:L,y:P},{x:0,y:P}]; // tiang di 4 sudut sbg awal
+  S.grid=+inGrid.value;S.tinggi=+inT.value;S.arah=inArah.value;
+  applySaran();
+}
+
+// ---- self-check ringkas (converter + scanline) ----
+function selfCheck(){
+  S.verts=[{x:0,y:0},{x:400,y:0},{x:400,y:400},{x:0,y:400}];S.arah='h';S.kotak=100;S.removed={};S.supportsManual=[];S.matOverride={};S.tiang=[];
+  const m=buildMembers();
+  const fr=m.filter(x=>x.jenis==='frame'),sp=m.filter(x=>x.jenis==='support');
+  console.assert(fr.length===4,'frame square=4',fr.length);
+  console.assert(fr.every(f=>f.panjang===400),'frame len=400');
+  console.assert(sp.length===3,'support 400/100 h → 3 garis dalam',sp.length); // y=100,200,300
+  console.assert(sp.every(s=>s.panjang===400),'support len=400');
+  // L-shape cekung: support tak bocor keluar
+  S.verts=[{x:0,y:0},{x:400,y:0},{x:400,y:200},{x:200,y:200},{x:200,y:400},{x:0,y:400}];
+  const seg=buildMembers().filter(x=>x.jenis==='support');
+  console.assert(seg.every(s=>s.panjang<=400+1),'L support tak melebihi lebar');
+  console.log('%cself-check denah OK','color:green');
+}
+selfCheck();
+resetBox();
+</script>
+</body>
+</html>
