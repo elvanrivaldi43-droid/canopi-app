@@ -42,5 +42,10 @@ $check('warn harga kosong', count($r['warn']) >= 1, true);
 $r = $svc->hitung([['nama' => 'x', 'panjang' => 0, 'material' => '5x10'], ['nama' => 'y', 'panjang' => 300, 'material' => '']]);
 $check('input invalid diabaikan', $r['total_batang'], 0);
 
+// F. Batang sangat panjang (>2x stok) -> sambungan dihitung benar (1400 = 600+600+200 = 2 sambungan)
+$r = $svc->hitung([['nama' => 'panjang', 'panjang' => 1400, 'material' => '5x10']]);
+$check('1400cm = 3 batang', $r['per_material'][0]['jumlah_batang'], 3);
+$check('1400cm = 2 sambungan', $r['per_material'][0]['sambungan'], 2);
+
 echo $fail ? "\n=== ADA FAIL ===\n" : "\n=== SEMUA PASS ===\n";
 exit($fail ? 1 : 0);

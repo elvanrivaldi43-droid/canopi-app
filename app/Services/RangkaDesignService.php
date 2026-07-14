@@ -37,13 +37,16 @@ class RangkaDesignService
 
         foreach ($byMat as $mat => $pieces) {
             $bars = $this->cutting->potong($pieces);
-            $joins = 0;
+            $segPerJid = [];
             foreach ($bars as $b) {
                 foreach ($b['seg'] as $s) {
-                    if (($s['jenis'] ?? '') === 'sambung') $joins++;
+                    if (($s['jenis'] ?? '') === 'sambung' && isset($s['jid'])) {
+                        $segPerJid[$s['jid']] = ($segPerJid[$s['jid']] ?? 0) + 1;
+                    }
                 }
             }
-            $joins = intdiv($joins, 2);
+            $joins = 0;
+            foreach ($segPerJid as $cnt) $joins += max(0, $cnt - 1);
             $batang = count($bars);
 
             $h = ($lihatHarga && isset($harga[$mat])) ? (float) $harga[$mat] : null;
