@@ -18,19 +18,45 @@ class CuttingService
      */
     public function potong(array $pieces): array
     {
-        usort($pieces, fn($a, $b) => $b['len'] <=> $a['len']);
-        $bars = [];
-        $jid  = 0;
+        $jid = 0;
 
+        // Pra-proses: potongan yang lebih panjang dari 1 batang (STOCK) tidak mungkin
+        // utuh — harus disambung. Pecah jadi segmen penuh STOCK + sisa, satu 'jid' per
+        // potongan asal (1 rangkaian sambungan). Potongan <= STOCK lewat apa adanya.
+        // (Tanpa ini, potongan >600cm dulu dipaksa ke 1 batang -> sisa NEGATIF & material
+        //  kehitung KURANG. Fix 14 Juli 2026, divalidasi ke cutting list PA-DUTA.)
+        $segs = [];
         foreach ($pieces as $p) {
             $len = (float) $p['len'];
             if ($len <= 0) continue;
+            if ($len <= self::STOCK) {
+                $segs[] = ['label' => $p['label'], 'len' => $len, 'presambung' => 0];
+                continue;
+            }
+            $jid++;
+            $rem = $len;
+            while ($rem > self::STOCK + 1e-9) {
+                $segs[] = ['label' => $p['label'], 'len' => (float) self::STOCK, 'presambung' => $jid];
+                $rem -= self::STOCK;
+            }
+            if ($rem > 1e-9) $segs[] = ['label' => $p['label'], 'len' => $rem, 'presambung' => $jid];
+        }
+
+        usort($segs, fn($a, $b) => $b['len'] <=> $a['len']);
+        $bars = [];
+
+        foreach ($segs as $p) {
+            $len = (float) $p['len'];
+            $pre = $p['presambung'];   // >0 kalau segmen ini bagian potongan tersambung
+            $mkSeg = fn($l) => $pre > 0
+                ? ['label' => $p['label'], 'len' => $l, 'jenis' => 'sambung', 'jid' => $pre]
+                : ['label' => $p['label'], 'len' => $l, 'jenis' => 'utuh'];
 
             // 1) coba taruh utuh di batang yang masih muat
             $placed = false;
             foreach ($bars as &$b) {
                 if ($b['sisa'] >= $len) {
-                    $b['seg'][] = ['label' => $p['label'], 'len' => $len, 'jenis' => 'utuh'];
+                    $b['seg'][] = $mkSeg($len);
                     $b['sisa'] -= $len;
                     $placed = true;
                     break;
@@ -55,8 +81,8 @@ class CuttingService
                 continue;
             }
 
-            // 3) buka batang baru
-            $bars[] = ['sisa' => self::STOCK - $len, 'seg' => [['label' => $p['label'], 'len' => $len, 'jenis' => 'utuh']]];
+            // 3) buka batang baru (len dijamin <= STOCK di titik ini)
+            $bars[] = ['sisa' => self::STOCK - $len, 'seg' => [$mkSeg($len)]];
         }
 
         // nomori batang
