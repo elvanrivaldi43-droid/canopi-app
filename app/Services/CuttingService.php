@@ -16,8 +16,9 @@ class CuttingService
      * @param array $pieces  [ ['label'=>..,'len'=>cm], ... ]
      * @return array bars: [ ['no'=>1,'seg'=>[ ['label','len','jenis'=>'utuh|sambung','jid'?] ],'sisa'=>cm], ... ]
      */
-    public function potong(array $pieces): array
+    public function potong(array $pieces, ?float $stock = null): array
     {
+        $stock = $stock ?? self::STOCK;
         $jid = 0;
 
         // Pra-proses: potongan yang lebih panjang dari 1 batang (STOCK) tidak mungkin
@@ -29,15 +30,15 @@ class CuttingService
         foreach ($pieces as $p) {
             $len = (float) $p['len'];
             if ($len <= 0) continue;
-            if ($len <= self::STOCK) {
+            if ($len <= $stock) {
                 $segs[] = ['label' => $p['label'], 'len' => $len, 'presambung' => 0];
                 continue;
             }
             $jid++;
             $rem = $len;
-            while ($rem > self::STOCK + 1e-9) {
-                $segs[] = ['label' => $p['label'], 'len' => (float) self::STOCK, 'presambung' => $jid];
-                $rem -= self::STOCK;
+            while ($rem > $stock + 1e-9) {
+                $segs[] = ['label' => $p['label'], 'len' => (float) $stock, 'presambung' => $jid];
+                $rem -= $stock;
             }
             if ($rem > 1e-9) $segs[] = ['label' => $p['label'], 'len' => $rem, 'presambung' => $jid];
         }
@@ -81,8 +82,8 @@ class CuttingService
                 continue;
             }
 
-            // 3) buka batang baru (len dijamin <= STOCK di titik ini)
-            $bars[] = ['sisa' => self::STOCK - $len, 'seg' => [$mkSeg($len)]];
+            // 3) buka batang baru (len dijamin <= stock di titik ini)
+            $bars[] = ['sisa' => $stock - $len, 'seg' => [$mkSeg($len)]];
         }
 
         // nomori batang
