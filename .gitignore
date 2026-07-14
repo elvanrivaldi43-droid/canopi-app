@@ -6,3 +6,6 @@
 /storage/framework/views/*
 /storage/logs/*
 !.gitkeep
+# Harness preview lokal Perancang Rangka (dev only, tak ikut deploy)
+tests/rangka/preview_server.php
+tests/rangka/*.log

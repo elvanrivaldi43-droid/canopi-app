@@ -202,6 +202,18 @@ Divalidasi lawan cutting list asli (Cutting Optimization Pro). Angka resmi (Stat
 Fix potong >600cm sudah LIVE di produksi (commit di main, terverifikasi lewat cutting-test 700×730). Lalu didesain fitur besar **Perancang Rangka** (editable member-list): satu kanopi = daftar batang yang bisa diedit, tiap batang punya besi sendiri — melebur blok/profil/besi-tambahan. Spec: `docs/superpowers/specs/2026-07-14-perancang-rangka-design.md`. Plan Fase 1: `docs/superpowers/plans/2026-07-14-perancang-rangka-fase1.md`.
 
 >>> RESUME POINT (mulai di sini kalau lanjut) <<<
-Fase 1 sudah diimplementasi & di-review penuh di branch **`feat/perancang-rangka-fase1`** (6 commit, ledger: `.superpowers/sdd/progress.md`, final whole-branch review = READY TO MERGE, 0 Critical/Important). Tes engine standalone lulus (`php tests/rangka/test_hitung.php`, `php tests/rangka/test_seed.php`). Halaman baru `/rangka-desain` (owner-only, terpisah dari RAB live). **Langkah berikut: (a) merge branch ke main, (b) `git push` untuk deploy (butuh OK Elvan), (c) Elvan verifikasi di browser menu "Perancang Rangka" — seed 700×730 harus keluar frame 8 batang/6 sambungan, support 20/16.** Setelah itu lanjut Fase 2 (denah interaktif) & Fase 3 (multi-blok + notif dobel).
+**Status 14 Juli sore:** Merge Fase 1 ke `main` **SUDAH** (commit `8c1ad1a`) — `main` ahead `origin/main` **11 commit, BELUM di-push**. Elvan pilih: **testing lokal dulu, JANGAN push/deploy** sampai puas lihat halaman di browser.
+
+**Preview lokal sudah disiapkan** (tanpa Composer/DB/login — VPS ini cuma checkout kode, PHP CLI-nya minim): harness `tests/rangka/preview_server.php` (untracked, TAK ikut deploy) — baca view asli + panggil `RangkaDesignService`/`CuttingService` (keduanya PHP murni) langsung. Jalankan:
+`cd /root/projects/canopi-app && php -S 127.0.0.1:8892 tests/rangka/preview_server.php`
+Engine sudah DIVERIFIKASI lewat curl ke server yg jalan: seed 700×730 → **frame 8 batang/6 samb, support 20 batang/16 samb**, tiang 1, total Rp3.080.000 (persis target). Tes standalone juga lulus (`php tests/rangka/test_hitung.php`, `test_seed.php`).
+
+**Keputusan tertunda (tanya Elvan):**
+1. **Cara akses preview di browser Elvan** — loopback VPS tak bisa dibuka dari HP/laptop. Pilihan: (a) bind `0.0.0.0:8892` → buka `http://187.77.143.121:8892/` (butuh OK, sama seperti upload-server 8891 yg sudah publik); (b) SSH tunnel `ssh -L 8892:127.0.0.1:8892 root@187.77.143.121`. Guard keamanan auto-mode MENOLAK bind 0.0.0.0 tanpa OK eksplisit Elvan.
+2. **Setelah Elvan puas** → `git push` (= auto-deploy, BUTUH OK Elvan). Lalu verifikasi menu "Perancang Rangka" di production.
+
+Setelah itu lanjut Fase 2 (denah interaktif) & Fase 3 (multi-blok + notif dobel).
+
+**14 Juli 2026 (sore) — Preview lokal Fase 1 (Elvan minta test dulu, TIDAK jadi push):** Ketahuan RESUME POINT lama basi: merge ke `main` sudah lama beres (11 commit belum push). Elvan pilih testing lokal dulu sebelum deploy. VPS ini cuma checkout kode (tak ada `vendor/`/`.env`, PHP CLI minim ext), jadi jalan penuh Laravel mahal → dibikin harness ringkas `tests/rangka/preview_server.php` (`php -S`, tanpa Composer/DB/login) yang render view asli + panggil service murni. Diverifikasi via curl: seed 700×730 → frame 8/6, support 20/16, total Rp3.080.000. Elvan istirahat sebelum lihat UI di browser — cara aksesnya belum diputuskan (lihat RESUME POINT).
 
 **TODO berikutnya (urut):** merge+deploy Fase 1 → Fase 2/3 Perancang Rangka → stok per-material (WF s/d 1200) → kalibrasi ulang model support → retune consumable/finishing pakai luas asli ~40 (bukan 51) m². Catatan bug laten (di luar scope, buat nanti): `CuttingService::potong` case-2 mint jid baru → sambungan bisa kurang di kasus ekstrem; `hitungRangka` masih pakai intdiv/2.
