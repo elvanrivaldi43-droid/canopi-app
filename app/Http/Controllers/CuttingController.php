@@ -355,7 +355,8 @@ class CuttingController extends Controller
      */
     private function hitungSatuBlok(array $b, CuttingService $svc, bool $lihatHarga): array
     {
-        $tipe = ($b['tipe'] ?? 'kanopi') === 'manual' ? 'manual' : 'kanopi';
+        $tipe = $b['tipe'] ?? 'kanopi';
+        if (!in_array($tipe, ['kanopi', 'manual', 'denah'], true)) $tipe = 'kanopi';
         $nama = trim((string) ($b['nama'] ?? ''));
         $warn = [];
         $besi = 0.0; $rincian = null; $cutting = null;
@@ -404,6 +405,32 @@ class CuttingController extends Controller
                 }
             }
             $rincian = $cutting['per_material'];
+        } elseif ($tipe === 'denah') {
+            // DENAH: daftar batang (members) dari denah interaktif -> RangkaDesignService.
+            $members = array_map(fn ($m) => (array) $m, (array) ($b['members'] ?? []));
+            $harga   = (array) ($b['harga'] ?? []);
+            $rd = (new \App\Services\RangkaDesignService())
+                ->hitung($members, $harga, $lihatHarga, $this->stokMap());
+            $cutting = [
+                'per_material' => $rd['per_material'],
+                'input'        => ['L' => 0, 'P' => 0],
+                'luas_m2'      => (float) ($b['luas_m2'] ?? 0),
+            ];
+            if ($lihatHarga) {
+                $besi = (float) ($rd['total_biaya_besi'] ?? 0);
+                foreach ((array) ($rd['warn'] ?? []) as $w) $warn[] = $w;
+                // besi tambahan manual (kalau masih dipakai) — pola sama seperti kanopi
+                foreach ((array) ($b['besi_extra'] ?? []) as $bx) {
+                    $bx = (array) $bx;
+                    $nm = trim((string) ($bx['material'] ?? '')); $bt = (float) ($bx['batang'] ?? 0);
+                    if ($nm === '' || $bt <= 0) continue;
+                    $h = isset($harga[$nm]) ? (float) $harga[$nm] : 0;
+                    $besi += $bt * $h;
+                    $cutting['per_material'][] = ['material' => $nm, 'jumlah_batang' => $bt, 'harga_pokok' => $h, 'subtotal_besi' => $h * $bt];
+                    if ($h <= 0) $warn[] = "Harga besi tambahan \"{$nm}\" belum diisi";
+                }
+            }
+            $rincian = $cutting['per_material'];
         } else {
             // MANUAL: daftar item besi (nama, qty, harga) diisi langsung
             $items = [];
@@ -423,10 +450,13 @@ class CuttingController extends Controller
 
         // ===== UPAH =====
         $upah = 0.0; $rangka = null; $luasKanopiBlok = 0.0;
-        if ($tipe === 'kanopi') {
+        if ($tipe !== 'manual') {
             $L = (float) ($cutting['input']['L'] ?? 0);
             $P = (float) ($cutting['input']['P'] ?? 0);
-            $luas = $L * $P / 10000; $luasKanopiBlok = $luas;
+            $luas = ($tipe === 'denah')
+                ? (float) ($cutting['luas_m2'] ?? 0)
+                : $L * $P / 10000;
+            $luasKanopiBlok = $luas;
             $jkId = (int) ($b['jenis_kerja_id'] ?? 0);
             if ($lihatHarga && $jkId > 0) {
                 $jk = DB::table('rab_jenis_kerja')->where('id', $jkId)->first();
