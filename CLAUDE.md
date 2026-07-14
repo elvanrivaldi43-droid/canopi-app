@@ -197,4 +197,11 @@ Divalidasi lawan cutting list asli (Cutting Optimization Pro). Angka resmi (Stat
 
 *Infra baru 14 Juli:* Node.js v22 + uv + graphify terpasang. Upload-inbox untuk Elvan kirim foto/PDF ke Claude: service systemd `claude-upload` (port 8891, auto-nyala, file masuk `/root/inbox/`). Skill Claude Code: superpowers, ponytail, find-skills, frontend-design, graphify.
 
-**Selanjutnya:** (1) pasang fix potong >600cm ke production, (2) buat stok per-material (WF s/d 1200), (3) profil menerus keliling, (4) kalibrasi ulang model support, (5) retune kalibrasi consumable/finishing pakai luas asli ~40 bukan 51 m².
+**14 Juli 2026 (lanjutan) — Perancang Rangka Fase 1 SELESAI di branch (belum merge/deploy):**
+
+Fix potong >600cm sudah LIVE di produksi (commit di main, terverifikasi lewat cutting-test 700×730). Lalu didesain fitur besar **Perancang Rangka** (editable member-list): satu kanopi = daftar batang yang bisa diedit, tiap batang punya besi sendiri — melebur blok/profil/besi-tambahan. Spec: `docs/superpowers/specs/2026-07-14-perancang-rangka-design.md`. Plan Fase 1: `docs/superpowers/plans/2026-07-14-perancang-rangka-fase1.md`.
+
+>>> RESUME POINT (mulai di sini kalau lanjut) <<<
+Fase 1 sudah diimplementasi & di-review penuh di branch **`feat/perancang-rangka-fase1`** (6 commit, ledger: `.superpowers/sdd/progress.md`, final whole-branch review = READY TO MERGE, 0 Critical/Important). Tes engine standalone lulus (`php tests/rangka/test_hitung.php`, `php tests/rangka/test_seed.php`). Halaman baru `/rangka-desain` (owner-only, terpisah dari RAB live). **Langkah berikut: (a) merge branch ke main, (b) `git push` untuk deploy (butuh OK Elvan), (c) Elvan verifikasi di browser menu "Perancang Rangka" — seed 700×730 harus keluar frame 8 batang/6 sambungan, support 20/16.** Setelah itu lanjut Fase 2 (denah interaktif) & Fase 3 (multi-blok + notif dobel).
+
+**TODO berikutnya (urut):** merge+deploy Fase 1 → Fase 2/3 Perancang Rangka → stok per-material (WF s/d 1200) → kalibrasi ulang model support → retune consumable/finishing pakai luas asli ~40 (bukan 51) m². Catatan bug laten (di luar scope, buat nanti): `CuttingService::potong` case-2 mint jid baru → sambungan bisa kurang di kasus ekstrem; `hitungRangka` masih pakai intdiv/2.

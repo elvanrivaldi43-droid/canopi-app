@@ -375,6 +375,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cutting-test',        [\App\Http\Controllers\CuttingController::class, 'index']);
     Route::post('/cutting-test/hitung',[\App\Http\Controllers\CuttingController::class, 'hitung']);
     Route::post('/cutting-test/cetak', [\App\Http\Controllers\CuttingController::class, 'cetak']);
+
+    // Perancang Rangka (Fase 1) — halaman baru terpisah, owner-only
+    Route::get('/rangka-desain',         [\App\Http\Controllers\RangkaDesainController::class, 'index']);
+    Route::post('/rangka-desain/seed',   [\App\Http\Controllers\RangkaDesainController::class, 'seed']);
+    Route::post('/rangka-desain/hitung', [\App\Http\Controllers\RangkaDesainController::class, 'hitung']);
 });
 
 // ================================================================
