@@ -81,6 +81,22 @@ Desain tiap blok disimpan sebagai **JSON** (daftar batang), menumpang pola **aut
 4. **Hitung** — batang dikelompokkan **per besi** → mesin cutting (`CuttingService::potong`, sudah fix >600cm) jalan per besi → batang + sambungan + biaya. Dihitung per blok, lalu **dijumlah jadi satu penawaran**.
 5. **Denah preview** — gambar tampak-atas dari posisi batang, diwarnai per jenis/besi.
 
+### Benih multi-kotak — membentuk outline berlekuk (L)
+
+Bentuk seperti PA-DUTA dibuat dari beberapa kotak benih **di dalam satu denah**. Cara menempelkan benih ke-2/ke-3, dua tahap:
+
+- **Cara A (dulu, ringan) — form "nempel di sisi X":** saat tambah benih baru, isi: nempel di **sisi mana** (atas/bawah/kiri/kanan) benih dasar + **geser berapa cm** dari pojok. Sistem menaruhnya & menggambar denah gabungan.
+- **Cara B (menyusul, setelah denah interaktif) — klik di denah:** klik pinggir denah tempat benih baru mau nongol, lalu isi ukurannya.
+
+Sisi yang bertemu (dobel) disorot → user hapus salah satu (notif dobel, langkah 3).
+
+Contoh PA-DUTA:
+```
+Benih #1  Badan  700 × 492    (dasar)
+Benih #2  Sayap  148,5 × 238  → sisi ATAS, geser 0 cm dari kiri
+Benih #3  Step   133 × 33     → sisi ATAS, geser 0 cm dari kanan
+```
+
 ### Yang universal vs per-produk
 - **Beda per produk:** hanya **penyeed** (kanopi = `hitungRangka`; pagar = penyeed baru nanti).
 - **Sama semua produk:** daftar batang, edit, notif dobel, cutting, denah, penyimpanan.
@@ -89,6 +105,16 @@ Desain tiap blok disimpan sebagai **JSON** (daftar batang), menumpang pola **aut
 ---
 
 ## 6. UX — edit lewat denah interaktif
+
+### Prinsip wajib: gampang dipahami, jalan mulus di HP & komputer
+
+- Seluruh layar **sangat mudah dipahami** — bahasa awam, bukan istilah teknis; alur jelas tanpa perlu tutorial.
+- **Responsif penuh** — enak dipakai di **HP maupun komputer**:
+  - *HP:* denah bisa di-zoom/geser; panel edit muncul sebagai **lembar bawah (bottom sheet)** yang mudah dijangkau jempol; tombol besar; tidak ada tabel yang kepanjangan.
+  - *Komputer:* denah + panel edit berdampingan; ringkasan biaya selalu kelihatan.
+- Aksi utama jelas & langsung (tombol bilang apa yang terjadi), umpan balik cepat (biaya update seketika saat besi diganti).
+
+### Interaksi inti
 
 Menghindari "tabel raksasa" yang bikin step pilih item RAB kepanjangan:
 
