@@ -74,4 +74,57 @@ class RangkaDesignService
             'warn'             => array_values(array_unique($warn)),
         ];
     }
+
+    /**
+     * Ubah 1 kotak jadi daftar batang rata (frame/support/tiang) + posisi,
+     * memakai hitungRangka. Hasil ini yang jadi seed awal untuk diedit.
+     */
+    public function seedDariKotak(array $in): array
+    {
+        $r = $this->cutting->hitungRangka($in);
+        $matFrame   = trim((string) ($in['mat_frame']   ?? 'Frame'));
+        $matSupport = trim((string) ($in['mat_support'] ?? 'Support'));
+        $matTiang   = trim((string) ($in['mat_tiang']   ?? 'Tiang'));
+
+        $L = (float) ($r['denah']['L'] ?? 0);
+        $P = (float) ($r['denah']['P'] ?? 0);
+        $T = (float) ($r['denah']['T'] ?? 0);
+
+        $members = [];
+        // Garis vertikal (membujur) panjang = P
+        foreach ($r['denah']['v'] as $ln) {
+            $members[] = [
+                'nama'     => $ln['nama'],
+                'jenis'    => $ln['tipe'],
+                'panjang'  => $P,
+                'arah'     => 'vertikal',
+                'posisi'   => ['x' => $ln['x']],
+                'material' => $ln['tipe'] === 'frame' ? $matFrame : $matSupport,
+            ];
+        }
+        // Garis horizontal (melintang) panjang = L
+        foreach ($r['denah']['h'] as $ln) {
+            $members[] = [
+                'nama'     => $ln['nama'],
+                'jenis'    => $ln['tipe'],
+                'panjang'  => $L,
+                'arah'     => 'horizontal',
+                'posisi'   => ['y' => $ln['y']],
+                'material' => $ln['tipe'] === 'frame' ? $matFrame : $matSupport,
+            ];
+        }
+        // Tiang panjang = T
+        foreach ($r['denah']['tiang'] as $ln) {
+            $members[] = [
+                'nama'     => $ln['nama'],
+                'jenis'    => 'tiang',
+                'panjang'  => $T,
+                'arah'     => 'tiang',
+                'posisi'   => ['x' => $ln['x'], 'y' => $ln['y']],
+                'material' => $matTiang,
+            ];
+        }
+
+        return ['members' => $members, 'denah' => $r['denah']];
+    }
 }
