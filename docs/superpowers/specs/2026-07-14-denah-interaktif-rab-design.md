@@ -41,13 +41,17 @@ Kesimpulan: yang perlu dibangun adalah **editor denah + penghubung denah→dafta
 | 5 | Bentuk denah | **Poligon titik-sudut bisa diseret** (bentuk tidak beraturan / miring), tambah/kurang sudut, **snap ke grid** (10/20/25/50 cm) |
 | 6 | Ukur sisi | Bisa **ketik panjang sisi (cm) pasti**, bukan cuma seret |
 | 7 | Tiang | Bisa ditaruh **di titik mana saja** (snap grid), bukan cuma di sudut |
-| 8 | Support | Auto-isi dari "kotak support" **+ bisa hapus / tambah / geser manual** (untuk gawang/WF melintang khusus) |
-| 9 | Material | Per denah: pilih besi Frame / Support / Tiang (dari Master Material) |
-| 10 | Kurva/lengkung | **Tidak didukung** — didekati dengan beberapa sudut lurus (sesuai fabrikasi asli) |
-| 11 | Input sudut derajat | **Ditunda** — cukup titik bebas + ketik panjang sisi; tambah nanti kalau kepakai |
-| 12 | Nasib `/rangka-desain` | **Dibuang** (halaman, controller, rute, menu owner) — lebur ke RAB opsi |
-| 13 | Stok potong | **Per-material** (hollow 600, WF s/d 1200) — bukan `const 600` |
-| 14 | UI | Responsif PC + HP; ikut gaya app (slate + amber), kanvas denah bergaya blueprint |
+| 8 | Arah support | **3 pilihan**: Grid 2 arah / 1 arah horizontal (melintang) / 1 arah vertikal (membujur). ("1 arah" lama dipecah jadi 2 pilihan eksplisit.) |
+| 9 | Kotak support | **Disarankan mesin** — dari lebar, cari jarak yang membagi simetris (mendekati target ~100cm). Prefill & editable; kalau surveyor ubah → denah + support ikut berubah live. Tombol "pakai saran" untuk balik ke rekomendasi. |
+| 10 | Support | Auto-isi mengikuti bentuk **+ bisa hapus / tambah / geser manual** (untuk gawang/WF melintang khusus) |
+| 11 | Material besi | **Per-bagian, bukan per-denah.** Default per peran (frame/support/tiang) jadi warna dasar; **klik bagian mana pun di denah → Ganti besi / Tambah / Hapus**. Sumber besi: Master Material. |
+| 12 | Warna & legenda | **Tiap besi beda warna** dalam satu denah; **legenda (warna → nama besi) tampil di bawah denah**. Warna diassign per besi yang benar-benar dipakai. |
+| 13 | Label denah | Tiap bagian berlabel di denah (sisi frame F1..Fn + ukuran cm, tiang T1..Tn); support diidentifikasi lewat warna. |
+| 14 | Kurva/lengkung | **Tidak didukung** — didekati dengan beberapa sudut lurus (sesuai fabrikasi asli) |
+| 15 | Input sudut derajat | **Ditunda** — cukup titik bebas + ketik panjang sisi; tambah nanti kalau kepakai |
+| 16 | Nasib `/rangka-desain` | **Dibuang** (halaman, controller, rute, menu owner) — lebur ke RAB opsi |
+| 17 | Stok potong | **Per-material** (hollow 600, WF s/d 1200) — bukan `const 600` |
+| 18 | UI | Responsif PC + HP; ikut gaya app (slate + amber), kanvas denah bergaya blueprint |
 
 **Non-goals (eksplisit di luar scope):** kurva beneran, input derajat, wizard quick-quote `/rab/buat`, model SWE/produksi, multi-produk (pagar/tralis) — walau denah ini nanti bisa dipakai ulang untuk itu.
 
@@ -58,10 +62,11 @@ Kesimpulan: yang perlu dibangun adalah **editor denah + penghubung denah→dafta
 Di RAB opsi, tiap blok jadi kartu berisi **denah + panel material + rincian batang**:
 
 1. Denah mulai dari kotak default. User membentuk: **seret sudut**, **tap "+ Sudut"** untuk sisipkan sudut (bikin L/berlekuk), **tap "− Sudut"** untuk hapus, atau **ketuk sisi lalu ketik cm** untuk ukuran pasti.
-2. Atur **kotak support (cm)** & **arah grid** → support terisi otomatis mengikuti bentuk. Yang berlebih **dihapus** (mode Support); yang khusus (gawang/WF melintang) **ditambah/digeser** manual.
+2. Pilih **arah support** (2 arah / horizontal / vertikal). **Kotak support** sudah diisi saran mesin (simetris dari lebar); surveyor bisa ubah → support langsung menyesuaikan. Yang berlebih **dihapus** (mode Support); yang khusus (gawang/WF melintang) **ditambah/digeser** manual.
 3. **Taruh tiang** di titik beban mana pun (mode Tiang).
-4. Pilih **besi Frame/Support/Tiang**.
-5. **Rincian batang + biaya blok** muncul langsung. **Tambah blok** → denah baru. Semua blok dijumlah; **margin di level opsi** (tak berubah).
+4. Set **besi default** per peran (frame/support/tiang) = warna dasar. Untuk beda per bagian: **mode Ganti besi → klik bagian di denah** → Ganti / Tambah / Hapus. Tiap besi punya **warna sendiri**, dan **legenda warna→besi ada di bawah denah**.
+5. Denah **berlabel** (F1..Fn + cm, T1..Tn) biar jelas bagian mana yang diklik.
+6. **Rincian batang + biaya blok** muncul langsung. **Tambah blok** → denah baru. Semua blok dijumlah; **margin di level opsi** (tak berubah).
 
 Semua interaksi **snap ke grid** + target ketuk besar → nyaman di HP.
 
@@ -76,21 +81,26 @@ Dipecah jadi unit kecil dengan tanggung jawab tunggal:
 - **State (model denah) per blok:**
   ```
   {
-    verts:   [{x, y}, ...],            // cm, urut keliling
-    grid:    20,                        // cm snap
-    kotak:   100, arah: 2,              // parameter auto-support
-    supports:[{a:{x,y}, b:{x,y}, sumber:'auto'|'manual', off:bool}],
-    tiang:   [{x, y}],                  // cm
-    material:{frame, support, tiang}    // nama material (Master Material)
+    verts:      [{x, y}, ...],              // cm, urut keliling
+    grid:       20,                          // cm snap
+    kotak:      100, autoKotak: true,        // saran simetris; false kalau surveyor override
+    arah:       '2' | 'h' | 'v',             // 2 arah / horizontal / vertikal
+    supportsManual:[{a:{x,y}, b:{x,y}}],     // support tambahan manual
+    removed:    { <memberId>: true },        // support auto yang dibuang
+    tiang:      [{x, y}],                    // cm
+    matDefault: {frame, support, tiang},     // besi dasar per peran
+    matOverride:{ <memberId>: nama_besi }    // besi khusus per bagian (klik→ganti)
   }
   ```
-- **Tool:** Bentuk (seret/tambah/kurang sudut, ketik sisi), Support (hapus/tambah/geser), Tiang (taruh/lepas). Interaksi via Pointer Events (satu jalur untuk mouse + sentuh), snap ke grid, `touch-action:none`.
+- **Warna:** diassign per **nama besi** yang benar-benar dipakai (palet tetap, urut stabil) → dipakai untuk render bagian + legenda di bawah denah.
+- **Rekomendasi kotak:** `kotak = lebar / round(lebar/target)` (target ~100cm, dibulatkan) → jarak simetris; dipakai selama `autoKotak`.
+- **Tool:** Bentuk (seret/tambah/kurang sudut, ketik sisi), **Ganti besi (klik bagian → ganti/tambah/hapus)**, Support (hapus/tambah/geser), Tiang (taruh/lepas). Interaksi via Pointer Events (satu jalur mouse + sentuh), snap ke grid, `touch-action:none`.
 - **Output:** memancarkan **daftar batang** (lihat 5.2) + menyimpan model denah untuk persist.
 - **Tanggung jawab:** hanya UI + geometri denah. Tidak menghitung harga.
 
 ### 5.2 Konverter `denah → members` (baru, kecil, murni)
 - Input: model denah. Output: `members[]` sesuai kontrak `RangkaDesignService::hitung`:
-  `{ nama, jenis:'frame'|'support'|'tiang', panjang, material }`.
+  `{ nama, jenis:'frame'|'support'|'tiang', panjang, material }`, di mana `material = matOverride[id] || matDefault[jenis]` (besi per-bagian). Karena `RangkaDesignService.hitung` sudah mengelompokkan cutting **per material**, besi beda-beda per batang otomatis kehitung benar — tanpa ubah mesin.
 - Aturan: tiap **sisi poligon** → 1 member frame (panjang = jarak antar sudut); tiap **garis support aktif** → 1 member support (panjang = panjang tergunting di dalam poligon); tiap **tiang** → 1 member tiang (panjang = tinggi).
 - Support otomatis: garis horizontal (dan vertikal bila arah=2) berjarak `kotak`, **diklip ke dalam poligon** (scanline: cari perpotongan sisi, ambil pasangan). Ini memungkinkan support mengisi bentuk tidak beraturan.
 - **m² blok** = luas poligon (shoelace), dipakai untuk consumable/finishing per-m².
