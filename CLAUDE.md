@@ -135,7 +135,7 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 
 **Belum terpecahkan:**
 - WF melintang/gawang belum dimodelkan benar (workaround sementara: set jumlah tiang=4)
-- Hollow count discrepancy di Material Support — **update 11 Juli:** terbukti BUKAN bug di `CuttingService.php` (sudah diverifikasi eksekusi). Kemungkinan besar sumbernya di fitur "Besi Tambahan Manual" (`CuttingController.php:379-387`) yang append tanpa cek duplikat kalau material sudah otomatis terhitung. **Perlu 1 contoh kasus nyata (angka RAB spesifik) dari Elvan untuk konfirmasi & fix final.**
+- Hollow count discrepancy di Material Support — **RESOLVED 14 Juli** lewat validasi ke cutting list asli project PA-DUTA (Cutting Optimization Pro). Dugaan "Besi Tambahan dobel" GUGUR — fitur itu benar (dipakai nambah profil 4x6/3x3 yang beda material). Akar masalah sebenarnya 3, lihat "Temuan validasi PA-DUTA" di bawah.
 
 ---
 
@@ -183,4 +183,18 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 
 **11 Juli 2026:** Setup Claude Code selesai di VPS Hostinger (`/root/projects/canopi-app`). Investigasi bug hollow 5x10 selesai — terbukti BUKAN bug di CuttingService (diverifikasi eksekusi PHP nyata, 504 skenario). Kemungkinan sumbernya di fitur Besi Tambahan Manual, menunggu contoh kasus nyata dari Elvan. Repo GitHub sudah disinkronkan penuh dengan server production, insiden deploy 9-11 Juli sudah tuntas diperbaiki.
 
-**Selanjutnya:** [isi progress sesi berikutnya di sini]
+**14 Juli 2026 — Validasi cutting engine ke project nyata PA-DUTA (Kanopi Alderon, ~40 m²):**
+
+Divalidasi lawan cutting list asli (Cutting Optimization Pro). Angka resmi (Statistics → Utilized bars): **hg 5x10 = 10 batang, hg 4x8 = 9, hg 3x3 = 4, hg 4x6 = 4** (stok 600cm).
+
+*Temuan validasi PA-DUTA (4 hal):*
+1. **Bug potong >600cm KONFIRMASI & sudah dibikin fix** (belum dipasang ke production). `CuttingService::potong()` menaruh potongan >600cm ke 1 batang → sisa NEGATIF, 0 sambungan → material kehitung KURANG. Fix: pecah jadi batang penuh + sambungan. Sudah diuji standalone, kasus ≤600cm identik (tidak merusak verifikasi 11 Juli). **TODO: pasang ke `app/Services/CuttingService.php`.**
+2. **Stok potong harus PER-MATERIAL, bukan hardcode 600.** Hollow = 600cm. WF-150 dari vendor khusus = sampai 1200cm & bisa custom <7m → palang 7m TANPA sambungan. `const STOCK = 600` harus jadi parameter per-material.
+3. **Profil (4x6 & 3x3) itu MENERUS keliling luar, bukan per-blok.** Cutting list: profil = 3 sisi (depan 700 + kiri 730 + kanan 528), belakang dibuang = 4 batang. Model per-blok salah (keluar 5).
+4. **Model support 4x8 TERLALU RAPAT.** Model auto grid-83 dua-arah + anggap semua garis dalam = support → keluar 14, asli 9. Realita (dari gambar bertanda hitam=5x10/pink=4x8): garis dalam VERTIKAL = 5x10 spine (3 balok tengah @492) + ada balok tengah horizontal; support 4x8 pink lebih jarang. **TODO: kalibrasi ulang aturan support** biar output = 9.
+
+*Yang sudah BENAR:* frame 5x10 (10=10 persis, termasuk dedup sisi berbagi antar blok + 3 balok tengah), luas atap dihitung dari bentuk asli berlekuk (~40 m², BUKAN bounding-box 51 m² — **ini bisa geser kalibrasi consumable/finishing per-m² yang tadinya dasar 51**).
+
+*Infra baru 14 Juli:* Node.js v22 + uv + graphify terpasang. Upload-inbox untuk Elvan kirim foto/PDF ke Claude: service systemd `claude-upload` (port 8891, auto-nyala, file masuk `/root/inbox/`). Skill Claude Code: superpowers, ponytail, find-skills, frontend-design, graphify.
+
+**Selanjutnya:** (1) pasang fix potong >600cm ke production, (2) buat stok per-material (WF s/d 1200), (3) profil menerus keliling, (4) kalibrasi ulang model support, (5) retune kalibrasi consumable/finishing pakai luas asli ~40 bukan 51 m².
