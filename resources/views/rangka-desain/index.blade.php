@@ -71,6 +71,7 @@ const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 const LIHAT_HARGA = @json($lihatHarga);
 const BESI = @json($besi);
 let members = [];
+let box = {L:0, P:0};   // dimensi kotak untuk outline denah
 let hargaMap = {};
 BESI.forEach(b => hargaMap[b.nama] = Number(b.harga_pokok) || 0);
 
@@ -93,9 +94,9 @@ document.getElementById('btnSeed').onclick = async () => {
   });
   if(!j.success){ alert('Gagal seed'); return; }
   members = j.data.members;
+  box = {L:+lebar.value, P:+panjang.value};
   document.getElementById('hasil').style.display = 'block';
-  gambarDenah(j.data.denah);
-  renderTabel(); hitung();
+  renderTabel(); hitung();   // renderTabel() menggambar denah dari members
 };
 
 document.getElementById('btnTambah').onclick = () => {
@@ -118,6 +119,7 @@ function renderTabel(){
   document.querySelectorAll('.rd-len').forEach(el => el.onchange = e => { members[+e.target.dataset.i].panjang = +e.target.value; hitung(); });
   document.querySelectorAll('.rd-mat').forEach(el => el.onchange = e => { members[+e.target.dataset.i].material = e.target.value; hitung(); });
   document.querySelectorAll('.rd-del').forEach(el => el.onclick = e => { members.splice(+e.target.dataset.i,1); renderTabel(); hitung(); });
+  gambarDenah();   // denah selalu ikut members terkini (tambah/hapus langsung terlihat)
 }
 
 async function hitung(){
@@ -137,17 +139,53 @@ async function hitung(){
   document.getElementById('warn').innerHTML = (d.warn||[]).map(w=>'! '+w).join('<br>');
 }
 
-// Denah read-only sederhana: gambar garis dari posisi (SVG)
-function gambarDenah(dn){
-  const L = dn.L, P = dn.P, pad = 30, sc = Math.min(520/L, 360/P);
+// Warna per jenis batang
+const WARNA = {frame:'#1e40af', support:'#60a5fa', tiang:'#b45309', tambahan:'#16a34a'};
+function esc(t){ return String(t).replace(/[<&>]/g, c => ({'<':'&lt;','&':'&amp;','>':'&gt;'}[c])); }
+
+// Denah digambar dari members terkini (satu sumber data, bukan payload seed terpisah)
+function gambarDenah(){
+  const L = box.L, P = box.P, el = document.getElementById('denah');
+  if(!L || !P){ el.innerHTML=''; return; }
+  const pad = 42, sc = Math.min(520/L, 360/P);
   const W = L*sc+pad*2, H = P*sc+pad*2;
-  let s = `<svg width="${W}" height="${H}" style="max-width:100%">`;
-  s += `<rect x="${pad}" y="${pad}" width="${L*sc}" height="${P*sc}" fill="none" stroke="#94a3b8"/>`;
-  (dn.v||[]).forEach(v => { const x = pad+v.x*sc; s += `<line x1="${x}" y1="${pad}" x2="${x}" y2="${pad+P*sc}" stroke="${v.tipe==='frame'?'#1e40af':'#60a5fa'}" stroke-width="${v.tipe==='frame'?2:1}"/>`; });
-  (dn.h||[]).forEach(v => { const y = pad+v.y*sc; s += `<line x1="${pad}" y1="${y}" x2="${pad+L*sc}" y2="${y}" stroke="${v.tipe==='frame'?'#1e40af':'#60a5fa'}" stroke-width="${v.tipe==='frame'?2:1}"/>`; });
-  (dn.tiang||[]).forEach(t => { s += `<circle cx="${pad+t.x*sc}" cy="${pad+t.y*sc}" r="4" fill="#b45309"/>`; });
+  let s = `<svg width="${W}" height="${H}" style="max-width:100%;font-family:sans-serif">`;
+  // pemandu kotak: putus-putus tipis, biar frame tepi (solid berwarna) kelihatan hilang saat dihapus
+  s += `<rect x="${pad}" y="${pad}" width="${L*sc}" height="${P*sc}" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="5 4"/>`;
+  let batangTambahan = 0;
+  members.forEach(m => {
+    const c = WARNA[m.jenis] || WARNA.tambahan;
+    const nama = esc(m.nama || m.jenis || '');
+    const p = m.posisi || {};
+    const isF = m.jenis==='frame';
+    // garis putih di belakang teks (paint-order) biar nama kebaca di atas garis
+    const halo = 'paint-order="stroke" stroke="#fff" stroke-width="2.5"';
+    if(m.arah==='vertikal' && p.x!=null){
+      const x = pad+p.x*sc;
+      s += `<line x1="${x}" y1="${pad}" x2="${x}" y2="${pad+P*sc}" stroke="${c}" stroke-width="${isF?3:1.5}"><title>${nama}</title></line>`;
+      if(isF) s += `<text x="${x}" y="${pad-5}" font-size="9" fill="${c}" text-anchor="start" transform="rotate(-45 ${x} ${pad-5})">${nama}</text>`;
+      else    s += `<text x="${x}" y="${pad+P*sc*0.35}" font-size="9" fill="${c}" text-anchor="middle" ${halo}>${nama}</text>`;
+    } else if(m.arah==='horizontal' && p.y!=null){
+      const y = pad+p.y*sc;
+      s += `<line x1="${pad}" y1="${y}" x2="${pad+L*sc}" y2="${y}" stroke="${c}" stroke-width="${isF?3:1.5}"><title>${nama}</title></line>`;
+      if(isF) s += `<text x="${pad-4}" y="${y+3}" font-size="9" fill="${c}" text-anchor="end">${nama}</text>`;
+      else    s += `<text x="${pad+L*sc*0.65}" y="${y-3}" font-size="9" fill="${c}" text-anchor="middle" ${halo}>${nama}</text>`;
+    } else if(m.arah==='tiang' && p.x!=null){
+      const x = pad+p.x*sc, y = pad+(p.y||0)*sc;
+      s += `<circle cx="${x}" cy="${y}" r="4" fill="${WARNA.tiang}"><title>${nama}</title></circle>`;
+      s += `<text x="${x+6}" y="${y+3}" font-size="9" fill="${WARNA.tiang}" ${halo}>${nama}</text>`;
+    } else {
+      batangTambahan++;   // batang tanpa posisi (mis. + Tambah) tak tergambar
+    }
+  });
   s += '</svg>';
-  document.getElementById('denah').innerHTML = s;
+  // Legend
+  let lg = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:11px;color:#475569">';
+  [['frame','Frame'],['support','Support'],['tiang','Tiang']].forEach(([k,t]) =>
+    lg += `<span><span style="display:inline-block;width:10px;height:10px;background:${WARNA[k]};border-radius:2px;margin-right:4px;vertical-align:middle"></span>${t}</span>`);
+  if(batangTambahan) lg += `<span style="color:#16a34a">+${batangTambahan} batang tambahan (tanpa posisi, tak tergambar)</span>`;
+  lg += '</div>';
+  el.innerHTML = s + lg;
 }
 </script>
 @endsection
