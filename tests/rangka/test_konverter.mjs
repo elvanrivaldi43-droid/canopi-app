@@ -1,6 +1,8 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { DenahConv } = require('../../public/js/denah-editor.js');
+// Muat modul classic-script (globalThis.DenahConv) via read+eval — file browser tak pakai ESM export.
+import { readFileSync } from 'node:fs';
+const code = readFileSync(new URL('../../public/js/denah-editor.js', import.meta.url), 'utf8');
+(0, eval)(code);            // eval scope global → set globalThis.DenahConv
+const { DenahConv } = globalThis;
 
 let fail = false;
 const check = (name, got, exp) => {

@@ -1,3 +1,4 @@
+(function () {
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const bbox = (v) => {
   const xs = v.map(p => p.x), ys = v.map(p => p.y);
@@ -56,7 +57,9 @@ const DenahConv = {
   _dist: dist, _bbox: bbox,
 };
 
-export { DenahConv };
-
-// For browser <script> tag
-if (typeof window !== 'undefined') window.DenahConv = DenahConv;
+// Ekspos sbg global classic-script (browser: globalThis===window; Node test: globalThis===global).
+// SENGAJA TANPA ESM `export`: file dimuat browser lewat <script> KLASIK di blade rab-opsi, dan
+// package.json "type":"module" membuat `export` gagal di classic script. Node memuat via read+eval
+// (lihat tests/rangka/test_konverter.mjs). Kelas DenahEditor (Task 2) menyusul di dalam IIFE ini.
+globalThis.DenahConv = DenahConv;
+})();
