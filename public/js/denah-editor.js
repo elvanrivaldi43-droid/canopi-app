@@ -93,6 +93,7 @@ class DenahEditor {
     this.menuId = null;
     this.SC = 1;
     this.PAD = 44;
+    this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
     this.el.innerHTML = DenahEditor.shellHTML();
     this._fillMatSelects();
@@ -371,9 +372,10 @@ class DenahEditor {
     const X = x => PAD + x * this.SC, Y = y => PAD + y * this.SC;
     const gpx = S.grid * this.SC;
     let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
-    s += `<defs><pattern id="grid" width="${gpx}" height="${gpx}" patternUnits="userSpaceOnUse" x="${PAD}" y="${PAD}"><path d="M ${gpx} 0 L 0 0 0 ${gpx}" fill="none" stroke="#1e3a5f" stroke-width="0.5"/></pattern></defs>`;
+    const gid = 'grid-' + this.uid;
+    s += `<defs><pattern id="${gid}" width="${gpx}" height="${gpx}" patternUnits="userSpaceOnUse" x="${PAD}" y="${PAD}"><path d="M ${gpx} 0 L 0 0 0 ${gpx}" fill="none" stroke="#1e3a5f" stroke-width="0.5"/></pattern></defs>`;
     s += `<rect x="0" y="0" width="${W}" height="${H}" fill="#0f2740"/>`;
-    s += `<rect x="${PAD}" y="${PAD}" width="${domW * this.SC}" height="${domH * this.SC}" fill="url(#grid)"/>`;
+    s += `<rect x="${PAD}" y="${PAD}" width="${domW * this.SC}" height="${domH * this.SC}" fill="url(#${gid})"/>`;
     // support (grup — diredupkan saat seret sudut). Support manual dapat titik ujung yang bisa digeser.
     s += '<g id="supLayer">';
     mem.filter(m => m.jenis === 'support').forEach(m => { const c = cmap[m.material]; const manual = m.id.startsWith('Sm_');
@@ -521,5 +523,6 @@ if (globalThis.__DENAH_SELFCHECK) {
 // package.json "type":"module" membuat `export` gagal di classic script. Node memuat via read+eval
 // (lihat tests/rangka/test_konverter.mjs).
 globalThis.DenahConv = DenahConv;
+DenahEditor._n = 0;   // counter instance untuk id pattern grid unik
 globalThis.DenahEditor = DenahEditor;
 })();
