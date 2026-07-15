@@ -43,6 +43,7 @@
 .blok-head .b-nama { flex:1; min-width:80px; background:#1e293b; border:1px solid #334155; border-radius:8px; padding:9px; color:#f1f5f9; font-size:13px; font-weight:700; min-height:42px; }
 .tag { font-size:10px; font-weight:700; padding:3px 7px; border-radius:6px; background:#fbbf24; color:#0f172a; flex:none; }
 .tag.manual { background:#a78bfa; }
+.tag.denah { background:#38bdf8; }
 .blok-body { padding:12px; }
 .subhead { font-size:12px; color:#fbbf24; margin:12px 0 8px; }
 .iconbtn { background:none; border:none; cursor:pointer; font-size:17px; padding:4px; }
@@ -175,6 +176,7 @@
     <div style="display:flex;gap:8px;margin-bottom:14px">
         <button class="btn btn-grey" onclick="tambahBlok(null,'kanopi')">+ Blok Kanopi</button>
         <button class="btn btn-grey" onclick="tambahBlok(null,'manual')">+ Blok Manual</button>
+        <button class="btn btn-grey" onclick="tambahBlok(null,'denah')">+ Blok Denah</button>
     </div>
     </div>{{-- /step1 --}}
 
@@ -192,6 +194,7 @@
     <button class="btn btn-gold wz-n3" style="display:none" onclick="buatPenawaran()">Buat Penawaran →</button>
 </div></div>
 
+<script src="{{ asset('js/denah-editor.js') }}"></script>
 <script>
 const CSRF='{{ csrf_token() }}';
 const LEAD = @json($lead ?? null);
@@ -205,6 +208,7 @@ const KOND=@json($kondisi);
 const ATAP=@json($atap);
 const ADDON=@json($addon);
 let opsiSeq=0, blokSeq=0, opsiAktif=null;
+const DENAH = new WeakMap(); // card -> instance DenahEditor (blok tipe 'denah')
 
 function rp(n){ return 'Rp '+Math.round(n||0).toLocaleString('id-ID'); }
 function esc(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); }
@@ -379,6 +383,8 @@ function hapusOpsi(){
     const pane=paneAktif();
     const tab=document.querySelector('.tab[data-opsi="'+pane.id+'"]');
     if(tab) tab.remove();
+    // musnahkan editor denah di dalam opsi ini dulu (lepas listener document, cegah bocor)
+    pane.querySelectorAll('.blok-card').forEach(function(card){ var ed=DENAH.get(card); if(ed){ ed.destroy(); DENAH.delete(card); } });
     pane.remove();
     const first=document.querySelector('.opsi-pane');
     if(first) switchOpsi(first.id);
@@ -429,6 +435,21 @@ function tambahBlok(pane, tipe, data){
           '<div class="ro-field"><label>Jenis Kerja</label><select class="b-jk">'+jkOpts()+'</select></div>'+
           (KOND.length ? '<div style="margin-top:8px;font-size:11px;color:#94a3b8;margin-bottom:6px">Kondisi kerja</div><div style="display:flex;flex-wrap:wrap;gap:12px">'+kondHtml()+'</div>' : '')+
         '</div>') : '');
+    } else if(tipe==='denah'){
+        body=
+        '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
+          '<div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:8px">Besi Tambahan (support/reng/besi lain)</div>'+
+          '<div class="b-besiExtra"></div>'+
+          '<button type="button" class="btn btn-grey" style="padding:9px" onclick="addBesiRow(this)">+ Besi Tambahan</button>'+
+          '<div style="font-size:10px;color:#64748b;margin-top:6px">Untuk hollow/besi yang tak tercakup rangka otomatis (mis. reng 3x3, gording 4x8, besi beton). Pilih jenis + jumlah batang.</div>'+
+        '</div>'+
+        '<div class="b-denah" style="margin-top:10px"></div>'+
+        (LIHAT_HARGA ? (
+        '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
+          '<div class="subhead" style="margin-top:0">Upah</div>'+
+          '<div class="ro-field"><label>Jenis Kerja</label><select class="b-jk">'+jkOpts()+'</select></div>'+
+          (KOND.length ? '<div style="margin-top:8px;font-size:11px;color:#94a3b8;margin-bottom:6px">Kondisi kerja</div><div style="display:flex;flex-wrap:wrap;gap:12px">'+kondHtml()+'</div>' : '')+
+        '</div>') : '');
     } else {
         body=
         '<div style="font-size:12px;color:#a78bfa;margin-bottom:8px">Mode manual — isi daftar besi/bahan langsung.</div>'+
@@ -452,17 +473,31 @@ function tambahBlok(pane, tipe, data){
         if(hasT){ extra+=addonSection('Add-on Lain','total'); }
     }
 
+    var tagCls=(tipe==='manual'?'manual':(tipe==='denah'?'denah':''));
+    var tagLbl=(tipe==='manual'?'MANUAL':(tipe==='denah'?'DENAH':'KANOPI'));
+    var namaDefault=(tipe==='manual'?'Pagar/Railing':(tipe==='denah'?'Denah':'Kanopi'));
     card.innerHTML=
         '<div class="blok-head">'+
-          '<span class="tag '+(tipe==='manual'?'manual':'')+'">'+(tipe==='manual'?'MANUAL':'KANOPI')+'</span>'+
-          '<input type="text" class="b-nama" value="'+(tipe==='manual'?'Pagar/Railing':'Kanopi')+'">'+
+          '<span class="tag '+tagCls+'">'+tagLbl+'</span>'+
+          '<input type="text" class="b-nama" value="'+namaDefault+'">'+
           '<label class="sw"><input type="checkbox" class="b-aktif" checked><span class="sl"></span></label>'+
           '<button class="iconbtn" onclick="lipat(this)">▾</button>'+
-          '<button class="iconbtn" onclick="if(confirm(\'Hapus blok?\'))this.closest(\'.blok-card\').remove()">🗑️</button>'+
+          '<button class="iconbtn" onclick="hapusBlok(this)">🗑️</button>'+
         '</div>'+
         '<div class="blok-body">'+body+extra+'</div>';
 
     list.appendChild(card);
+
+    // blok denah: mount DenahEditor (Task 1-2) di dalam kartu, registry per-kartu di WeakMap DENAH
+    if(tipe==='denah'){
+        const mount=card.querySelector('.b-denah');
+        const ed=new DenahEditor(mount, {
+            besi: BESI.map(function(b){ return { nama:b.nama, harga:Number(b.harga_pokok)||0 }; }),
+            model: (data && data.denah) ? data.denah : null,
+            onChange: function(){ jadwalkanHitung(pane); }
+        });
+        DENAH.set(card, ed);
+    }
 
     // default material tebakan
     if(tipe==='kanopi' && !data){
@@ -474,6 +509,15 @@ function tambahBlok(pane, tipe, data){
 
     if(data) isiBlok(card, data);
     return card;
+}
+
+// blok denah dibuang: musnahkan instance DenahEditor (lepas listener document) & buang dari registry
+function hapusBlok(btn){
+    if(!confirm('Hapus blok?')) return;
+    var card=btn.closest('.blok-card');
+    var ed=DENAH.get(card);
+    if(ed){ ed.destroy(); DENAH.delete(card); }
+    card.remove();
 }
 
 function isiBlok(card, d){
@@ -492,6 +536,14 @@ function isiBlok(card, d){
         setVal(card.querySelector('.b-jk'), d.jenis_kerja_id);
         const kset=d.kondisi_ids||[];
         [].slice.call(card.querySelectorAll('.b-kond')).forEach(function(c){ c.checked = kset.indexOf(+c.value)>=0; });
+    } else if(card.dataset.tipe==='denah'){
+        // model denah (poligon/matDefault) sudah dioper via {model:d.denah} ke constructor DenahEditor
+        // di tambahBlok — DenahEditor.syncInputs() sendiri yang mengisi ulang select besi default-nya.
+        var bxD=d.besi_extra||[];
+        bxD.forEach(function(x){ var r=addBesiRowTo(card); setVal(r.querySelector('.bx-jenis'), x.material); setVal(r.querySelector('.bx-batang'), x.batang); });
+        setVal(card.querySelector('.b-jk'), d.jenis_kerja_id);
+        const ksetD=d.kondisi_ids||[];
+        [].slice.call(card.querySelectorAll('.b-kond')).forEach(function(c){ c.checked = ksetD.indexOf(+c.value)>=0; });
     } else {
         (d.manual_items||[]).forEach(function(it){ const r=addManualRowTo(card); setVal(r.querySelector('.m-nama'), it.nama); setVal(r.querySelector('.m-qty'), it.qty); setVal(r.querySelector('.m-harga'), it.harga); });
         setVal(card.querySelector('.b-manualUpah'), d.manual_upah);
@@ -575,6 +627,23 @@ function bacaBlok(card){
         b.frame_depan=ck('.b-fDepan'); b.frame_belakang=ck('.b-fBelakang');
         b.frame_kiri=ck('.b-fKiri'); b.frame_kanan=ck('.b-fKanan'); b.frame_tengah=ck('.b-fTengah');
         b.harga=harga; b.jenis_kerja_id=+g('.b-jk')||0;
+        b.kondisi_ids=[].slice.call(card.querySelectorAll('.b-kond:checked')).map(function(c){return +c.value;});
+    } else if(tipe==='denah'){
+        const ed=DENAH.get(card);
+        const members=ed?ed.getMembers():[];
+        const hargaD={};
+        members.forEach(function(m){ hargaD[m.material]=hargaOf(m.material); });
+        b.besi_extra=[];
+        [].slice.call(card.querySelectorAll('.b-besiExtra .row3')).forEach(function(r){
+            var j=r.querySelector('.bx-jenis'), q=r.querySelector('.bx-batang');
+            var nm=j?j.value:''; var bt=q?(+q.value||0):0;
+            if(nm && bt>0){ b.besi_extra.push({material:nm, batang:bt}); hargaD[nm]=hargaOf(nm); }
+        });
+        b.luas_m2=ed?ed.getLuas():0;
+        b.members=members.map(function(m){ return { nama:m.nama, jenis:m.jenis, panjang:m.panjang, material:m.material }; });
+        b.harga=hargaD;
+        b.denah=ed?ed.getModel():null; // ikut ke rab_snapshot untuk rehidrasi
+        b.jenis_kerja_id=+g('.b-jk')||0;
         b.kondisi_ids=[].slice.call(card.querySelectorAll('.b-kond:checked')).map(function(c){return +c.value;});
     } else {
         b.manual_items=[].slice.call(card.querySelectorAll('.b-manualRows .row3')).map(function(r){
@@ -945,6 +1014,16 @@ function buatPenawaran(){
         if(res && res.success){ window.open('{{ url("/penawaran") }}/'+LEAD.id, '_blank'); }
         else { alert('Gagal buat penawaran: '+((res&&res.message)||'error')); }
     }).catch(function(e){ alert('Error: '+e.message); });
+}
+// blok denah: DenahEditor memanggil onChange tiap kali model berubah (drag sudut, ganti besi, dst).
+// Tidak ada mesin hitung-langsung untuk blok kanopi/manual (harga baru dihitung saat tombol
+// "Hitung Harga"/navigasi wizard ditekan, lihat wzHitung/wzGo/lanjutFinalisasi -> autoSave()).
+// Supaya konsisten (tak menambah jalur hitung-harga baru yang tak ada di kanopi/manual), blok
+// denah hanya di-debounce ke autoSave() yang sudah ada, agar draft denah tak hilang saat pindah step.
+let _hitungTimer=null;
+function jadwalkanHitung(pane){
+    clearTimeout(_hitungTimer);
+    _hitungTimer=setTimeout(function(){ autoSave(); }, 800);
 }
 function autoSave(){
     if(!LEAD){ return; }
