@@ -219,8 +219,15 @@ Fix potong >600cm sudah LIVE di produksi (commit di main, terverifikasi lewat cu
 1. **SQL belum dijalankan** (VPS ini tak ada DB) — jalankan di phpMyAdmin production: `ALTER TABLE master_material ADD COLUMN IF NOT EXISTS panjang_batang_cm INT NOT NULL DEFAULT 600;` lalu isi WF = 1200. Selama belum → stokMap() balik `[]`, semua default 600 (tak crash).
 2. **PA-DUTA 4x8=9 belum ter-reproduksi** — bar #12 cutting list tak terekam di 2 screenshot (`inbox/*cutting list*kalibarasi*`). Potongan terlihat baru 8 batang. Butuh foto bar #12 buat menutup. (Catatan: temuan lama "support 14 vs 9" itu soal MODEL auto-layout = 1D, bukan engine cutting.)
 
-Urutan besar sesudahnya: **1B DenahEditor di RAB opsi (di belakang tab, jalur kotak lama tetap jalan; baca `resources/views/rab-opsi/index.blade.php` dulu) → 1C validasi PA-DUTA end-to-end lalu sapih+hapus `/rangka-desain` (deploy di sini) → 1D kalibrasi ulang support (target 9) + retune consumable/finishing pakai luas ~40 m²**.
+**TAHAP 1B (DenahEditor + integrasi UI) SELESAI — merged ke `main`** (subagent-driven, review akhir opus = READY TO MERGE). Plan: `docs/superpowers/plans/2026-07-15-denah-rab-tahap1b-editor.md`; ledger: `.superpowers/sdd/progress.md`.
+- `public/js/denah-editor.js` — modul classic-script (IIFE, `globalThis`, TANPA ESM export krn package `type:module`): `DenahConv` (geometri murni denah→members, tes `node tests/rangka/test_konverter.mjs`) + kelas `DenahEditor` (SVG editor per-blok, port dari prototype).
+- `resources/views/rab-opsi/index.blade.php` — tipe blok baru **`denah`** (tombol `+ Blok Denah`), aditif; **kanopi/manual TAK berubah**. `bacaBlok` kirim `members`+`luas_m2`+`harga`+`denah`(model); `isiBlok`/`tambahBlok` rehidrasi dari `rab_snapshot`; `hapusBlok`/`hapusOpsi` panggil `DenahEditor.destroy()`.
+- Biaya denah muncul saat klik **"Hitung Harga"** (via `bacaBlok`→`/rab-blok/hitung`→jalur `tipe:denah` 1A), bukan live — sama pola kanopi.
 
-**Status git:** `main` ahead `origin/main`, **BELUM di-push** (keputusan Elvan: deploy hanya setelah bukti PA-DUTA end-to-end di 1C). Fase 1 lama (`/rangka-desain` + fix potong >600cm) sudah ter-merge di `main`.
+**BLOCKER 1C (WAJIB sebelum go-live):** `buildPenawaran()` di blade belum ada cabang `tipe==='denah'` → blok denah tampil **item KOSONG di PDF penawaran** (harga tetap benar, hanya rincian cetak kosong).
+
+Urutan besar sesudahnya: **1C = fix `buildPenawaran()` denah + jadikan denah default (opsional) + hapus `/rangka-desain` + VALIDASI di browser/DB nyata (drag UI, autosave→reload, "Hitung Harga" e2e, reproduksi PA-DUTA lewat UI) → deploy → 1D kalibrasi ulang support (target 9) + retune consumable/finishing pakai luas ~40 m²**.
+
+**Status git:** `main` ahead `origin/main` **~33 commit, BELUM di-push** (keputusan Elvan: deploy hanya setelah bukti PA-DUTA end-to-end di 1C). 1A+1B semua di `main` lokal. Utang 1A tetap: (1) SQL `master_material.panjang_batang_cm` (jalankan di phpMyAdmin + isi WF=1200); (2) foto bar #12 untuk tutup PA-DUTA 4x8=9.
 
 **Catatan bug laten (di luar scope, buat nanti):** `CuttingService::potong` case-2 mint jid baru → sambungan bisa kurang di kasus ekstrem; `hitungRangka` auto-layout lama pakai intdiv/2 (boleh dipensiunkan setelah DenahEditor menggantikan penuh).
