@@ -211,6 +211,8 @@ class DenahEditor {
     this._q('[data-role=inGrid]').onchange = e => { this.S.grid = +e.target.value; this.render(); };
     this._q('[data-role=inT]').oninput = e => { this.S.tinggi = +e.target.value || 300; this.render(); };
     this._q('[data-role=inL]').oninput = () => this.updSaranHint();
+    this._q('[data-role=inL]').onchange = () => this.resizeBox();
+    this._q('[data-role=inP]').onchange = () => this.resizeBox();
     this._q('[data-role=btnSaran]').onclick = () => this.applySaran();
     this._q('[data-role=btnReset]').onclick = () => this.resetBox();
 
@@ -299,13 +301,31 @@ class DenahEditor {
     this.updSaranHint();
   }
 
+  // Ubah ukuran denah dari input Lebar/Panjang: skala semua titik (verts, tiang, support manual)
+  // proporsional ke bounding-box baru — bentuk (L/berlekuk) tetap, cuma ukurannya berubah.
+  resizeBox() {
+    const L = +(this._q('[data-role=inL]').value) || 0;
+    const P = +(this._q('[data-role=inP]').value) || 0;
+    if (L <= 0 || P <= 0) return;
+    const bb = DenahConv._bbox(this.S.verts);
+    const w = (bb.x1 - bb.x0) || 1, h = (bb.y1 - bb.y0) || 1;
+    const sx = L / w, sy = P / h;
+    const sc = (pt) => ({ x: (pt.x - bb.x0) * sx + bb.x0, y: (pt.y - bb.y0) * sy + bb.y0 });
+    this.pushUndo();
+    this.S.verts = this.S.verts.map(sc);
+    this.S.tiang = (this.S.tiang || []).map(sc);
+    this.S.supportsManual = (this.S.supportsManual || []).map(m => ({ a: sc(m.a), b: sc(m.b) }));
+    if (this.S.autoKotak) this.S.kotak = DenahConv.saranKotak(L, this.S.target);
+    this.render();
+  }
+
   resetBox() {
     this.undoStack = [];
     const L = +(this._q('[data-role=inL]').value) || 400;
     const P = +(this._q('[data-role=inP]').value) || 300;
     this.S.verts = [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: P }, { x: 0, y: P }];
     this.S.removed = {}; this.S.supportsManual = []; this.S.matOverride = {};
-    this.S.tiang = [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: P }, { x: 0, y: P }];
+    this.S.tiang = [];   // JANGAN auto-taruh tiang di sudut — user yang tentukan tiang (mode Tiang)
     this.S.grid = +(this._q('[data-role=inGrid]').value);
     this.S.tinggi = +(this._q('[data-role=inT]').value);
     this.S.arah = this._q('[data-role=inArah]').value;
@@ -379,8 +399,12 @@ class DenahEditor {
     s += `<rect x="${PAD}" y="${PAD}" width="${domW * this.SC}" height="${domH * this.SC}" fill="url(#${gid})"/>`;
     // support (grup — diredupkan saat seret sudut). Support manual dapat titik ujung yang bisa digeser.
     s += '<g id="supLayer">';
-    mem.filter(m => m.jenis === 'support').forEach(m => { const c = cmap[m.material]; const manual = m.id.startsWith('Sm_');
-      s += `<line ${manual ? `id="sm${m.id.slice(3)}"` : ''} x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="${c}" stroke-width="${manual ? 3 : 2}" data-id="${m.id}" class="hit"><title>${m.material} • ${m.panjang}cm</title></line>`; });
+    mem.filter(m => m.jenis === 'support').forEach((m, i) => { const c = cmap[m.material]; const manual = m.id.startsWith('Sm_');
+      const mx = (m.geom.a.x + m.geom.b.x) / 2, my = (m.geom.a.y + m.geom.b.y) / 2;
+      // garis tampak (tanpa event) + garis transparan lebar (target ketuk) + label S{n}·panjang
+      s += `<line ${manual ? `id="sm${m.id.slice(3)}"` : ''} x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="${c}" stroke-width="${manual ? 3 : 2}"><title>${m.material} • ${m.panjang}cm</title></line>`;
+      s += `<line x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="transparent" stroke-width="14" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
+      s += `<text x="${X(mx)}" y="${Y(my) - 4}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">S${i + 1} · ${m.panjang}</text>`; });
     if (this.mode === 'support') mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
       ['a', 'b'].forEach(end => { const p = m.geom[end], cx = X(p.x), cy = Y(p.y);
         s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;
@@ -388,7 +412,8 @@ class DenahEditor {
     s += '</g>';
     // frame (tebal) + label sisi — tiap sisi id fl{i}/fll{i} biar bisa diupdate saat seret
     mem.filter(m => m.jenis === 'frame').forEach((m, i) => { const c = cmap[m.material]; const a = m.geom.a, b = m.geom.b;
-      s += `<line id="fl${i}" x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="${c}" stroke-width="4" data-id="${m.id}" class="hit" stroke-linecap="round"><title>${m.material} • ${m.panjang}cm</title></line>`;
+      s += `<line id="fl${i}" x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="${c}" stroke-width="4" stroke-linecap="round"><title>${m.material} • ${m.panjang}cm</title></line>`;
+      s += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="transparent" stroke-width="16" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
       s += `<text id="fll${i}" x="${X(mx)}" y="${Y(my) - 5}" fill="#e2e8f0" font-size="10" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">F${i + 1} · ${m.panjang}</text>`; });
     // tiang

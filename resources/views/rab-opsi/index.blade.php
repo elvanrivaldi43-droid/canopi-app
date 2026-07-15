@@ -174,9 +174,8 @@
     <div id="panes"></div>
 
     <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button class="btn btn-grey" onclick="tambahBlok(null,'kanopi')">+ Blok Kanopi</button>
-        <button class="btn btn-grey" onclick="tambahBlok(null,'manual')">+ Blok Manual</button>
         <button class="btn btn-grey" onclick="tambahBlok(null,'denah')">+ Blok Denah</button>
+        <button class="btn btn-grey" onclick="tambahBlok(null,'manual')">+ Blok Manual</button>
     </div>
     </div>{{-- /step1 --}}
 
@@ -351,7 +350,7 @@ function tambahOpsi(nama, bloks, finishing){
 
     switchOpsi(id);
     if(bloks && bloks.length){ bloks.forEach(function(bd){ tambahBlok(pane, bd.tipe, bd); }); }
-    else { tambahBlok(pane, 'kanopi'); }
+    else { tambahBlok(pane, 'denah'); }   // default blok baru = denah (kanopi lama dipensiunkan)
     return pane;
 }
 
@@ -437,13 +436,7 @@ function tambahBlok(pane, tipe, data){
         '</div>') : '');
     } else if(tipe==='denah'){
         body=
-        '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
-          '<div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:8px">Besi Tambahan (support/reng/besi lain)</div>'+
-          '<div class="b-besiExtra"></div>'+
-          '<button type="button" class="btn btn-grey" style="padding:9px" onclick="addBesiRow(this)">+ Besi Tambahan</button>'+
-          '<div style="font-size:10px;color:#64748b;margin-top:6px">Untuk hollow/besi yang tak tercakup rangka otomatis (mis. reng 3x3, gording 4x8, besi beton). Pilih jenis + jumlah batang.</div>'+
-        '</div>'+
-        '<div class="b-denah" style="margin-top:10px"></div>'+
+        '<div class="b-denah"></div>'+
         (LIHAT_HARGA ? (
         '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
           '<div class="subhead" style="margin-top:0">Upah</div>'+
@@ -1033,14 +1026,24 @@ function jadwalkanHitung(pane){
     clearTimeout(_hitungTimer);
     _hitungTimer=setTimeout(function(){ autoSave(); }, 800);
 }
+function simpanStatus(msg, ok){
+    var el=document.getElementById('saveStat');
+    if(!el){ el=document.createElement('div'); el.id='saveStat';
+        el.style.cssText='position:fixed;bottom:14px;right:14px;z-index:9998;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25);color:#fff';
+        document.body.appendChild(el); }
+    el.textContent=msg; el.style.background=ok?'#16a34a':'#b45309'; el.style.display='block';
+    clearTimeout(el._t); el._t=setTimeout(function(){ el.style.display='none'; }, 2500);
+}
 function autoSave(){
-    if(!LEAD){ return; }
+    if(!LEAD){ simpanStatus('Belum tersimpan — buka RAB dari lead/pipeline dulu', false); return; }
     try{
         var body = { lead_id: LEAD.id, snapshot: JSON.stringify({ panes: bacaSemuaOpsi() }) };
         fetch('{{ url("/rab-opsi/autosave") }}', {method:'POST',
             headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'Accept':'application/json'},
-            body: JSON.stringify(body)});
-    }catch(e){}
+            body: JSON.stringify(body)})
+        .then(function(r){ simpanStatus(r.ok?'Tersimpan':'Gagal simpan ('+r.status+')', r.ok); })
+        .catch(function(){ simpanStatus('Gagal simpan (jaringan)', false); });
+    }catch(e){ simpanStatus('Gagal simpan', false); }
 }
 function lanjutFinalisasi(){
     var hasil=validasiStep1();
