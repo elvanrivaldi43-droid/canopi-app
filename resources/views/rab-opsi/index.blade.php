@@ -995,6 +995,14 @@ function buildPenawaran(){
                 for(var a=0;a<aj.length;a++){ atapArr.push(namaAtap(aj[a])+' ('+al[a]+' m2)'); }
                 blokOut.push({ nama:bl.nama||('Blok '+(b+1)), ukuran:(bl.lebar_cm||0)+' x '+(bl.panjang_cm||0)+' cm',
                     frame:bl.mat_frame, support:bl.mat_support, tiang:bl.mat_tiang, atap:atapArr });
+            } else if(bl.tipe==='denah'){
+                // blok denah: ringkasan customer = luas denah + besi default per peran + atap (bentuk sama kanopi)
+                var atapArrD=[];
+                var ajD=bl.atap_jenis_id||[], alD=bl.atap_luas||[];
+                for(var ad=0;ad<ajD.length;ad++){ atapArrD.push(namaAtap(ajD[ad])+' ('+alD[ad]+' m2)'); }
+                var md=(bl.denah&&bl.denah.matDefault)||{};
+                blokOut.push({ nama:bl.nama||('Blok '+(b+1)), ukuran:(bl.luas_m2||0)+' m2 (denah)',
+                    frame:md.frame, support:md.support, tiang:md.tiang, atap:atapArrD });
             } else {
                 var items=(bl.manual_items||[]).map(function(m){ return m.nama+' x'+m.qty; });
                 blokOut.push({ nama:bl.nama||('Blok '+(b+1)), manual:items });
