@@ -383,6 +383,8 @@ function hapusOpsi(){
     const pane=paneAktif();
     const tab=document.querySelector('.tab[data-opsi="'+pane.id+'"]');
     if(tab) tab.remove();
+    // musnahkan editor denah di dalam opsi ini dulu (lepas listener document, cegah bocor)
+    pane.querySelectorAll('.blok-card').forEach(function(card){ var ed=DENAH.get(card); if(ed){ ed.destroy(); DENAH.delete(card); } });
     pane.remove();
     const first=document.querySelector('.opsi-pane');
     if(first) switchOpsi(first.id);

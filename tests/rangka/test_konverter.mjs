@@ -28,7 +28,8 @@ check('kotak: luas 16 m2', DenahConv.luasM2(kotak), 16);
 // L-shape cekung: support tak bocor keluar poligon (segmen <= lebar 400)
 const L = { ...kotak, verts:[{x:0,y:0},{x:400,y:0},{x:400,y:200},{x:200,y:200},{x:200,y:400},{x:0,y:400}] };
 const seg = DenahConv.buildMembers(L).filter(x=>x.jenis==='support');
-check('L: support tak melebihi 400', seg.every(s=>s.panjang<=400), true);
+// L cekung (arah h, kotak 100): support y=100 penuh 400; y=200 & y=300 terpotong notch → 200,200
+check('L: support terklip cekung = [200,200,400]', seg.map(s=>s.panjang).sort((a,b)=>a-b), [200,200,400]);
 
 // saranKotak: lebar 700, target 100 -> 700/round(7)=100
 check('saranKotak(700,100)=100', DenahConv.saranKotak(700,100), 100);

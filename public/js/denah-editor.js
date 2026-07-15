@@ -30,7 +30,8 @@ const colorMap = (mem) => {
 
 const DenahConv = {
   buildMembers(S) {
-    const mem = [], V = S.verts, bb = bbox(V), K = S.kotak, rem = S.removed || {};
+    // K harus > 0: kotak<=0 (mis. input negatif / model tersimpan rusak) bikin loop scanline tak berhenti → freeze tab.
+    const mem = [], V = S.verts, bb = bbox(V), K = (S.kotak > 0 ? S.kotak : 100), rem = S.removed || {};
     // frame: tiap sisi poligon
     V.forEach((v, i) => {
       const w = V[(i + 1) % V.length], id = 'F' + i;
@@ -147,7 +148,7 @@ class DenahEditor {
     <label>Arah support
       <select data-role="inArah"><option value="2">Grid 2 arah</option><option value="h">1 arah horizontal (melintang)</option><option value="v">1 arah vertikal (membujur)</option></select>
     </label>
-    <label>Kotak support (cm)<input type="number" data-role="inKotak" value="100" step="5"></label>
+    <label>Kotak support (cm)<input type="number" data-role="inKotak" value="100" step="5" min="1"></label>
     <span class="de-mini" data-role="btnSaran">Pakai saran</span>
     <span class="de-hint" data-role="saranHint"></span>
   </div>
@@ -206,7 +207,7 @@ class DenahEditor {
     this._q('[data-role=btnAddSupport]').onclick = () => { if (this.mode !== 'support') return; this.armed = 'addSupport'; this.addSupportPt = null; this.setHint('Klik titik ke-1 support…'); };
 
     this._q('[data-role=inArah]').onchange = e => { this.S.arah = e.target.value; this.render(); };
-    this._q('[data-role=inKotak]').oninput = e => { this.S.kotak = +e.target.value || this.S.kotak; this.S.autoKotak = false; this.render(); };
+    this._q('[data-role=inKotak]').oninput = e => { this.S.kotak = Math.max(1, +e.target.value) || this.S.kotak; this.S.autoKotak = false; this.render(); };
     this._q('[data-role=inGrid]').onchange = e => { this.S.grid = +e.target.value; this.render(); };
     this._q('[data-role=inT]').oninput = e => { this.S.tinggi = +e.target.value || 300; this.render(); };
     this._q('[data-role=inL]').oninput = () => this.updSaranHint();
