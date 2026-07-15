@@ -224,7 +224,7 @@ Fix potong >600cm sudah LIVE di produksi (commit di main, terverifikasi lewat cu
 - `resources/views/rab-opsi/index.blade.php` — tipe blok baru **`denah`** (tombol `+ Blok Denah`), aditif; **kanopi/manual TAK berubah**. `bacaBlok` kirim `members`+`luas_m2`+`harga`+`denah`(model); `isiBlok`/`tambahBlok` rehidrasi dari `rab_snapshot`; `hapusBlok`/`hapusOpsi` panggil `DenahEditor.destroy()`.
 - Biaya denah muncul saat klik **"Hitung Harga"** (via `bacaBlok`→`/rab-blok/hitung`→jalur `tipe:denah` 1A), bukan live — sama pola kanopi.
 
-**BLOCKER 1C (WAJIB sebelum go-live):** `buildPenawaran()` di blade belum ada cabang `tipe==='denah'` → blok denah tampil **item KOSONG di PDF penawaran** (harga tetap benar, hanya rincian cetak kosong).
+**BLOCKER 1C — SUDAH DIPERBAIKI (15 Juli, lokal):** `buildPenawaran()` kini punya cabang `tipe==='denah'` (ukuran=luas denah + frame/support/tiang default + atap, bentuk sama kanopi → dirender `penawaran/show.blade.php`). Sisa: verifikasi visual PDF saat deploy 1C.
 
 Urutan besar sesudahnya: **1C = fix `buildPenawaran()` denah + jadikan denah default (opsional) + hapus `/rangka-desain` + VALIDASI di browser/DB nyata (drag UI, autosave→reload, "Hitung Harga" e2e, reproduksi PA-DUTA lewat UI) → deploy → 1D kalibrasi ulang support (target 9) + retune consumable/finishing pakai luas ~40 m²**.
 
