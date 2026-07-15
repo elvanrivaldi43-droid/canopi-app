@@ -228,6 +228,6 @@ Fix potong >600cm sudah LIVE di produksi (commit di main, terverifikasi lewat cu
 
 Urutan besar sesudahnya: **1C = fix `buildPenawaran()` denah + jadikan denah default (opsional) + hapus `/rangka-desain` + VALIDASI di browser/DB nyata (drag UI, autosave→reload, "Hitung Harga" e2e, reproduksi PA-DUTA lewat UI) → deploy → 1D kalibrasi ulang support (target 9) + retune consumable/finishing pakai luas ~40 m²**.
 
-**Status git:** `main` ahead `origin/main` **~33 commit, BELUM di-push** (keputusan Elvan: deploy hanya setelah bukti PA-DUTA end-to-end di 1C). 1A+1B semua di `main` lokal. Utang 1A tetap: (1) SQL `master_material.panjang_batang_cm` (jalankan di phpMyAdmin + isi WF=1200); (2) foto bar #12 untuk tutup PA-DUTA 4x8=9.
+**Status git:** `main` ahead `origin/main` **~33 commit, BELUM di-push** (keputusan Elvan: deploy hanya setelah bukti PA-DUTA end-to-end di 1C). 1A+1B semua di `main` lokal. Utang 1A: (1) SQL kolom `master_material.panjang_batang_cm` **SUDAH dijalankan Elvan (15 Juli, berhasil)** — kolom ada, default 600. Sisa: pastikan baris besi WF di-`UPDATE ... =1200` (langkah data terpisah, konfirmasi ke Elvan). (2) foto bar #12 untuk tutup PA-DUTA 4x8=9 (masih kurang).
 
 **Catatan bug laten (di luar scope, buat nanti):** `CuttingService::potong` case-2 mint jid baru → sambungan bisa kurang di kasus ekstrem; `hitungRangka` auto-layout lama pakai intdiv/2 (boleh dipensiunkan setelah DenahEditor menggantikan penuh).
