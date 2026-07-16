@@ -546,12 +546,17 @@ class DenahEditor {
     this.applySaran();
   }
 
-  // screen→cm
+  // screen→cm. Ukur kotak svg langsung di layar (getBoundingClientRect, sudah termasuk
+  // SEMUA skala yang berlaku: pinch-zoom kita + max-width:100% browser), bukan getScreenCTM
+  // (bergantung browser mengurai CSS transform leluhur dgn benar — tak konsisten di sebagian
+  // browser HP, bikin drag meleset dari jari saat pinch-zoom aktif).
   toCm(evt, el) {
-    const pt = el.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
-    const m = el.getScreenCTM().inverse();
-    const p = pt.matrixTransform(m);
-    return { x: (p.x - this.PAD) / this.SC, y: (p.y - this.PAD) / this.SC };
+    const rect = el.getBoundingClientRect();
+    const svgW = el.width.baseVal.value, svgH = el.height.baseVal.value;
+    const scaleX = rect.width / svgW, scaleY = rect.height / svgH;
+    const localX = (evt.clientX - rect.left) / scaleX;
+    const localY = (evt.clientY - rect.top) / scaleY;
+    return { x: (localX - this.PAD) / this.SC, y: (localY - this.PAD) / this.SC };
   }
 
   // Set panjang sisi F(i) ke nilai pasti: geser vertex tujuan sepanjang arah sisi.
