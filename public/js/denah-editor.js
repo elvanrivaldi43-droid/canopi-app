@@ -150,6 +150,7 @@ class DenahEditor {
     this.el.innerHTML = DenahEditor.shellHTML();
     this._fillMatSelects();
     this._wireControls();
+    this._wireRibbon();
     this.syncInputs();
     this.render();
   }
@@ -171,13 +172,24 @@ class DenahEditor {
 .de-row>label{font-size:12px;display:flex;flex-direction:column;gap:3px}
 .de-card input[type=number],.de-card input[type=text]{width:78px;padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px}
 .de-card select{padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;background:#fff}
-.de-tools{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
-.de-tool{padding:7px 11px;border:1px solid #334155;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;user-select:none}
+.de-tools{display:flex;flex-wrap:wrap;gap:10px;margin:2px 0}
+.de-tool{padding:10px 14px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #334155;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;user-select:none}
 .de-tool.on{background:#1e293b;color:#fff}
-.de-mini{padding:6px 9px;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:12px;cursor:pointer;display:inline-block}
+.de-mini{padding:9px 13px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:12px;cursor:pointer}
 .de-hint{font-size:12px;color:#64748b;margin:6px 2px;min-height:16px}
-.de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:auto}
+.de-ribbon-tabs{display:flex;border:1px solid #334155;border-radius:8px 8px 0 0;overflow:hidden;background:#1e293b}
+.de-ribbon-tab{flex:1;text-align:center;padding:11px 4px;min-height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:12px;color:#cbd5e1;cursor:pointer;user-select:none;border-right:1px solid #334155}
+.de-ribbon-tab:last-child{border-right:none}
+.de-ribbon-tab.on{background:#0f2740;color:#38bdf8;font-weight:600}
+.de-ribbon-strip{border:1px solid transparent;border-top:none;border-radius:0 0 8px 8px;background:#f8fafc;padding:0;margin-bottom:10px;max-height:0;overflow:hidden;transition:max-height .15s ease}
+.de-ribbon-strip.open{border-color:#334155;padding:10px 12px;max-height:220px;overflow-y:auto}
+.de-ribbon-panel{display:none}
+.de-ribbon-panel.on{display:block}
+.de-canvas-wrap{position:relative;touch-action:none}
+.de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden}
 .de-canvas svg{max-width:100%;touch-action:none;display:block}
+.de-zoom-reset{position:absolute;right:10px;bottom:10px;min-width:44px;min-height:44px;padding:0 14px;border-radius:22px;background:rgba(15,23,42,.85);color:#e2e8f0;border:1px solid #334155;font-size:13px;display:none;align-items:center;justify-content:center;cursor:pointer;user-select:none}
+.de-zoom-reset.show{display:flex}
 .de-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:#475569}
 .de-legend b{font-weight:600}
 .de-sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:middle}
@@ -188,44 +200,65 @@ class DenahEditor {
 .de-matmenu .de-mrow{display:flex;gap:6px;margin-top:6px}
 </style>
 <div class="de-card">
-  <div class="de-row">
-    <label>Lebar (cm)<input type="number" data-role="inL" value="400" step="10"></label>
-    <label>Panjang (cm)<input type="number" data-role="inP" value="300" step="10"></label>
-    <label>Tinggi tiang (cm)<input type="number" data-role="inT" value="300" step="10"></label>
-    <label>Snap grid<select data-role="inGrid"><option>10</option><option selected>20</option><option>25</option><option>50</option></select></label>
-    <span class="de-mini" data-role="btnReset">Reset kotak dari Lebar×Panjang</span>
+  <div class="de-ribbon-tabs">
+    <span class="de-ribbon-tab" data-tab="ukuran">Ukuran</span>
+    <span class="de-ribbon-tab" data-tab="support">Support</span>
+    <span class="de-ribbon-tab" data-tab="besi">Besi</span>
+    <span class="de-ribbon-tab" data-tab="mode">Mode</span>
+    <span class="de-ribbon-tab" data-tab="sisi">Ukur Sisi</span>
   </div>
-  <div class="de-row" style="margin-top:8px">
-    <label>Arah support
-      <select data-role="inArah"><option value="2">Grid 2 arah</option><option value="h">1 arah horizontal (melintang)</option><option value="v">1 arah vertikal (membujur)</option></select>
-    </label>
-    <label>Kotak support (cm)<input type="number" data-role="inKotak" value="100" step="5" min="1"></label>
-    <span class="de-mini" data-role="btnSaran">Pakai saran</span>
-    <span class="de-hint" data-role="saranHint"></span>
-  </div>
-  <div class="de-matbar">
-    <label>Besi frame<select data-role="matFrame"></select></label>
-    <label>Besi support<select data-role="matSupport"></select></label>
-    <label>Besi tiang<select data-role="matTiang"></select></label>
-  </div>
-  <div class="de-tools">
-    <span class="de-tool on" data-mode="bentuk">Bentuk</span>
-    <span class="de-tool" data-mode="besi">Ganti besi</span>
-    <span class="de-tool" data-mode="support">Support</span>
-    <span class="de-tool" data-mode="tiang">Tiang</span>
-    <span style="width:10px"></span>
-    <span class="de-mini" data-role="btnAddV">+ Sudut</span>
-    <span class="de-mini" data-role="btnDelV">− Sudut</span>
-    <span class="de-mini" data-role="btnAddBox">+ Tambah Kotak</span>
-    <span class="de-mini" data-role="btnUndo">Undo</span>
-    <span class="de-mini" data-role="btnAddSupport" style="margin-left:6px">+ Support manual</span>
+  <div class="de-ribbon-strip" data-role="ribbonStrip">
+    <div class="de-ribbon-panel" data-panel="ukuran">
+      <div class="de-row">
+        <label>Lebar (cm)<input type="number" data-role="inL" value="400" step="10"></label>
+        <label>Panjang (cm)<input type="number" data-role="inP" value="300" step="10"></label>
+        <label>Tinggi tiang (cm)<input type="number" data-role="inT" value="300" step="10"></label>
+        <label>Snap grid<select data-role="inGrid"><option>10</option><option selected>20</option><option>25</option><option>50</option></select></label>
+        <span class="de-mini" data-role="btnReset">Reset kotak dari Lebar×Panjang</span>
+      </div>
+    </div>
+    <div class="de-ribbon-panel" data-panel="support">
+      <div class="de-row">
+        <label>Arah support
+          <select data-role="inArah"><option value="2">Grid 2 arah</option><option value="h">1 arah horizontal (melintang)</option><option value="v">1 arah vertikal (membujur)</option></select>
+        </label>
+        <label>Kotak support (cm)<input type="number" data-role="inKotak" value="100" step="5" min="1"></label>
+        <span class="de-mini" data-role="btnSaran">Pakai saran</span>
+        <span class="de-hint" data-role="saranHint"></span>
+      </div>
+    </div>
+    <div class="de-ribbon-panel" data-panel="besi">
+      <div class="de-matbar">
+        <label>Besi frame<select data-role="matFrame"></select></label>
+        <label>Besi support<select data-role="matSupport"></select></label>
+        <label>Besi tiang<select data-role="matTiang"></select></label>
+      </div>
+    </div>
+    <div class="de-ribbon-panel" data-panel="mode">
+      <div class="de-tools">
+        <span class="de-tool on" data-mode="bentuk">Bentuk</span>
+        <span class="de-tool" data-mode="besi">Ganti besi</span>
+        <span class="de-tool" data-mode="support">Support</span>
+        <span class="de-tool" data-mode="tiang">Tiang</span>
+        <span class="de-mini" data-role="btnAddV">+ Sudut</span>
+        <span class="de-mini" data-role="btnDelV">− Sudut</span>
+        <span class="de-mini" data-role="btnAddBox">+ Tambah Kotak</span>
+        <span class="de-mini" data-role="btnUndo">Undo</span>
+        <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
+      </div>
+    </div>
+    <div class="de-ribbon-panel" data-panel="sisi">
+      <div class="de-legend" data-role="sisiPanel"></div>
+    </div>
   </div>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
-  <div class="de-canvas"></div>
+  <div class="de-canvas-wrap" data-role="canvasWrap">
+    <div class="de-canvas"></div>
+    <span class="de-zoom-reset" data-role="btnZoomReset">Reset</span>
+  </div>
   <div class="de-legend" data-role="legend"></div>
   <div style="font-size:12px;color:#64748b;margin-top:4px">Luas denah: <b data-role="luas">–</b></div>
-  <div class="de-legend" data-role="sisiPanel" style="margin-top:10px"></div>
 </div>
 <div class="de-matmenu" data-role="matMenu">
   <select data-role="matPick"></select>
@@ -294,6 +327,29 @@ class DenahEditor {
       if (menu && menu.style.display === 'block' && !menu.contains(e.target) && !(canvas && canvas.contains(e.target))) menu.style.display = 'none';
     };
     document.addEventListener('pointerdown', this._docPointerDown);
+  }
+
+  _wireRibbon() {
+    const tabs = this._qa('.de-ribbon-tab');
+    const strip = this._q('[data-role=ribbonStrip]');
+    const panels = {};
+    this._qa('.de-ribbon-panel').forEach(p => { panels[p.dataset.panel] = p; });
+    let openTab = null;
+    tabs.forEach(t => t.onclick = () => {
+      const name = t.dataset.tab;
+      if (openTab === name) {
+        strip.classList.remove('open');
+        panels[name].classList.remove('on');
+        t.classList.remove('on');
+        openTab = null;
+        return;
+      }
+      if (openTab) { panels[openTab].classList.remove('on'); tabs.forEach(x => { if (x.dataset.tab === openTab) x.classList.remove('on'); }); }
+      panels[name].classList.add('on');
+      t.classList.add('on');
+      strip.classList.add('open');
+      openTab = name;
+    });
   }
 
   // lepas listener document saat instance dibuang (blok di-hapus/off di RAB opsi)
