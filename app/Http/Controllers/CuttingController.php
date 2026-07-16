@@ -409,13 +409,8 @@ class CuttingController extends Controller
             // DENAH: daftar batang (members) dari denah interaktif -> RangkaDesignService.
             $members = array_map(fn ($m) => (array) $m, (array) ($b['members'] ?? []));
             $harga   = (array) ($b['harga'] ?? []);
-            $stok    = $this->stokMap();
-            \Illuminate\Support\Facades\Log::error('DEBUG-WF-stok', [
-                'stok_wf'    => $stok['WF 200 12m'] ?? 'TIDAK ADA DI STOKMAP',
-                'members_wf' => array_values(array_filter($members, fn ($m) => trim((string) ($m['material'] ?? '')) === 'WF 200 12m')),
-            ]);
             $rd = (new \App\Services\RangkaDesignService())
-                ->hitung($members, $harga, $lihatHarga, $stok);
+                ->hitung($members, $harga, $lihatHarga, $this->stokMap());
             $cutting = [
                 'per_material' => $rd['per_material'],
                 'input'        => ['L' => 0, 'P' => 0],
