@@ -8,6 +8,7 @@
 !.gitkeep
 # Harness preview lokal Perancang Rangka (dev only, tak ikut deploy)
 tests/rangka/preview_server.php
+tests/rangka/denah_editor_harness.html
 tests/rangka/*.log
 
 # Mockup sesi brainstorming (superpowers skill, lokal saja)
