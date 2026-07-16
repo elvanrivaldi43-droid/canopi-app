@@ -309,6 +309,7 @@ class DenahEditor {
   // ---- Undo ----
   pushUndo() { this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift(); }
   undo() {
+    this.armed = null; this.boxPreview = null;
     if (!this.undoStack.length) { this.setHint('Tak ada langkah untuk di-undo'); return; }
     Object.assign(this.S, JSON.parse(this.undoStack.pop()));
     this.syncInputs();
@@ -371,6 +372,7 @@ class DenahEditor {
   }
 
   resetBox() {
+    this.armed = null; this.boxPreview = null;
     this.undoStack = [];
     const L = +(this._q('[data-role=inL]').value) || 400;
     const P = +(this._q('[data-role=inP]').value) || 300;
@@ -663,7 +665,7 @@ class DenahEditor {
   getModel() { return JSON.parse(JSON.stringify(this.S)); }
   getMembers() { return DenahConv.buildMembers(this.S); }
   getLuas() { return DenahConv.luasM2(this.S); }
-  setModel(m) { this.S = JSON.parse(JSON.stringify(m)); this.syncInputs(); this.render(); }
+  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.syncInputs(); this.render(); }
 }
 
 // ---- self-check ringkas, browser-only (guard: tak jalan di produksi/Node) ----
