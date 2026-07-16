@@ -439,7 +439,7 @@ class DenahEditor {
       if (wasSingle && this.zoomScale !== 1) {
         const isEmpty = e.target.dataset.vert == null && !e.target.dataset.id && e.target.dataset.sm == null && !e.target.dataset.boxprev;
         const now = Date.now();
-        if (isEmpty && now - lastTapTime < 350 && Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 24) {
+        if (isEmpty && now - lastTapTime < 450 && Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 40) {
           resetZoom(); lastTapTime = 0;
         } else { lastTapTime = now; lastTapX = e.clientX; lastTapY = e.clientY; }
       }
@@ -809,7 +809,7 @@ class DenahEditor {
         } else if (drag.type === 'sup') {
           const otherEnd = drag.end === 'a' ? 'b' : 'a';
           const anchor = this.S.supportsManual[drag.i][otherEnd];
-          const TH = (this.S.grid || 20) * 0.8;
+          const TH = (this.S.grid || 20) * 1.2;
           const snapped = DenahConv._orthoSnapToPoint(cm, anchor, TH);
           const px2 = PAD + snapped.x * this.SC, py2 = PAD + snapped.y * this.SC;
           this.S.supportsManual[drag.i][drag.end] = snapped;
