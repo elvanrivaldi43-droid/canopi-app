@@ -47,6 +47,15 @@ const isSimplePolygon = (v) => {
   }
   return true;
 };
+// Snap 1 titik ke sumbu X/Y titik acuan kalau jaraknya < threshold (dipakai ortho-snap
+// drag ujung support manual — garis jadi lurus tanpa harus pas manual, pola sama seperti
+// ortho-snap drag sudut poligon yang sudah ada di bindSvg()).
+const orthoSnapToPoint = (p, anchor, TH) => {
+  let { x, y } = p;
+  if (Math.abs(x - anchor.x) < TH) x = anchor.x;
+  if (Math.abs(y - anchor.y) < TH) y = anchor.y;
+  return { x, y };
+};
 
 const DenahConv = {
   buildMembers(S) {
@@ -102,7 +111,7 @@ const DenahConv = {
     const out = [...verts.slice(0, sisiIdx + 1), ...seq, ...verts.slice(sisiIdx + 1)];
     return isSimplePolygon(out) ? out : null;
   },
-  _dist: dist, _bbox: bbox,
+  _dist: dist, _bbox: bbox, _orthoSnapToPoint: orthoSnapToPoint,
 };
 
 // ============================================================================
@@ -641,11 +650,16 @@ class DenahEditor {
             elx.textContent = 'F' + (i + 1) + ' · ' + (Math.round(dist(a, b) * 10) / 10); };
           upLbl(drag.tPrev, (vi - 1 + n) % n); upLbl(drag.tThis, vi); this.syncLP();
         } else if (drag.type === 'sup') {
-          this.S.supportsManual[drag.i][drag.end] = { x: cm.x, y: cm.y };
-          drag.line.setAttribute(drag.end === 'a' ? 'x1' : 'x2', px);
-          drag.line.setAttribute(drag.end === 'a' ? 'y1' : 'y2', py);
-          drag.h.setAttribute('cx', px); drag.h.setAttribute('cy', py);
-          drag.hit.setAttribute('cx', px); drag.hit.setAttribute('cy', py);
+          const otherEnd = drag.end === 'a' ? 'b' : 'a';
+          const anchor = this.S.supportsManual[drag.i][otherEnd];
+          const TH = (this.S.grid || 20) * 0.8;
+          const snapped = DenahConv._orthoSnapToPoint(cm, anchor, TH);
+          const px2 = PAD + snapped.x * this.SC, py2 = PAD + snapped.y * this.SC;
+          this.S.supportsManual[drag.i][drag.end] = snapped;
+          drag.line.setAttribute(drag.end === 'a' ? 'x1' : 'x2', px2);
+          drag.line.setAttribute(drag.end === 'a' ? 'y1' : 'y2', py2);
+          drag.h.setAttribute('cx', px2); drag.h.setAttribute('cy', py2);
+          drag.hit.setAttribute('cx', px2); drag.hit.setAttribute('cy', py2);
         } else if (drag.type === 'box') {
           const bp = this.boxPreview, verts = this.S.verts, n = verts.length;
           const a = verts[bp.sisiIdx], b = verts[(bp.sisiIdx + 1) % n];
