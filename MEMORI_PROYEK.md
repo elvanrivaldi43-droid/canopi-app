@@ -1,0 +1,42 @@
+# MEMORI PROYEK — Denah Interaktif RAB (sesi 14–16 Juli 2026)
+
+> Catatan kerja hidup. Fokus: fitur **Denah Interaktif di RAB Opsi** (spec: `docs/superpowers/specs/2026-07-14-denah-interaktif-rab-design.md`).
+> Semua sudah **di-push & deploy ke production** (`main`), kecuali yang ditandai.
+
+## STATUS BUG / TUGAS
+
+| # | Hal | Status | Catatan |
+|---|-----|--------|---------|
+| 1 | Tahap 1A backend (stok per-material, jalur `tipe:denah`, `stokMap()`, reproduksi PA-DUTA) | ✅ SELESAI | 5 task, tes standalone hijau |
+| 2 | Tahap 1B DenahEditor + integrasi RAB opsi | ✅ SELESAI | subagent-driven, review opus clean |
+| 3 | `buildPenawaran()` cabang denah (PDF penawaran) | ✅ SELESAI | tampil ukuran+frame/support/tiang+atap |
+| 4 | Iterasi editor: tiang tak di sudut, Lebar/Panjang resize, label support S1..Sn, target-ketuk lebar, hapus tombol Kanopi + Besi Tambahan, denah jadi default, indikator autosave | ✅ SELESAI | dari tes browser Elvan |
+| 5 | Ortho-snap (seret sudut auto-lurus vertikal/horizontal) | ✅ SELESAI | bikin lekukan lebih mudah |
+| 6 | Cache-bust `denah-editor.js` (`?v=filemtime`) | ✅ SELESAI | cegah browser pakai JS lama |
+| 7 | **Bug TDZ `let _hitungTimer` → `var`** (akar harga-0 + autosave-mati + jarak-kosong) | ✅ SELESAI & DIKONFIRMASI ELVAN | denah-default bikin editor saat load → `onChange`→`jadwalkanHitung` pakai `_hitungTimer` sebelum deklarasi `let` → TDZ throw → konstruksi editor gagal (members tak sampai mesin) + IIFE load abort (jarak profil tak ke-load). `var` ter-hoist = aman. Terverifikasi jsdom + Elvan (harga Rp14,8jt keluar, rincian besi ada, autosave jalan, jarak & jenis-kerja terisi) |
+| 8 | **WF masih terhitung 6m (bukan 12m)** | 🟡 SETENGAH — nunggu data Elvan | DB sudah `panjang_batang_cm=1200` (Elvan cek). Dugaan: **nama tak cocok** — rincian pakai "WF 200 12m", tapi baris 1200 dinamai "wf12m". `stokMap()` cocokkan per-nama-persis → tak match → default 600. MINTA hasil `SELECT id,nama,aktif,panjang_batang_cm FROM master_material WHERE nama LIKE '%wf%'` + nama di dropdown denah |
+| 9 | **Freehand susah bikin bentuk PA-DUTA** | 🔴 BELUM — lagi brainstorming | Elvan: bentuk "campur" (mayoritas siku 90° + kadang ada sisi miring). Belum ada desain/keputusan. LANJUT dari sini |
+
+## FILE YANG DIUBAH (sesi ini, semua di `main`, sudah di-push)
+
+- `public/js/denah-editor.js` (BARU) — `DenahConv` (geometri murni denah→members, tes `node tests/rangka/test_konverter.mjs`) + kelas `DenahEditor` (SVG editor per-blok, classic-script `globalThis`, TANPA ESM export).
+- `resources/views/rab-opsi/index.blade.php` — tipe blok `denah`, mount editor, `bacaBlok`/`isiBlok`/`tambahBlok` denah, `buildPenawaran` denah, indikator autosave, cache-bust, **fix TDZ `var _hitungTimer`**.
+- `app/Services/CuttingService.php` — `potong($pieces, $stock=null)`.
+- `app/Services/RangkaDesignService.php` — `hitung(..., array $stok=[])`.
+- `app/Http/Controllers/CuttingController.php` — `stokMap()` + cabang `tipe:'denah'` di `hitungSatuBlok`.
+- `tests/rangka/test_{stok,stok_material,denah_blok,paduta}.php`, `test_konverter.mjs` — tes.
+- `tests/rangka/denah_prototype.html` — prototype UX (referensi).
+- `docs/superpowers/plans/2026-07-14-denah-rab-tahap1a-engine.md`, `2026-07-15-denah-rab-tahap1b-editor.md` — plan.
+- `CLAUDE.md` — RESUME POINT.
+- **SQL (dijalankan Elvan di phpMyAdmin):** kolom `master_material.panjang_batang_cm` (default 600) + set WF = 1200.
+
+## LANGKAH SELANJUTNYA (urut)
+
+1. **WF 12m (#8):** terima hasil SQL + nama dropdown → betulkan ketidakcocokan nama (samakan nama besi yang dipakai denah dengan baris yang `panjang_batang_cm=1200`, atau perbaiki matching bila perlu). Cepat begitu data ada.
+2. **Cara bikin bentuk (#9):** lanjut brainstorming (jawaban "campur") → propose 2-3 pendekatan (mis. input rantai-ukur sisi + belok siku default + diagonal untuk sisi miring / preset bentuk / grid) → desain → spec → plan → implementasi.
+3. Foto **bar #12** cutting list PA-DUTA (opsional) → tutup validasi 4x8=9.
+
+## CATATAN PENTING
+- Deploy = `git push` → GitHub Actions FTP ke Niagahoster (±1-2 menit). `main` = production.
+- Aset JS statik WAJIB cache-bust (`?v=filemtime`) — browser agresif nyimpen JS lama (pelajaran sesi ini).
+- Bug JS di blade tak ketahuan `node --check` (cuma sintaks) — pakai **jsdom** untuk uji runtime konstruksi/onChange (terbukti ampuh nemu TDZ).
