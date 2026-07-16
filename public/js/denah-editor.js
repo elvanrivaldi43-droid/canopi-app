@@ -742,7 +742,7 @@ class DenahEditor {
   }
 
   bindSvg(el) {
-    let drag = null, raf = 0, pend = null;
+    let drag = null;
     const PAD = this.PAD;
     const X = x => PAD + x * this.SC, Y = y => PAD + y * this.SC;
     el.addEventListener('pointerdown', e => {
@@ -806,9 +806,11 @@ class DenahEditor {
       }
     });
     // Seret mulus: hanya ubah atribut node terkait, TANPA render ulang. Ikuti jari (tak snap); snap saat lepas.
+    // Update LANGSUNG tiap pointermove (tak nunggu requestAnimationFrame) — jeda 1 frame kerasa lebih jauh
+    // secara visual pas di-zoom (Elvan lapor drag "belum ikutin jari" saat pinch-zoom aktif).
     el.addEventListener('pointermove', e => {
-      if (!drag) return; pend = this.toCm(e, el); if (raf) return;
-      raf = requestAnimationFrame(() => { raf = 0; const cm = pend, px = PAD + cm.x * this.SC, py = PAD + cm.y * this.SC;
+      if (!drag) return; const cm = this.toCm(e, el), px = PAD + cm.x * this.SC, py = PAD + cm.y * this.SC;
+      {
         if (drag.type === 'vert') { const vi = drag.vi, n = this.S.verts.length;
           // ORTHO-SNAP: kalau hampir sejajar dgn sudut tetangga (kiri/kanan poligon), kunci ke sumbunya
           // → sisi jadi lurus vertikal/horizontal tanpa harus pas manual. Bikin lekukan gampang.
@@ -851,13 +853,13 @@ class DenahEditor {
           const poly = el.querySelector('[data-boxprev]');
           if (poly) poly.setAttribute('points', [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' '));
         }
-      });
+      }
     });
     const end = () => { if (!drag) return;
       if (drag.type === 'vert') { const vi = drag.vi; this.S.verts[vi] = { x: this.snap(this.S.verts[vi].x), y: this.snap(this.S.verts[vi].y) }; }
       else if (drag.type === 'sup') { const p = this.S.supportsManual[drag.i][drag.end]; this.S.supportsManual[drag.i][drag.end] = { x: this.snap(p.x), y: this.snap(p.y) }; }
       else if (drag.type === 'box') { this.boxPreview.offset = this.snap(this.boxPreview.offset); }
-      drag = null; if (raf) { cancelAnimationFrame(raf); raf = 0; } this.render(); };
+      drag = null; this.render(); };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
   }
