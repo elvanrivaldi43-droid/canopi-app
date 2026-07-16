@@ -14,8 +14,8 @@
 | 5 | Ortho-snap (seret sudut auto-lurus vertikal/horizontal) | ✅ SELESAI | bikin lekukan lebih mudah |
 | 6 | Cache-bust `denah-editor.js` (`?v=filemtime`) | ✅ SELESAI | cegah browser pakai JS lama |
 | 7 | **Bug TDZ `let _hitungTimer` → `var`** (akar harga-0 + autosave-mati + jarak-kosong) | ✅ SELESAI & DIKONFIRMASI ELVAN | denah-default bikin editor saat load → `onChange`→`jadwalkanHitung` pakai `_hitungTimer` sebelum deklarasi `let` → TDZ throw → konstruksi editor gagal (members tak sampai mesin) + IIFE load abort (jarak profil tak ke-load). `var` ter-hoist = aman. Terverifikasi jsdom + Elvan (harga Rp14,8jt keluar, rincian besi ada, autosave jalan, jarak & jenis-kerja terisi) |
-| 8 | **WF masih terhitung 6m (bukan 12m)** | 🟡 SETENGAH — nunggu data Elvan | DB sudah `panjang_batang_cm=1200` (Elvan cek). Dugaan: **nama tak cocok** — rincian pakai "WF 200 12m", tapi baris 1200 dinamai "wf12m". `stokMap()` cocokkan per-nama-persis → tak match → default 600. MINTA hasil `SELECT id,nama,aktif,panjang_batang_cm FROM master_material WHERE nama LIKE '%wf%'` + nama di dropdown denah |
-| 9 | **Freehand susah bikin bentuk PA-DUTA** | 🔴 BELUM — lagi brainstorming | Elvan: bentuk "campur" (mayoritas siku 90° + kadang ada sisi miring). Belum ada desain/keputusan. LANJUT dari sini |
+| 8 | **WF masih terhitung 6m (bukan 12m)** | ✅ SELESAI & DIKONFIRMASI (16 Juli) — **ternyata bukan bug** | Dugaan lama (nama tak cocok) GUGUR — SQL cek: `WF 200 12m` aktif=1, `panjang_batang_cm=1200`, persis sama nama dropdown. Diverifikasi lewat log debug sementara (`Log::error` — `Log::info` kefilter krn `LOG_LEVEL=error` production, pelajaran baru): `stok_wf:1200` terbaca benar. "2 btg" yang tampil di UI itu **matematis minimal**, bukan bug: support 700cm + tiang 300cm + 300cm = total 1300cm, > 1 batang 12m (1200cm), jadi butuh 2 batang apa pun susunannya. Dibanding stok lama 600cm yang bakal jadi 3 batang, ini pembuktian stok 1200 sudah kepakai. Log debug sudah dibersihkan dari kode. |
+| 9 | **Freehand susah bikin bentuk PA-DUTA** | 🔴 BELUM — lagi brainstorming | Elvan: bentuk "campur" (mayoritas siku 90° + kadang ada sisi miring). Belum ada desain/keputusan. **LANJUT dari sini** |
 
 ## FILE YANG DIUBAH (sesi ini, semua di `main`, sudah di-push)
 
@@ -32,11 +32,11 @@
 
 ## LANGKAH SELANJUTNYA (urut)
 
-1. **WF 12m (#8):** terima hasil SQL + nama dropdown → betulkan ketidakcocokan nama (samakan nama besi yang dipakai denah dengan baris yang `panjang_batang_cm=1200`, atau perbaiki matching bila perlu). Cepat begitu data ada.
-2. **Cara bikin bentuk (#9):** lanjut brainstorming (jawaban "campur") → propose 2-3 pendekatan (mis. input rantai-ukur sisi + belok siku default + diagonal untuk sisi miring / preset bentuk / grid) → desain → spec → plan → implementasi.
-3. Foto **bar #12** cutting list PA-DUTA (opsional) → tutup validasi 4x8=9.
+1. **Cara bikin bentuk (#9):** lanjut brainstorming (jawaban "campur") → propose 2-3 pendekatan (mis. input rantai-ukur sisi + belok siku default + diagonal untuk sisi miring / preset bentuk / grid) → desain → spec → plan → implementasi. **LANJUT DARI SINI.**
+2. Foto **bar #12** cutting list PA-DUTA (opsional) → tutup validasi 4x8=9.
 
 ## CATATAN PENTING
 - Deploy = `git push` → GitHub Actions FTP ke Niagahoster (±1-2 menit). `main` = production.
 - Aset JS statik WAJIB cache-bust (`?v=filemtime`) — browser agresif nyimpen JS lama (pelajaran sesi ini).
 - Bug JS di blade tak ketahuan `node --check` (cuma sintaks) — pakai **jsdom** untuk uji runtime konstruksi/onChange (terbukti ampuh nemu TDZ).
+- **`LOG_LEVEL=error` di production** → `Log::info()` kefilter, nggak nyampe `laravel.log`. Debug log sementara pakai `Log::error()` biar pasti kebaca (16 Juli, kasus WF #8).

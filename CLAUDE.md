@@ -166,6 +166,7 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 - DB pakai `DB::table` (bukan Eloquent) di endpoint kritis untuk hindari masalah fillable
 - **Notifikasi:** Owner (1 orang) via Telegram (curl langsung, token di kode bukan `.env`). Karyawan (14 orang): rencana pindah ke WhatsApp Business API resmi — jangan paksa mereka pakai Telegram
 - **Storage foto:** Cloudflare R2 arah jangka panjang (bandwidth gratis, tak bisa suspend, murah). Cloudinary free tidak cukup untuk volume absensi+portal. Bangun infrastruktur media SEKALI dengan pola sama untuk semua modul, jangan tambal-sulam per modul
+- **`LOG_LEVEL=error` di production** → `Log::info()`/`Log::debug()` kefilter, tak nyampe `laravel.log`. Debug log sementara pakai `Log::error()` biar pasti kebaca, hapus lagi setelah dipakai
 
 ---
 
@@ -231,3 +232,7 @@ Urutan besar sesudahnya: **1C = fix `buildPenawaran()` denah + jadikan denah def
 **Status git:** `main` **SUDAH di-push & deploy (15 Juli)** — 1A+1B+fix buildPenawaran live ke production. (Sebelumnya ahead ~38 commit) 1A+1B semua sudah di production. Utang 1A: (1) **SELESAI PENUH (15 Juli)** — kolom `master_material.panjang_batang_cm` dibuat + baris WF di-set **1200** (dikonfirmasi Elvan). Stok per-material WF-1200 kini aktif di production DB. (2) foto bar #12 untuk tutup PA-DUTA 4x8=9 — **masih kurang** (satu-satunya sisa utang 1A).
 
 **Catatan bug laten (di luar scope, buat nanti):** `CuttingService::potong` case-2 mint jid baru → sambungan bisa kurang di kasus ekstrem; `hitungRangka` auto-layout lama pakai intdiv/2 (boleh dipensiunkan setelah DenahEditor menggantikan penuh).
+
+**16 Juli 2026 — Bug #8 (WF 12m) CLOSED, ternyata bukan bug:** Diverifikasi lewat log debug sementara (dihapus lagi setelah dipakai) — `stok_wf:1200` terbaca benar dari DB (`WF 200 12m` sudah pas namanya, dugaan lama "nama tak cocok" gugur). "2 batang" yang sempat dikira bug itu minimal matematis (support 700cm + 2 tiang 300cm = 1300cm > 1 batang 1200cm). Pelajaran baru: `LOG_LEVEL=error` di production nge-filter `Log::info()`, pakai `Log::error()` buat debug sementara.
+
+>>> RESUME POINT — lanjut ke #9: cara bikin bentuk "campur" (freehand susah untuk bentuk siku+miring). Lihat MEMORI_PROYEK.md. <<<
