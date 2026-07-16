@@ -179,14 +179,16 @@ class DenahEditor {
 .de-tool.on{background:#1e293b;color:#fff}
 .de-mini{padding:9px 13px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:12px;cursor:pointer}
 .de-hint{font-size:12px;color:#64748b;margin:6px 2px;min-height:16px}
-.de-ribbon-tabs{display:flex;border:1px solid #334155;border-radius:8px 8px 0 0;overflow:hidden;background:#1e293b}
+.de-ribbon{position:relative;margin-bottom:10px}
+.de-ribbon-tabs{display:flex;border:1px solid #334155;border-radius:8px;overflow:hidden;background:#1e293b}
 .de-ribbon-tab{flex:1;text-align:center;padding:11px 4px;min-height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:12px;color:#cbd5e1;cursor:pointer;user-select:none;border-right:1px solid #334155}
 .de-ribbon-tab:last-child{border-right:none}
 .de-ribbon-tab.on{background:#0f2740;color:#38bdf8;font-weight:600}
-.de-ribbon-strip{border:1px solid transparent;border-top:none;border-radius:0 0 8px 8px;background:#f8fafc;padding:0;margin-bottom:10px;max-height:0;overflow:hidden;transition:max-height .15s ease}
-.de-ribbon-strip.open{border-color:#334155;padding:10px 12px;max-height:220px;overflow-y:auto}
+.de-ribbon-strip{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;border:1px solid transparent;border-radius:8px;background:#f8fafc;padding:0;max-height:0;overflow:hidden;transition:max-height .15s ease;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+.de-ribbon-strip.open{border-color:#334155;padding:10px 12px;max-height:45vh;overflow-y:auto}
 .de-ribbon-panel{display:none}
 .de-ribbon-panel.on{display:block}
+.de-quickbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block}
@@ -202,6 +204,7 @@ class DenahEditor {
 .de-matmenu .de-mrow{display:flex;gap:6px;margin-top:6px}
 </style>
 <div class="de-card">
+  <div class="de-ribbon">
   <div class="de-ribbon-tabs">
     <span class="de-ribbon-tab" data-tab="ukuran">Ukuran</span>
     <span class="de-ribbon-tab" data-tab="support">Support</span>
@@ -245,13 +248,16 @@ class DenahEditor {
         <span class="de-mini" data-role="btnAddV">+ Sudut</span>
         <span class="de-mini" data-role="btnDelV">− Sudut</span>
         <span class="de-mini" data-role="btnAddBox">+ Tambah Kotak</span>
-        <span class="de-mini" data-role="btnUndo">Undo</span>
         <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
       </div>
     </div>
     <div class="de-ribbon-panel" data-panel="sisi">
       <div class="de-legend" data-role="sisiPanel"></div>
     </div>
+  </div>
+  </div>
+  <div class="de-quickbar">
+    <span class="de-mini" data-role="btnUndo">Undo</span>
   </div>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
@@ -337,21 +343,27 @@ class DenahEditor {
     const panels = {};
     this._qa('.de-ribbon-panel').forEach(p => { panels[p.dataset.panel] = p; });
     let openTab = null;
+    const closeRibbon = () => {
+      if (!openTab) return;
+      strip.classList.remove('open');
+      panels[openTab].classList.remove('on');
+      tabs.forEach(x => { if (x.dataset.tab === openTab) x.classList.remove('on'); });
+      openTab = null;
+    };
     tabs.forEach(t => t.onclick = () => {
       const name = t.dataset.tab;
-      if (openTab === name) {
-        strip.classList.remove('open');
-        panels[name].classList.remove('on');
-        t.classList.remove('on');
-        openTab = null;
-        return;
-      }
+      if (openTab === name) { closeRibbon(); return; }
       if (openTab) { panels[openTab].classList.remove('on'); tabs.forEach(x => { if (x.dataset.tab === openTab) x.classList.remove('on'); }); }
       panels[name].classList.add('on');
       t.classList.add('on');
       strip.classList.add('open');
       openTab = name;
     });
+    this._docPointerDownRibbon = (e) => {
+      const ribbon = this._q('.de-ribbon');
+      if (openTab && ribbon && !ribbon.contains(e.target)) closeRibbon();
+    };
+    document.addEventListener('pointerdown', this._docPointerDownRibbon);
   }
 
   // Pinch-zoom + pan (CSS transform di atas .de-canvas — TIDAK menyentuh viewBox/SC/toCm,
@@ -438,6 +450,7 @@ class DenahEditor {
   // lepas listener document saat instance dibuang (blok di-hapus/off di RAB opsi)
   destroy() {
     if (this._docPointerDown) document.removeEventListener('pointerdown', this._docPointerDown);
+    if (this._docPointerDownRibbon) document.removeEventListener('pointerdown', this._docPointerDownRibbon);
   }
 
   _changed() { if (this.opts.onChange) this.opts.onChange(); }
