@@ -410,7 +410,7 @@ class CuttingController extends Controller
             $members = array_map(fn ($m) => (array) $m, (array) ($b['members'] ?? []));
             $harga   = (array) ($b['harga'] ?? []);
             $stok    = $this->stokMap();
-            \Illuminate\Support\Facades\Log::info('DEBUG-WF-stok', [
+            \Illuminate\Support\Facades\Log::error('DEBUG-WF-stok', [
                 'stok_wf'    => $stok['WF 200 12m'] ?? 'TIDAK ADA DI STOKMAP',
                 'members_wf' => array_values(array_filter($members, fn ($m) => trim((string) ($m['material'] ?? '')) === 'WF 200 12m')),
             ]);
