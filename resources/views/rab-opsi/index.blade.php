@@ -193,7 +193,7 @@
     <button class="btn btn-gold wz-n3" style="display:none" onclick="buatPenawaran()">Buat Penawaran →</button>
 </div></div>
 
-<script src="{{ asset('js/denah-editor.js') }}"></script>
+<script src="{{ asset('js/denah-editor.js') }}?v={{ @filemtime(public_path('js/denah-editor.js')) ?: time() }}"></script>
 <script>
 const CSRF='{{ csrf_token() }}';
 const LEAD = @json($lead ?? null);
