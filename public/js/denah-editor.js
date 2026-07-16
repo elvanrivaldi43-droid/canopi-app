@@ -130,8 +130,9 @@ class DenahEditor {
     }
     this.undoStack = [];
     this.mode = 'bentuk';
-    this.armed = null;      // 'addV' | 'delV' | 'addSupport'
+    this.armed = null;      // 'addV' | 'delV' | 'addSupport' | 'addBox'
     this.addSupportPt = null;
+    this.boxPreview = null; // { sisiIdx, offset, span, depthMag, depthSign } selama armed === 'addBox'
     this.menuId = null;
     this.SC = 1;
     this.PAD = 44;
@@ -206,9 +207,11 @@ class DenahEditor {
     <span style="width:10px"></span>
     <span class="de-mini" data-role="btnAddV">+ Sudut</span>
     <span class="de-mini" data-role="btnDelV">− Sudut</span>
+    <span class="de-mini" data-role="btnAddBox">+ Tambah Kotak</span>
     <span class="de-mini" data-role="btnUndo">Undo</span>
     <span class="de-mini" data-role="btnAddSupport" style="margin-left:6px">+ Support manual</span>
   </div>
+  <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
   <div class="de-canvas"></div>
   <div class="de-legend" data-role="legend"></div>
@@ -238,14 +241,21 @@ class DenahEditor {
       this._qa('.de-tool').forEach(t => t.classList.remove('on'));
       elx.classList.add('on');
       this.mode = elx.dataset.mode;
-      this.armed = null; this.addSupportPt = null;
+      this.armed = null; this.addSupportPt = null; this.boxPreview = null;
       this.setHint();
       this.render();
     });
-    this._q('[data-role=btnAddV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'addV'; this.setHint('Klik sisi frame untuk sisipkan sudut baru.'); };
-    this._q('[data-role=btnDelV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'delV'; this.setHint('Klik sudut untuk menghapus (min 3 sudut).'); };
+    this._q('[data-role=btnAddV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'addV'; this.boxPreview = null; this.setHint('Klik sisi frame untuk sisipkan sudut baru.'); this.renderBoxPanel(); };
+    this._q('[data-role=btnDelV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'delV'; this.boxPreview = null; this.setHint('Klik sudut untuk menghapus (min 3 sudut).'); this.renderBoxPanel(); };
     this._q('[data-role=btnUndo]').onclick = () => this.undo();
     this._q('[data-role=btnAddSupport]').onclick = () => { if (this.mode !== 'support') return; this.armed = 'addSupport'; this.addSupportPt = null; this.setHint('Klik titik ke-1 support…'); };
+    this._q('[data-role=btnAddBox]').onclick = () => {
+      if (this.mode !== 'bentuk') return;
+      this.armed = 'addBox';
+      this.boxPreview = { sisiIdx: null, offset: 0, span: 100, depthMag: 100, depthSign: 1 };
+      this.setHint('Ketuk sisi lurus tempat kotak mau nempel.');
+      this.renderBoxPanel();
+    };
 
     this._q('[data-role=inArah]').onchange = e => { this.S.arah = e.target.value; this.render(); };
     this._q('[data-role=inKotak]').oninput = e => { this.S.kotak = Math.max(1, +e.target.value) || this.S.kotak; this.S.autoKotak = false; this.render(); };
@@ -419,6 +429,54 @@ class DenahEditor {
     menu.style.display = 'block';
   }
 
+  // Panel input span/menjorok + Terapkan/Batal — cuma tampil selagi armed === 'addBox'.
+  renderBoxPanel() {
+    const panel = this._q('[data-role=boxPanel]');
+    if (this.armed !== 'addBox') { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+    const bp = this.boxPreview;
+    panel.style.display = 'flex';
+    panel.innerHTML =
+      '<label style="font-size:12px;display:flex;flex-direction:column;gap:3px">Panjang di sisi ini (cm)' +
+      '<input type="number" data-role="inBoxSpan" value="' + bp.span + '" min="1" step="10"></label>' +
+      '<label style="font-size:12px;display:flex;flex-direction:column;gap:3px">Menjorok (cm)' +
+      '<input type="number" data-role="inBoxDepth" value="' + bp.depthMag + '" min="1" step="10"></label>' +
+      (bp.sisiIdx != null ? '<span class="de-mini" data-role="btnBoxApply">Terapkan</span>' : '') +
+      '<span class="de-mini" data-role="btnBoxCancel">Batal</span>';
+    this._q('[data-role=inBoxSpan]').oninput = e => { bp.span = Math.max(1, +e.target.value) || bp.span; this.render(); };
+    this._q('[data-role=inBoxDepth]').oninput = e => { bp.depthMag = Math.max(1, +e.target.value) || bp.depthMag; this.render(); };
+    this._q('[data-role=btnBoxCancel]').onclick = () => { this.armed = null; this.boxPreview = null; this.setHint(); this.render(); };
+    const apply = this._q('[data-role=btnBoxApply]');
+    if (apply) apply.onclick = () => this.applyBoxPreview();
+  }
+
+  // Titik kotak-preview sekarang (cm), dari sisi+offset+span+depth yang sedang diedit/digeser.
+  computeBoxPreviewVerts() {
+    const bp = this.boxPreview, verts = this.S.verts, n = verts.length;
+    const a = verts[bp.sisiIdx], b = verts[(bp.sisiIdx + 1) % n];
+    const ex = b.x - a.x, ey = b.y - a.y, len = Math.hypot(ex, ey) || 1;
+    const ux = ex / len, uy = ey / len, nx = -uy, ny = ux;
+    const off = Math.max(0, Math.min(bp.offset, len - bp.span));
+    const p1 = { x: a.x + ux * off, y: a.y + uy * off };
+    const p2 = { x: a.x + ux * (off + bp.span), y: a.y + uy * (off + bp.span) };
+    const d = bp.depthMag * bp.depthSign;
+    const p4 = { x: p1.x + nx * d, y: p1.y + ny * d };
+    const p3 = { x: p2.x + nx * d, y: p2.y + ny * d };
+    return { p1, p2, p3, p4 };
+  }
+
+  // Terapkan: panggil combineBox murni (Task 1); kalau valid ganti S.verts, kalau tidak kasih hint & tetap di preview.
+  applyBoxPreview() {
+    const bp = this.boxPreview;
+    const result = DenahConv.combineBox(this.S.verts, bp.sisiIdx, bp.offset, bp.span, bp.depthMag * bp.depthSign);
+    if (!result) { this.setHint('Kotak tidak valid di posisi ini — geser lagi atau kecilkan ukurannya.'); return; }
+    this.pushUndo();
+    this.S.verts = result;
+    this.armed = null; this.boxPreview = null;
+    this.setHint();
+    this.syncLP();
+    this.render();
+  }
+
   // ---- Render SVG ----
   render() {
     const S = this.S;
@@ -465,6 +523,11 @@ class DenahEditor {
     S.verts.forEach((v, i) => { const cx = X(v.x), cy = Y(v.y);
       s += `<circle cx="${cx}" cy="${cy}" r="24" fill="transparent" data-vert="${i}" class="vhit" style="cursor:grab"/>`;
       s += `<circle id="vh${i}" cx="${cx}" cy="${cy}" r="10" fill="#fff" stroke="#f59e0b" stroke-width="2.5" class="vh" style="pointer-events:none"/>`; });
+    if (this.armed === 'addBox' && this.boxPreview.sisiIdx != null) {
+      const pv = this.computeBoxPreviewVerts();
+      const pts = [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' ');
+      s += `<polygon points="${pts}" fill="rgba(56,189,248,0.35)" stroke="#38bdf8" stroke-width="2" data-boxprev="1" style="cursor:grab"/>`;
+    }
     s += '</svg>';
     const canvas = this._q('.de-canvas');
     canvas.innerHTML = s;
@@ -476,6 +539,7 @@ class DenahEditor {
       : '<span style="color:#94a3b8">Belum ada batang</span>';
     this._q('[data-role=luas]').textContent = (shoelace(S.verts) / 10000).toFixed(2) + ' m²';
     this.renderSides(mem);
+    this.renderBoxPanel();
     this._changed();
   }
 
@@ -486,6 +550,24 @@ class DenahEditor {
     el.addEventListener('pointerdown', e => {
       const t = e.target; const cm = this.toCm(e, el);
       if (this.mode === 'bentuk') {
+        if (this.armed === 'addBox' && this.boxPreview.sisiIdx == null && t.dataset.id && t.dataset.id.startsWith('F')) {
+          const i = +t.dataset.id.slice(1);
+          const a = this.S.verts[i], b = this.S.verts[(i + 1) % this.S.verts.length];
+          const len = dist(a, b);
+          const bp = this.boxPreview;
+          bp.sisiIdx = i;
+          bp.span = Math.min(bp.span, Math.max(1, Math.round(len - 1)));
+          bp.offset = Math.max(0, (len - bp.span) / 2);
+          this.setHint('Geser kotak buat pas-in posisi & arah (luar = nambah, dalam = lekukan), lalu ketuk Terapkan.');
+          this.renderBoxPanel();
+          this.render();
+          return;
+        }
+        if (t.dataset.boxprev && this.boxPreview && this.boxPreview.sisiIdx != null) {
+          drag = { type: 'box' };
+          el.setPointerCapture(e.pointerId); e.preventDefault();
+          return;
+        }
         if (this.armed === 'delV' && t.dataset.vert != null) { if (this.S.verts.length > 3) { this.pushUndo(); this.S.verts.splice(+t.dataset.vert, 1); } this.armed = null; this.setHint(); this.render(); return; }
         if (this.armed === 'addV' && t.dataset.id && t.dataset.id.startsWith('F')) {
           this.pushUndo(); const i = +t.dataset.id.slice(1); this.S.verts.splice(i + 1, 0, { x: this.snap(cm.x), y: this.snap(cm.y) }); this.armed = null; this.setHint(); this.render(); return; }
@@ -553,12 +635,25 @@ class DenahEditor {
           drag.line.setAttribute(drag.end === 'a' ? 'y1' : 'y2', py);
           drag.h.setAttribute('cx', px); drag.h.setAttribute('cy', py);
           drag.hit.setAttribute('cx', px); drag.hit.setAttribute('cy', py);
+        } else if (drag.type === 'box') {
+          const bp = this.boxPreview, verts = this.S.verts, n = verts.length;
+          const a = verts[bp.sisiIdx], b = verts[(bp.sisiIdx + 1) % n];
+          const ex = b.x - a.x, ey = b.y - a.y, len = Math.hypot(ex, ey) || 1;
+          const ux = ex / len, uy = ey / len, nx = -uy, ny = ux;
+          const vx = cm.x - a.x, vy = cm.y - a.y;
+          const along = vx * ux + vy * uy, side = vx * nx + vy * ny;
+          bp.offset = Math.max(0, Math.min(along - bp.span / 2, len - bp.span));
+          bp.depthSign = side >= 0 ? 1 : -1;
+          const pv = this.computeBoxPreviewVerts();
+          const poly = el.querySelector('[data-boxprev]');
+          if (poly) poly.setAttribute('points', [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' '));
         }
       });
     });
     const end = () => { if (!drag) return;
       if (drag.type === 'vert') { const vi = drag.vi; this.S.verts[vi] = { x: this.snap(this.S.verts[vi].x), y: this.snap(this.S.verts[vi].y) }; }
       else if (drag.type === 'sup') { const p = this.S.supportsManual[drag.i][drag.end]; this.S.supportsManual[drag.i][drag.end] = { x: this.snap(p.x), y: this.snap(p.y) }; }
+      else if (drag.type === 'box') { this.boxPreview.offset = this.snap(this.boxPreview.offset); }
       drag = null; if (raf) { cancelAnimationFrame(raf); raf = 0; } this.render(); };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
@@ -582,6 +677,7 @@ if (globalThis.__DENAH_SELFCHECK) {
       supportsManual: [], removed: {}, tiang: [], tinggi: 300,
       matDefault: { frame: 'Hollow 5x10', support: 'Hollow 5x10', tiang: 'Hollow 5x10' }, matOverride: {},
     });
+    console.assert(!!ed._q('[data-role=btnAddBox]'), 'DenahEditor selfcheck: tombol + Tambah Kotak ada');
     const mem = ed.getMembers();
     const fr = mem.filter(m => m.jenis === 'frame');
     console.assert(fr.length === 4, 'DenahEditor selfcheck: frame square=4', fr.length);
