@@ -489,11 +489,19 @@ class DenahEditor {
       if (!drag) return; pend = this.toCm(e, el); if (raf) return;
       raf = requestAnimationFrame(() => { raf = 0; const cm = pend, px = PAD + cm.x * this.SC, py = PAD + cm.y * this.SC;
         if (drag.type === 'vert') { const vi = drag.vi, n = this.S.verts.length;
-          this.S.verts[vi] = { x: cm.x, y: cm.y };
-          drag.vh.setAttribute('cx', px); drag.vh.setAttribute('cy', py);
-          drag.vhit.setAttribute('cx', px); drag.vhit.setAttribute('cy', py);
-          if (drag.lPrev) { drag.lPrev.setAttribute('x2', px); drag.lPrev.setAttribute('y2', py); }
-          if (drag.lThis) { drag.lThis.setAttribute('x1', px); drag.lThis.setAttribute('y1', py); }
+          // ORTHO-SNAP: kalau hampir sejajar dgn sudut tetangga (kiri/kanan poligon), kunci ke sumbunya
+          // → sisi jadi lurus vertikal/horizontal tanpa harus pas manual. Bikin lekukan gampang.
+          const pv = this.S.verts[(vi - 1 + n) % n], nx = this.S.verts[(vi + 1) % n];
+          const TH = (this.S.grid || 20) * 0.8;
+          let ax = cm.x, ay = cm.y;
+          if (Math.abs(ax - pv.x) < TH) ax = pv.x; else if (Math.abs(ax - nx.x) < TH) ax = nx.x;
+          if (Math.abs(ay - pv.y) < TH) ay = pv.y; else if (Math.abs(ay - nx.y) < TH) ay = nx.y;
+          this.S.verts[vi] = { x: ax, y: ay };
+          const px2 = PAD + ax * this.SC, py2 = PAD + ay * this.SC;
+          drag.vh.setAttribute('cx', px2); drag.vh.setAttribute('cy', py2);
+          drag.vhit.setAttribute('cx', px2); drag.vhit.setAttribute('cy', py2);
+          if (drag.lPrev) { drag.lPrev.setAttribute('x2', px2); drag.lPrev.setAttribute('y2', py2); }
+          if (drag.lThis) { drag.lThis.setAttribute('x1', px2); drag.lThis.setAttribute('y1', py2); }
           const upLbl = (elx, i) => { if (!elx) return; const a = this.S.verts[i], b = this.S.verts[(i + 1) % n];
             elx.setAttribute('x', X((a.x + b.x) / 2)); elx.setAttribute('y', Y((a.y + b.y) / 2) - 5);
             elx.textContent = 'F' + (i + 1) + ' · ' + (Math.round(dist(a, b) * 10) / 10); };
