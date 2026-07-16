@@ -187,7 +187,7 @@ class DenahEditor {
 .de-ribbon-strip.open{border-color:#334155;padding:10px 12px;max-height:220px;overflow-y:auto}
 .de-ribbon-panel{display:none}
 .de-ribbon-panel.on{display:block}
-.de-canvas-wrap{position:relative;touch-action:none}
+.de-canvas-wrap{position:relative;touch-action:none;overflow:hidden}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block}
 .de-zoom-reset{position:absolute;right:10px;bottom:10px;min-width:44px;min-height:44px;padding:0 14px;border-radius:22px;background:rgba(15,23,42,.85);color:#e2e8f0;border:1px solid #334155;font-size:13px;display:none;align-items:center;justify-content:center;cursor:pointer;user-select:none}
