@@ -27,6 +27,26 @@ const colorMap = (mem) => {
   const used = []; mem.forEach(m => { if (!used.includes(m.material)) used.push(m.material); });
   const map = {}; used.forEach((n, i) => map[n] = PALET[i % PALET.length]); return map;
 };
+// Deteksi 2 segmen saling potong (dipakai validasi combineBox) — sengaja skip kasus kolinear/nyentuh
+// ujung persis (jarang terjadi dari hasil combineBox, dan self-intersect nyata selalu ke-tangkap
+// oleh pasangan sisi lain di sekitarnya).
+const segInt = (p1, p2, p3, p4) => {
+  const d = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const d1 = d(p3, p4, p1), d2 = d(p3, p4, p2), d3 = d(p1, p2, p3), d4 = d(p1, p2, p4);
+  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+};
+// Poligon sederhana = tak ada 2 sisi tak-bertetangga yang saling potong.
+const isSimplePolygon = (v) => {
+  const n = v.length;
+  for (let i = 0; i < n; i++) {
+    const a1 = v[i], a2 = v[(i + 1) % n];
+    for (let j = i + 1; j < n; j++) {
+      if ((j + 1) % n === i || (i + 1) % n === j) continue; // lewati sisi bertetangga (berbagi titik)
+      if (segInt(a1, a2, v[j], v[(j + 1) % n])) return false;
+    }
+  }
+  return true;
+};
 
 const DenahConv = {
   buildMembers(S) {
@@ -61,6 +81,27 @@ const DenahConv = {
   },
   luasM2(S) { return Math.round(shoelace(S.verts) / 10000 * 100) / 100; },
   saranKotak(lebar, target) { const n = Math.max(1, Math.round(lebar / target)); return Math.round(lebar / n); },
+  // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
+  // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
+  // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
+  // memutuskan tandanya dari posisi drag — fungsi ini tak tahu & tak perlu tahu mana "luar"/"dalam".
+  combineBox(verts, sisiIdx, offset, span, depth) {
+    const n = verts.length;
+    const a = verts[sisiIdx], b = verts[(sisiIdx + 1) % n];
+    const ex = b.x - a.x, ey = b.y - a.y, len = Math.hypot(ex, ey);
+    if (!(len > 1e-6) || !(span > 0) || offset < -1e-6 || offset + span > len + 1e-6 || !depth) return null;
+    const ux = ex / len, uy = ey / len, nx = -uy, ny = ux;
+    const p1 = { x: a.x + ux * offset, y: a.y + uy * offset };
+    const p2 = { x: a.x + ux * (offset + span), y: a.y + uy * (offset + span) };
+    const p4 = { x: p1.x + nx * depth, y: p1.y + ny * depth };
+    const p3 = { x: p2.x + nx * depth, y: p2.y + ny * depth };
+    const seq = [];
+    if (offset > 1e-6) seq.push(p1);
+    seq.push(p4, p3);
+    if (offset + span < len - 1e-6) seq.push(p2);
+    const out = [...verts.slice(0, sisiIdx + 1), ...seq, ...verts.slice(sisiIdx + 1)];
+    return isSimplePolygon(out) ? out : null;
+  },
   _dist: dist, _bbox: bbox,
 };
 
