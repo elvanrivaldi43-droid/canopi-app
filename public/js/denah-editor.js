@@ -444,8 +444,14 @@ class DenahEditor {
       '<input type="number" data-role="inBoxDepth" value="' + bp.depthMag + '" min="1" step="10"></label>' +
       (bp.sisiIdx != null ? '<span class="de-mini" data-role="btnBoxApply">Terapkan</span>' : '') +
       '<span class="de-mini" data-role="btnBoxCancel">Batal</span>';
-    this._q('[data-role=inBoxSpan]').oninput = e => { bp.span = Math.max(1, +e.target.value) || bp.span; this.render(); };
-    this._q('[data-role=inBoxDepth]').oninput = e => { bp.depthMag = Math.max(1, +e.target.value) || bp.depthMag; this.render(); };
+    const refreshBoxPreview = () => {
+      if (bp.sisiIdx == null) return;
+      const pv = this.computeBoxPreviewVerts();
+      const poly = this.el.querySelector('[data-boxprev]');
+      if (poly) poly.setAttribute('points', [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${this.PAD + p.x * this.SC},${this.PAD + p.y * this.SC}`).join(' '));
+    };
+    this._q('[data-role=inBoxSpan]').oninput = e => { bp.span = Math.max(1, +e.target.value) || bp.span; refreshBoxPreview(); };
+    this._q('[data-role=inBoxDepth]').oninput = e => { bp.depthMag = Math.max(1, +e.target.value) || bp.depthMag; refreshBoxPreview(); };
     this._q('[data-role=btnBoxCancel]').onclick = () => { this.armed = null; this.boxPreview = null; this.setHint(); this.render(); };
     const apply = this._q('[data-role=btnBoxApply]');
     if (apply) apply.onclick = () => this.applyBoxPreview();
@@ -468,8 +474,11 @@ class DenahEditor {
 
   // Terapkan: panggil combineBox murni (Task 1); kalau valid ganti S.verts, kalau tidak kasih hint & tetap di preview.
   applyBoxPreview() {
-    const bp = this.boxPreview;
-    const result = DenahConv.combineBox(this.S.verts, bp.sisiIdx, bp.offset, bp.span, bp.depthMag * bp.depthSign);
+    const bp = this.boxPreview, verts = this.S.verts, n = verts.length;
+    const a = verts[bp.sisiIdx], b = verts[(bp.sisiIdx + 1) % n];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const off = Math.max(0, Math.min(bp.offset, len - bp.span));
+    const result = DenahConv.combineBox(this.S.verts, bp.sisiIdx, off, bp.span, bp.depthMag * bp.depthSign);
     if (!result) { this.setHint('Kotak tidak valid di posisi ini — geser lagi atau kecilkan ukurannya.'); return; }
     this.pushUndo();
     this.S.verts = result;

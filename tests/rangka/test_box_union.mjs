@@ -34,5 +34,13 @@ check('ditolak: offset+span > panjang sisi -> null', invalidRange, null);
 const invalidDeep = DenahConv.combineBox(kotak, 2, 200, 300, 500);
 check('ditolak: lekukan nembus sisi seberang -> null', invalidDeep, null);
 
+// --- Kasus DITOLAK: depth = 0 (tak ada arah) ---
+const invalidDepthZero = DenahConv.combineBox(kotak, 0, 100, 200, 0);
+check('ditolak: depth=0 -> null', invalidDepthZero, null);
+
+// --- Kasus DITOLAK: offset negatif ---
+const invalidNegOffset = DenahConv.combineBox(kotak, 0, -50, 200, 100);
+check('ditolak: offset negatif -> null', invalidNegOffset, null);
+
 console.log(fail ? '\nADA FAIL' : '\nSEMUA LULUS');
 process.exit(fail ? 1 : 0);
