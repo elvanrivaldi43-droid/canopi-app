@@ -9,3 +9,6 @@
 # Harness preview lokal Perancang Rangka (dev only, tak ikut deploy)
 tests/rangka/preview_server.php
 tests/rangka/*.log
+
+# Mockup sesi brainstorming (superpowers skill, lokal saja)
+.superpowers/
