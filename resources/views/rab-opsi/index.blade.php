@@ -1021,7 +1021,7 @@ function buatPenawaran(){
 // "Hitung Harga"/navigasi wizard ditekan, lihat wzHitung/wzGo/lanjutFinalisasi -> autoSave()).
 // Supaya konsisten (tak menambah jalur hitung-harga baru yang tak ada di kanopi/manual), blok
 // denah hanya di-debounce ke autoSave() yang sudah ada, agar draft denah tak hilang saat pindah step.
-let _hitungTimer=null;
+var _hitungTimer=null;   // var (bukan let): dipakai IIFE pemuatan SEBELUM baris ini — let → TDZ ReferenceError
 function jadwalkanHitung(pane){
     clearTimeout(_hitungTimer);
     _hitungTimer=setTimeout(function(){ autoSave(); }, 800);
