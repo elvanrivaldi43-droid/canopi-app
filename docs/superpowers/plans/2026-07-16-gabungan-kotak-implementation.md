@@ -464,9 +464,9 @@ Tandai item **#9** ("Freehand susah bikin bentuk PA-DUTA") jadi selesai, catat r
 | §3.2 Model data tetap `S.verts`, operasi sekali-jalan | 1 (`combineBox` return verts baru, bukan model kotak-list) |
 | §3.3/3.4 Ukuran diketik, posisi digeser | 2 (panel span/depth diketik, offset+arah lewat drag) |
 | §3.5 Arah otomatis dari posisi (tanpa toggle) | 1 (tanda `depth`) + 2 (`depthSign` dari sisi drag) |
-| §3.6 Sisi tempel harus lurus | 2 Step 6 (cek `t.dataset.id.startsWith('F')`, hanya sisi frame lurus yang punya id ini) |
-| §3.7 Preview live | 2 Step 7, 9 |
-| §3.8 Sisi miring tetap manual | Tidak disentuh sama sekali (non-goal, tak ada task) |
+| §3.6 Sisi tempel harus lurus | **Koreksi (ditemukan final review):** setiap sisi poligon punya id `F{i}` termasuk sisi yang sudah dimiringkan manual — `combineBox` sebenarnya tetap benar secara geometri untuk sisi miring (kotak tegak lurus ke sisi itu apa adanya), jadi §3.6 bukan dipaksakan oleh kode, ini kapabilitas ekstra yang tak sengaja lebih luas dari spec, bukan bug |
+| §3.7 Preview live | 2 Step 7, 9 (+ fix final review: update preview saat ketik span/depth TANPA `render()` penuh — full render menghancurkan `<input>` yang sedang diketik lewat `renderBoxPanel()`'s `innerHTML`, bikin fokus hilang tiap huruf) |
+| §3.8 Sisi miring tetap manual | Tidak disentuh sama sekali (non-goal, tak ada task) — TAPI lihat catatan §3.6: kalau user tempel kotak ke sisi yang KEBETULAN sudah dimiringkan manual sebelumnya, itu tetap jalan benar, bukan dilarang aktif |
 | §3.9 Algoritma XOR/detour satu fungsi | 1 |
 | §3.10 Validasi & penolakan kasus ambigu | 1 (`isSimplePolygon`) + 2 Step 5 (`applyBoxPreview` hint kalau `null`) |
 | §3.11 Undo | 2 (`pushUndo()` di `applyBoxPreview` sebelum ganti verts) |
