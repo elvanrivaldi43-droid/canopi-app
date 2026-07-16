@@ -188,7 +188,7 @@ class DenahEditor {
 .de-ribbon-panel{display:none}
 .de-ribbon-panel.on{display:block}
 .de-canvas-wrap{position:relative;touch-action:none}
-.de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden}
+.de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block}
 .de-zoom-reset{position:absolute;right:10px;bottom:10px;min-width:44px;min-height:44px;padding:0 14px;border-radius:22px;background:rgba(15,23,42,.85);color:#e2e8f0;border:1px solid #334155;font-size:13px;display:none;align-items:center;justify-content:center;cursor:pointer;user-select:none}
 .de-zoom-reset.show{display:flex}
@@ -383,6 +383,10 @@ class DenahEditor {
     wrap.addEventListener('pointerdown', e => {
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pointers.size === 2) {
+        // jari ke-2 ini mungkin persis di atas vertex/support/box lain — cegah
+        // bindSvg() (bubble-phase, listener di svg) memproses pointerdown ini
+        // sebagai drag baru sebelum pinch dikenali (lihat fix Finding 2, task-4 review)
+        e.stopPropagation();
         // batalkan drag 1-jari yg mungkin lagi jalan (vertex/support/box) di bindSvg
         const svg = canvasEl().querySelector('svg');
         if (svg) svg.dispatchEvent(new PointerEvent('pointercancel'));
@@ -395,7 +399,7 @@ class DenahEditor {
           startTx: this.zoomTx, startTy: this.zoomTy,
         };
       }
-    });
+    }, { capture: true });
 
     wrap.addEventListener('pointermove', e => {
       if (!pointers.has(e.pointerId)) return;
