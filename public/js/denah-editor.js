@@ -153,6 +153,7 @@ class DenahEditor {
     this._wireControls();
     this._wireRibbon();
     this._wireZoom();
+    this._wireFullscreen();
     this.syncInputs();
     this.render();
   }
@@ -189,6 +190,8 @@ class DenahEditor {
 .de-ribbon-panel{display:none}
 .de-ribbon-panel.on{display:block}
 .de-quickbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.de-card.de-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;overflow-y:auto;border-radius:0;margin:0;box-shadow:none}
+.de-fullscreen-exit{display:none;position:fixed;top:12px;right:12px;z-index:9001;padding:10px 18px;border-radius:22px;background:#1e293b;color:#fff;border:1px solid #334155;font-size:14px;font-weight:600;cursor:pointer;align-items:center;justify-content:center}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block}
@@ -258,7 +261,9 @@ class DenahEditor {
   </div>
   <div class="de-quickbar">
     <span class="de-mini" data-role="btnUndo">Undo</span>
+    <span class="de-mini" data-role="btnFullscreen">Perbesar Layar</span>
   </div>
+  <span class="de-fullscreen-exit" data-role="btnFullscreenExit">Selesai</span>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
   <div class="de-canvas-wrap" data-role="canvasWrap">
@@ -366,6 +371,21 @@ class DenahEditor {
     document.addEventListener('pointerdown', this._docPointerDownRibbon);
   }
 
+  _wireFullscreen() {
+    const card = this._q('.de-card');
+    const enterBtn = this._q('[data-role=btnFullscreen]');
+    const exitBtn = this._q('[data-role=btnFullscreenExit]');
+    enterBtn.onclick = () => {
+      card.classList.add('de-fullscreen');
+      exitBtn.style.display = 'flex';
+    };
+    exitBtn.onclick = () => {
+      card.classList.remove('de-fullscreen');
+      exitBtn.style.display = 'none';
+      if (this._resetZoom) this._resetZoom();
+    };
+  }
+
   // Pinch-zoom + pan (CSS transform di atas .de-canvas — TIDAK menyentuh viewBox/SC/toCm,
   // yang tetap dipakai bindSvg() untuk drag vertex/support/box seperti sebelumnya).
   _wireZoom() {
@@ -387,6 +407,7 @@ class DenahEditor {
       this.zoomScale = 1; this.zoomTx = 0; this.zoomTy = 0;
       applyTransform();
     };
+    this._resetZoom = resetZoom;
     resetBtn.onclick = resetZoom;
 
     const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
