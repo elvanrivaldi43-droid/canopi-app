@@ -145,12 +145,14 @@ class DenahEditor {
     this.menuId = null;
     this.SC = 1;
     this.PAD = 44;
+    this.zoomScale = 1; this.zoomTx = 0; this.zoomTy = 0;
     this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
     this.el.innerHTML = DenahEditor.shellHTML();
     this._fillMatSelects();
     this._wireControls();
     this._wireRibbon();
+    this._wireZoom();
     this.syncInputs();
     this.render();
   }
@@ -350,6 +352,83 @@ class DenahEditor {
       strip.classList.add('open');
       openTab = name;
     });
+  }
+
+  // Pinch-zoom + pan (CSS transform di atas .de-canvas — TIDAK menyentuh viewBox/SC/toCm,
+  // yang tetap dipakai bindSvg() untuk drag vertex/support/box seperti sebelumnya).
+  _wireZoom() {
+    const wrap = this._q('[data-role=canvasWrap]');
+    const resetBtn = this._q('[data-role=btnZoomReset]');
+    const canvasEl = () => this._q('.de-canvas');
+    const pointers = new Map();
+    let pinch = null; // { startDist, startScale, startMidLocal, startTx, startTy }
+    let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+
+    const applyTransform = () => {
+      const c = canvasEl();
+      if (c) c.style.transform = `translate(${this.zoomTx}px, ${this.zoomTy}px) scale(${this.zoomScale})`;
+      resetBtn.classList.toggle('show', Math.abs(this.zoomScale - 1) > 0.01 || Math.abs(this.zoomTx) > 0.5 || Math.abs(this.zoomTy) > 0.5);
+    };
+    const resetZoom = () => {
+      const c = canvasEl();
+      if (c) { c.style.transition = 'transform .2s ease'; setTimeout(() => { if (c) c.style.transition = ''; }, 220); }
+      this.zoomScale = 1; this.zoomTx = 0; this.zoomTy = 0;
+      applyTransform();
+    };
+    resetBtn.onclick = resetZoom;
+
+    const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const mid2 = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+    wrap.addEventListener('pointerdown', e => {
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2) {
+        // batalkan drag 1-jari yg mungkin lagi jalan (vertex/support/box) di bindSvg
+        const svg = canvasEl().querySelector('svg');
+        if (svg) svg.dispatchEvent(new PointerEvent('pointercancel'));
+        const [p1, p2] = [...pointers.values()];
+        const rect = wrap.getBoundingClientRect();
+        const startMid = mid2(p1, p2);
+        pinch = {
+          startDist: dist2(p1, p2), startScale: this.zoomScale,
+          startMidLocal: { x: startMid.x - rect.left, y: startMid.y - rect.top },
+          startTx: this.zoomTx, startTy: this.zoomTy,
+        };
+      }
+    });
+
+    wrap.addEventListener('pointermove', e => {
+      if (!pointers.has(e.pointerId)) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2 && pinch) {
+        e.preventDefault();
+        const [p1, p2] = [...pointers.values()];
+        const rect = wrap.getBoundingClientRect();
+        const newDist = dist2(p1, p2);
+        const newMid = mid2(p1, p2);
+        const newMidLocal = { x: newMid.x - rect.left, y: newMid.y - rect.top };
+        const newScale = Math.min(4, Math.max(1, pinch.startScale * (newDist / pinch.startDist)));
+        const ratio = newScale / pinch.startScale;
+        this.zoomTx = newMidLocal.x - (pinch.startMidLocal.x - pinch.startTx) * ratio;
+        this.zoomTy = newMidLocal.y - (pinch.startMidLocal.y - pinch.startTy) * ratio;
+        this.zoomScale = newScale;
+        applyTransform();
+      }
+    }, { passive: false });
+
+    const clearPointer = e => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; };
+    wrap.addEventListener('pointerup', e => {
+      const wasSingle = pointers.size === 1 && !pinch;
+      clearPointer(e);
+      if (wasSingle && this.zoomScale !== 1) {
+        const isEmpty = e.target.dataset.vert == null && !e.target.dataset.id && e.target.dataset.sm == null && !e.target.dataset.boxprev;
+        const now = Date.now();
+        if (isEmpty && now - lastTapTime < 350 && Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 24) {
+          resetZoom(); lastTapTime = 0;
+        } else { lastTapTime = now; lastTapX = e.clientX; lastTapY = e.clientY; }
+      }
+    });
+    wrap.addEventListener('pointercancel', clearPointer);
   }
 
   // lepas listener document saat instance dibuang (blok di-hapus/off di RAB opsi)
