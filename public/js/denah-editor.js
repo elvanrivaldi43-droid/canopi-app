@@ -274,8 +274,9 @@ class DenahEditor {
   <div style="font-size:12px;color:#64748b;margin-top:4px">Luas denah: <b data-role="luas">–</b></div>
 </div>
 <div class="de-matmenu" data-role="matMenu">
+  <div data-role="matMenuLabel" style="font-size:12px;font-weight:700;color:#334155;margin-bottom:6px"></div>
   <select data-role="matPick"></select>
-  <div class="de-mrow"><span class="de-mini" data-role="matApply">Ganti</span><span class="de-mini" data-role="matClear">Pakai default</span></div>
+  <div class="de-mrow"><span class="de-mini" data-role="matApply">Ganti</span><span class="de-mini" data-role="matClear">Pakai default</span><span class="de-mini" data-role="matCancel">Batal</span></div>
 </div>`;
   }
 
@@ -334,6 +335,7 @@ class DenahEditor {
     this._q('[data-role=matClear]').onclick = () => {
       if (this.menuId) { this.pushUndo(); delete this.S.matOverride[this.menuId]; this._q('[data-role=matMenu]').style.display = 'none'; this.render(); }
     };
+    this._q('[data-role=matCancel]').onclick = () => { this._q('[data-role=matMenu]').style.display = 'none'; };
     this._docPointerDown = (e) => {
       const menu = this._q('[data-role=matMenu]');
       const canvas = this._q('.de-canvas');
@@ -631,6 +633,19 @@ class DenahEditor {
     const cur = this.S.matOverride[id] || '';
     const pick = this._q('[data-role=matPick]');
     pick.value = cur || (id[0] === 'F' ? this.S.matDefault.frame : id[0] === 'T' ? this.S.matDefault.tiang : this.S.matDefault.support);
+    // Label biar jelas batang mana yang barusan diketuk (F3/S5/T2 — nomor SAMA seperti yang
+    // tertulis di kanvas, bukan id internal), biar user yakin ini batang yang benar sebelum ganti.
+    const mem = this.getMembers();
+    const jenisNama = { frame: 'Frame', support: 'Support', tiang: 'Tiang' };
+    const m = mem.find(x => x.id === id);
+    let label = id;
+    if (m) {
+      // frame/tiang: m.nama sudah "F3"/"T2". support: nomor dihitung ulang sesuai urutan render
+      // (nama mentah cuma "S" generik, bukan bernomor).
+      const code = m.jenis === 'support' ? 'S' + (mem.filter(x => x.jenis === 'support').findIndex(x => x.id === id) + 1) : m.nama;
+      label = `${jenisNama[m.jenis]} ${code} · ${m.panjang}cm`;
+    }
+    this._q('[data-role=matMenuLabel]').textContent = label;
     const menu = this._q('[data-role=matMenu]');
     menu.style.left = (evt.clientX + 6) + 'px';
     menu.style.top = (evt.clientY + 6) + 'px';
@@ -724,7 +739,7 @@ class DenahEditor {
     if (this.mode === 'support') mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
       ['a', 'b'].forEach(end => { const p = m.geom[end], cx = X(p.x), cy = Y(p.y);
         s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;
-        s += `<circle id="smh${i}${end}" cx="${cx}" cy="${cy}" r="8" fill="#0f2740" stroke="#38bdf8" stroke-width="2.5" style="pointer-events:none"/>`; }); });
+        s += `<circle id="smh${i}${end}" cx="${cx}" cy="${cy}" r="4" fill="#0f2740" stroke="#38bdf8" stroke-width="2.5" style="pointer-events:none"/>`; }); });
     s += '</g>';
     // frame (tebal) + label sisi — tiap sisi id fl{i}/fll{i} biar bisa diupdate saat seret
     mem.filter(m => m.jenis === 'frame').forEach((m, i) => { const c = cmap[m.material]; const a = m.geom.a, b = m.geom.b;
@@ -876,7 +891,19 @@ class DenahEditor {
     });
     const end = () => { if (!drag) return;
       if (drag.type === 'vert') { const vi = drag.vi; this.S.verts[vi] = { x: this.snap(this.S.verts[vi].x), y: this.snap(this.S.verts[vi].y) }; }
-      else if (drag.type === 'sup') { const p = this.S.supportsManual[drag.i][drag.end]; this.S.supportsManual[drag.i][drag.end] = { x: this.snap(p.x), y: this.snap(p.y) }; }
+      else if (drag.type === 'sup') {
+        // Snap grid biasa BISA menggeser lagi titik yang barusan pas ortho-snap-kan ke anchor
+        // (anchor sering tak persis kelipatan grid — datang dari resize/"Ukur Sisi" presisi yang
+        // sengaja tak di-snap). Kalau sumbu itu SUDAH persis sama anchor (ortho-snap aktif pas
+        // drag), pertahankan persis — jangan di-snap-grid lagi, biar tak jadi bengkok pas dilepas.
+        const otherEnd = drag.end === 'a' ? 'b' : 'a';
+        const anchor = this.S.supportsManual[drag.i][otherEnd];
+        const p = this.S.supportsManual[drag.i][drag.end];
+        this.S.supportsManual[drag.i][drag.end] = {
+          x: p.x === anchor.x ? p.x : this.snap(p.x),
+          y: p.y === anchor.y ? p.y : this.snap(p.y),
+        };
+      }
       else if (drag.type === 'box') { this.boxPreview.offset = this.snap(this.boxPreview.offset); }
       drag = null; this.render(); };
     el.addEventListener('pointerup', end);
