@@ -660,9 +660,16 @@ class DenahEditor {
     }
     this._q('[data-role=matMenuLabel]').textContent = label;
     const menu = this._q('[data-role=matMenu]');
-    menu.style.left = (evt.clientX + 6) + 'px';
-    menu.style.top = (evt.clientY + 6) + 'px';
-    menu.style.display = 'block';
+    // Tampilkan dulu baru ukur (offsetWidth/Height=0 kalau masih display:none) — kalau titik
+    // ketukan dekat tepi layar (sering kejadian pas zoom-in), geser ke kiri/atas biar popup
+    // tak kepotong keluar viewport.
+    menu.style.left = '0px'; menu.style.top = '0px'; menu.style.display = 'block';
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let left = evt.clientX + 6, top = evt.clientY + 6;
+    if (left + mw > window.innerWidth) left = Math.max(6, evt.clientX - mw - 6);
+    if (top + mh > window.innerHeight) top = Math.max(6, evt.clientY - mh - 6);
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
   }
 
   // Panel input span/menjorok + Terapkan/Batal — cuma tampil selagi armed === 'addBox'.
