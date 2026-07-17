@@ -806,8 +806,8 @@ class DenahEditor {
       s += `<text id="fll${i}" x="${X(mx)}" y="${Y(my) - 5}" fill="#e2e8f0" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">F${i + 1} · ${m.panjang}</text>`; });
     // tiang
     mem.filter(m => m.jenis === 'tiang').forEach((m, i) => { const c = cmap[m.material]; const p = m.geom.p;
-      s += `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="6" fill="${c}" stroke="#0f2740" stroke-width="1.5" data-id="${m.id}" class="hit"><title>Tiang ${m.material} • ${m.panjang}cm</title></circle>`;
-      s += `<text x="${X(p.x) + 9}" y="${Y(p.y) + 4}" fill="#fbbf24" font-size="10" paint-order="stroke" stroke="#0f2740" stroke-width="3">T${i + 1}</text>`; });
+      s += `<circle id="tc${i}" cx="${X(p.x)}" cy="${Y(p.y)}" r="6" fill="${c}" stroke="#0f2740" stroke-width="1.5" data-id="${m.id}" class="hit"><title>Tiang ${m.material} • ${m.panjang}cm</title></circle>`;
+      s += `<text id="tl${i}" x="${X(p.x) + 9}" y="${Y(p.y) + 4}" fill="#fbbf24" font-size="10" paint-order="stroke" stroke="#0f2740" stroke-width="3">T${i + 1}</text>`; });
     // vertex: hit-area besar transparan (mudah ditekan di HP) + bulatan tampak (tak makan event)
     S.verts.forEach((v, i) => { const cx = X(v.x), cy = Y(v.y);
       s += `<circle cx="${cx}" cy="${cy}" r="24" fill="transparent" data-vert="${i}" class="vhit" style="cursor:grab"/>`;
@@ -893,10 +893,18 @@ class DenahEditor {
           const sup = el.querySelector('#supLayer'); if (sup) sup.style.opacity = '0.25';
         } else if (t.dataset.id && t.dataset.id.startsWith('F')) { this.typeSide(+t.dataset.id.slice(1)); }
       } else if (this.mode === 'tiang') {
-        this.pushUndo();
         const hit = this.S.tiang.findIndex(p => dist(p, cm) < this.S.grid * 1.5);
-        if (hit >= 0) this.S.tiang.splice(hit, 1); else this.S.tiang.push({ x: this.snap(cm.x), y: this.snap(cm.y) });
-        this.render();
+        this.pushUndo();
+        if (hit >= 0) {
+          // Tunggu ada gerakan jari dulu (lihat pointermove) sebelum diputuskan drag-pindah atau
+          // tap-hapus (perilaku lama) — keduanya mulai dari gestur yang sama.
+          drag = { type: 'tiang', i: hit, startPt: cm, moved: false,
+            tc: el.querySelector('#tc' + hit), tl: el.querySelector('#tl' + hit) };
+          el.setPointerCapture(e.pointerId); e.preventDefault();
+        } else {
+          this.S.tiang.push({ x: this.snap(cm.x), y: this.snap(cm.y) });
+          this.render();
+        }
       } else if (this.mode === 'support') {
         if (t.dataset.sm != null) {
           this.pushUndo();
@@ -966,6 +974,18 @@ class DenahEditor {
           const pv = this.computeBoxPreviewVerts();
           const poly = el.querySelector('[data-boxprev]');
           if (poly) poly.setAttribute('points', [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' '));
+        } else if (drag.type === 'tiang') {
+          if (!drag.moved && dist(cm, drag.startPt) > 4) drag.moved = true;
+          if (!drag.moved) return;
+          const candidates = DenahConv.collectAlignCandidates(this.S, { kind: 'tiang', i: drag.i });
+          const TH = (this.S.grid || 20) * 0.8;
+          const snap = DenahConv.findAlignSnap(cm, candidates, TH);
+          this.S.tiang[drag.i] = { x: snap.x, y: snap.y };
+          this._lastGuides = snap.guides;
+          const px2 = PAD + snap.x * this.SC, py2 = PAD + snap.y * this.SC;
+          if (drag.tc) { drag.tc.setAttribute('cx', px2); drag.tc.setAttribute('cy', py2); }
+          if (drag.tl) { drag.tl.setAttribute('x', px2 + 9); drag.tl.setAttribute('y', py2 + 4); }
+          this._updateAlignGuides(snap.guides, snap);
         }
       }
     });
@@ -998,6 +1018,23 @@ class DenahEditor {
         };
       }
       else if (drag.type === 'box') { this.boxPreview.offset = this.snap(this.boxPreview.offset); }
+      else if (drag.type === 'tiang') {
+        if (!drag.moved) {
+          // Tak gerak = perilaku lama (tap tiang = hapus). Posisi belum diubah krn moved masih false.
+          this.S.tiang.splice(drag.i, 1);
+        } else {
+          // Sama pola fix Kelompok A (vert/sup): kalau sumbu SUDAH persis sama titik align-snap yg
+          // aktif barusan, jangan snap-grid lagi di situ — cegah "lurus pas drag, bengkok pas lepas".
+          const p = this.S.tiang[drag.i];
+          const gx = (this._lastGuides || []).find(g => g.axis === 'x');
+          const gy = (this._lastGuides || []).find(g => g.axis === 'y');
+          this.S.tiang[drag.i] = {
+            x: (gx && p.x === gx.ref.x) ? p.x : this.snap(p.x),
+            y: (gy && p.y === gy.ref.y) ? p.y : this.snap(p.y),
+          };
+        }
+        this._hideAlignGuides();
+      }
       drag = null; this.render(); };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
