@@ -1077,16 +1077,15 @@ class DenahEditor {
           const m = this.S.supportsManual[drag.i];
           const gx = (this._lastGuides || []).find(g => g.axis === 'x');
           const gy = (this._lastGuides || []).find(g => g.axis === 'y');
-          // Preserve-check HARUS pakai TITIK TENGAH garis, bukan endpoint a — krn align-snap saat
-          // drag (pointermove) dicek thd titik tengah (midStart), bukan endpoint a. Kalau dicek
-          // pakai endpoint a, koordinat a nyaris tak pernah persis sama dgn titik tengah pd sumbu
-          // memanjang garis, jadi guard ini nyaris selalu gagal → snap-grid tetap jalan walau
-          // align-snap sedang aktif → "lurus pas drag, bengkok pas lepas" (kelas bug sama spt
-          // vert/sup, kali ini kena titik tengah bukan endpoint).
           const mid = { x: (m.a.x + m.b.x) / 2, y: (m.a.y + m.b.y) / 2 };
+          // Kalau sumbu itu barusan aktif align-snap (ada di this._lastGuides), JANGAN grid-snap sumbu
+          // itu sama sekali -- posisi sekarang sudah pas (dipercaya langsung, tak dibandingkan nilai persis
+          // krn midpoint di sini hasil rekomputasi arithmetic yg bisa beda dikit scr floating-point dari nilai
+          // yg dicocokkan waktu pointermove -- BEDA dari vert/sup/tiang yg nilainya tersimpan persis tanpa
+          // rekomputasi, jadi aman pakai === di situ).
           const snappedMid = {
-            x: (gx && mid.x === gx.ref.x) ? mid.x : this.snap(mid.x),
-            y: (gy && mid.y === gy.ref.y) ? mid.y : this.snap(mid.y),
+            x: gx ? mid.x : this.snap(mid.x),
+            y: gy ? mid.y : this.snap(mid.y),
           };
           // Geser KEDUA ujung dgn OFFSET SAMA persis — garis tetap lurus, arah/panjang tak berubah.
           const shiftX = snappedMid.x - mid.x, shiftY = snappedMid.y - mid.y;
