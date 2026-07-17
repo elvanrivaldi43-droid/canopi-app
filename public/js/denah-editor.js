@@ -183,7 +183,7 @@ class DenahEditor {
 .de-ribbon{position:sticky;top:0;z-index:15;margin-bottom:10px}
 .de-ribbon-tabs{display:flex;border:1px solid #334155;border-radius:8px;overflow:hidden;background:#1e293b}
 .de-ribbon-tab{flex:1;text-align:center;padding:11px 4px;min-height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:12px;color:#cbd5e1;cursor:pointer;user-select:none;border-right:1px solid #334155}
-.de-ribbon-tab:last-child{border-right:none}
+.de-ribbon-tab:nth-last-child(2){border-right:none}
 .de-ribbon-tab.on{background:#0f2740;color:#38bdf8;font-weight:600}
 .de-ribbon-strip{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;border:1px solid transparent;border-radius:8px;background:#f8fafc;padding:0;max-height:0;overflow:hidden;transition:max-height .15s ease;box-shadow:0 6px 18px rgba(0,0,0,.28)}
 .de-ribbon-strip.open{border-color:#334155;padding:10px 12px;max-height:45vh;overflow-y:auto}
