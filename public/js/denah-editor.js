@@ -817,6 +817,10 @@ class DenahEditor {
       const pts = [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' ');
       s += `<polygon points="${pts}" fill="rgba(56,189,248,0.35)" stroke="#38bdf8" stroke-width="2" data-boxprev="1" style="cursor:grab"/>`;
     }
+    // Garis bantu align-snap (Kelompok B) — 2 elemen tetap, disembunyikan/ditampilkan &
+    // di-update posisinya lewat _updateAlignGuides()/_hideAlignGuides() selama drag, TANPA render ulang.
+    s += `<line id="agx${this.uid}" x1="0" y1="0" x2="0" y2="0" stroke="#facc15" stroke-width="1.5" stroke-dasharray="5,4" style="display:none;pointer-events:none"/>`;
+    s += `<line id="agy${this.uid}" x1="0" y1="0" x2="0" y2="0" stroke="#facc15" stroke-width="1.5" stroke-dasharray="5,4" style="display:none;pointer-events:none"/>`;
     s += '</svg>';
     const canvas = this._q('.de-canvas');
     canvas.innerHTML = s;
@@ -830,6 +834,25 @@ class DenahEditor {
     this.renderSides(mem);
     this.renderBoxPanel();
     this._changed();
+  }
+
+  // Update/sembunyikan garis bantu align-snap (dipakai drag tiang/support-garis/kotak, Kelompok B).
+  // movingPt = posisi cm SAAT INI dari elemen yg digeser (ujung garis yg bergerak).
+  _updateAlignGuides(guides, movingPt) {
+    const PAD = this.PAD, X = x => PAD + x * this.SC, Y = y => PAD + y * this.SC;
+    const gx = this._q('#agx' + this.uid), gy = this._q('#agy' + this.uid);
+    if (!gx || !gy) return;
+    const gRefX = (guides || []).find(g => g.axis === 'x');
+    const gRefY = (guides || []).find(g => g.axis === 'y');
+    if (gRefX) { gx.setAttribute('x1', X(gRefX.ref.x)); gx.setAttribute('y1', Y(gRefX.ref.y)); gx.setAttribute('x2', X(movingPt.x)); gx.setAttribute('y2', Y(movingPt.y)); gx.style.display = ''; }
+    else gx.style.display = 'none';
+    if (gRefY) { gy.setAttribute('x1', X(gRefY.ref.x)); gy.setAttribute('y1', Y(gRefY.ref.y)); gy.setAttribute('x2', X(movingPt.x)); gy.setAttribute('y2', Y(movingPt.y)); gy.style.display = ''; }
+    else gy.style.display = 'none';
+  }
+  _hideAlignGuides() {
+    const gx = this._q('#agx' + this.uid), gy = this._q('#agy' + this.uid);
+    if (gx) gx.style.display = 'none';
+    if (gy) gy.style.display = 'none';
   }
 
   bindSvg(el) {
