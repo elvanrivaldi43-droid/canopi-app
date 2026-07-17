@@ -147,6 +147,18 @@ const DenahConv = {
     const out = [...verts.slice(0, sisiIdx + 1), ...seq, ...verts.slice(sisiIdx + 1)];
     return isSimplePolygon(out) ? out : null;
   },
+  // Dipanggil setelah S.verts.splice(at, 0, ...count vertex baru...) (mode "+ Sudut" atau
+  // combineBox saat "+ Tambah Kotak"): index vertex combinedBoxes yg >= at ikut geser +count
+  // (vertex baru masuk SEBELUM index itu).
+  shiftBoxesInsert(boxes, at, count) {
+    return (boxes || []).map(bx => ({ verts: bx.verts.map(i => i >= at ? i + count : i) }));
+  },
+  // Dipanggil setelah S.verts.splice(at, 1) (mode "− Sudut"): entry yg salah satu vertex-nya
+  // PERSIS `at` dibuang (kotak itu dianggap bukan satu kesatuan lagi — salah satu sudutnya hilang).
+  // Entry lain yg index-nya > at ikut geser -1.
+  shiftBoxesDelete(boxes, at) {
+    return (boxes || []).filter(bx => !bx.verts.includes(at)).map(bx => ({ verts: bx.verts.map(i => i > at ? i - 1 : i) }));
+  },
   _dist: dist, _bbox: bbox, _orthoSnapToPoint: orthoSnapToPoint,
   findAlignSnap, collectAlignCandidates,
 };
@@ -200,7 +212,7 @@ class DenahEditor {
       verts: [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 300 }, { x: 0, y: 300 }],
       grid: 20, target: 100,
       kotak: 100, autoKotak: true, arah: '2', supportsManual: [], removed: {}, tiang: [],
-      tinggi: 300, matDefault: { frame: '', support: '', tiang: '' }, matOverride: {},
+      tinggi: 300, matDefault: { frame: '', support: '', tiang: '' }, matOverride: {}, combinedBoxes: [],
     };
   }
 
@@ -630,7 +642,7 @@ class DenahEditor {
     const L = +(this._q('[data-role=inL]').value) || 400;
     const P = +(this._q('[data-role=inP]').value) || 300;
     this.S.verts = [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: P }, { x: 0, y: P }];
-    this.S.removed = {}; this.S.supportsManual = []; this.S.matOverride = {};
+    this.S.removed = {}; this.S.supportsManual = []; this.S.matOverride = {}; this.S.combinedBoxes = [];
     this.S.tiang = [];   // JANGAN auto-taruh tiang di sudut — user yang tentukan tiang (mode Tiang)
     this.S.grid = +(this._q('[data-role=inGrid]').value);
     this.S.tinggi = +(this._q('[data-role=inT]').value);
@@ -759,6 +771,15 @@ class DenahEditor {
     const result = DenahConv.combineBox(this.S.verts, bp.sisiIdx, off, bp.span, bp.depthMag * bp.depthSign);
     if (!result) { this.setHint('Kotak tidak valid di posisi ini — geser lagi atau kecilkan ukurannya.'); return; }
     this.pushUndo();
+    // Catat vertex mana yg jadi 1 kotak (buat drag-kotak-utuh, Task 6) — jumlah vertex baru yg
+    // disisipkan sama persis logika `seq` di combineBox: offset>0 -> p1 baru, offset+span<len -> p2 baru,
+    // p4+p3 selalu ada.
+    const boxStart = bp.sisiIdx + 1;
+    let count = 2;
+    if (off > 1e-6) count++;
+    if (off + bp.span < len - 1e-6) count++;
+    this.S.combinedBoxes = DenahConv.shiftBoxesInsert(this.S.combinedBoxes, boxStart, count);
+    this.S.combinedBoxes.push({ verts: Array.from({ length: count }, (_, k) => boxStart + k) });
     this.S.verts = result;
     this.armed = null; this.boxPreview = null;
     this.setHint();
@@ -880,9 +901,19 @@ class DenahEditor {
           el.setPointerCapture(e.pointerId); e.preventDefault();
           return;
         }
-        if (this.armed === 'delV' && t.dataset.vert != null) { if (this.S.verts.length > 3) { this.pushUndo(); this.S.verts.splice(+t.dataset.vert, 1); } this.armed = null; this.setHint(); this.render(); return; }
+        if (this.armed === 'delV' && t.dataset.vert != null) {
+          if (this.S.verts.length > 3) {
+            this.pushUndo();
+            const vi = +t.dataset.vert;
+            this.S.verts.splice(vi, 1);
+            this.S.combinedBoxes = DenahConv.shiftBoxesDelete(this.S.combinedBoxes, vi);
+          }
+          this.armed = null; this.setHint(); this.render(); return; }
         if (this.armed === 'addV' && t.dataset.id && t.dataset.id.startsWith('F')) {
-          this.pushUndo(); const i = +t.dataset.id.slice(1); this.S.verts.splice(i + 1, 0, { x: this.snap(cm.x), y: this.snap(cm.y) }); this.armed = null; this.setHint(); this.render(); return; }
+          this.pushUndo(); const i = +t.dataset.id.slice(1);
+          this.S.verts.splice(i + 1, 0, { x: this.snap(cm.x), y: this.snap(cm.y) });
+          this.S.combinedBoxes = DenahConv.shiftBoxesInsert(this.S.combinedBoxes, i + 1, 1);
+          this.armed = null; this.setHint(); this.render(); return; }
         if (t.dataset.vert != null) {
           this.pushUndo();
           const vi = +t.dataset.vert, n = this.S.verts.length;
