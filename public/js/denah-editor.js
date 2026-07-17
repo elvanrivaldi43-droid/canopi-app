@@ -371,17 +371,33 @@ class DenahEditor {
     document.addEventListener('pointerdown', this._docPointerDownRibbon);
   }
 
+  // Halaman ini scroll di kontainer `.page-content` (layouts/app.blade.php), yang pakai
+  // -webkit-overflow-scrolling:touch — di Safari iOS, `position:fixed` pada elemen yang
+  // BERSARANG di dalam kontainer semacam itu jadi rusak (ikut ke-scroll bareng kontainer,
+  // bukan nempel viewport beneran). Solusinya: pindahkan `this.el` (mount point, isinya
+  // .de-card + .de-matmenu) jadi anak langsung <body> selama fullscreen, baru position:fixed
+  // jalan benar. Posisi asli diingat & dikembalikan pas keluar.
   _wireFullscreen() {
     const card = this._q('.de-card');
     const enterBtn = this._q('[data-role=btnFullscreen]');
     const exitBtn = this._q('[data-role=btnFullscreenExit]');
+    const mount = this.el;
+    const originalParent = mount.parentNode, originalNext = mount.nextSibling;
+    const pageContent = document.querySelector('.page-content');
     enterBtn.onclick = () => {
+      document.body.appendChild(mount);
       card.classList.add('de-fullscreen');
+      card.scrollTop = 0;
       exitBtn.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      if (pageContent) pageContent.style.overflow = 'hidden';
     };
     exitBtn.onclick = () => {
       card.classList.remove('de-fullscreen');
       exitBtn.style.display = 'none';
+      document.body.style.overflow = '';
+      if (pageContent) pageContent.style.overflow = '';
+      if (originalNext) originalParent.insertBefore(mount, originalNext); else originalParent.appendChild(mount);
       if (this._resetZoom) this._resetZoom();
     };
   }
