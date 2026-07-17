@@ -825,13 +825,21 @@ class DenahEditor {
       s += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="transparent" stroke-width="16" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
       s += `<text id="fll${i}" x="${X(mx)}" y="${Y(my) - 5}" fill="#e2e8f0" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">F${i + 1} · ${m.panjang}</text>`; });
+    // kotak-support (Gabungan Kotak): hit-area transparan per kotak buat drag-kotak-utuh. Dirender
+    // SEBELUM titik sudut (di bawah ini) supaya tap TEPAT di titik sudut tetap prioritas drag-sudut
+    // biasa (SVG: elemen belakangan di markup ada di atas utk hit-testing).
+    (S.combinedBoxes || []).forEach((bx, k) => {
+      const pts = bx.verts.map(i => S.verts[i]).filter(Boolean);
+      if (pts.length !== bx.verts.length) return; // index rusak (harusnya sudah tersaring reindex Task 5)
+      s += `<polygon points="${pts.map(p => `${X(p.x)},${Y(p.y)}`).join(' ')}" fill="transparent" data-boxgroup="${k}" style="cursor:grab"/>`;
+    });
     // tiang
     mem.filter(m => m.jenis === 'tiang').forEach((m, i) => { const c = cmap[m.material]; const p = m.geom.p;
       s += `<circle id="tc${i}" cx="${X(p.x)}" cy="${Y(p.y)}" r="6" fill="${c}" stroke="#0f2740" stroke-width="1.5" data-id="${m.id}" class="hit"><title>Tiang ${m.material} • ${m.panjang}cm</title></circle>`;
       s += `<text id="tl${i}" x="${X(p.x) + 9}" y="${Y(p.y) + 4}" fill="#fbbf24" font-size="10" paint-order="stroke" stroke="#0f2740" stroke-width="3">T${i + 1}</text>`; });
     // vertex: hit-area besar transparan (mudah ditekan di HP) + bulatan tampak (tak makan event)
     S.verts.forEach((v, i) => { const cx = X(v.x), cy = Y(v.y);
-      s += `<circle cx="${cx}" cy="${cy}" r="24" fill="transparent" data-vert="${i}" class="vhit" style="cursor:grab"/>`;
+      s += `<circle id="vhit${i}" cx="${cx}" cy="${cy}" r="24" fill="transparent" data-vert="${i}" class="vhit" style="cursor:grab"/>`;
       s += `<circle id="vh${i}" cx="${cx}" cy="${cy}" r="5" fill="#fff" stroke="#f59e0b" stroke-width="2.5" class="vh" style="pointer-events:none"/>`; });
     if (this.armed === 'addBox' && this.boxPreview.sisiIdx != null) {
       const pv = this.computeBoxPreviewVerts();
@@ -898,6 +906,26 @@ class DenahEditor {
         }
         if (t.dataset.boxprev && this.boxPreview && this.boxPreview.sisiIdx != null) {
           drag = { type: 'box' };
+          el.setPointerCapture(e.pointerId); e.preventDefault();
+          return;
+        }
+        if (!this.armed && t.dataset.boxgroup != null) {
+          this.pushUndo();
+          const k = +t.dataset.boxgroup;
+          const bx = this.S.combinedBoxes[k];
+          const n = this.S.verts.length;
+          const sideSet = new Set();
+          bx.verts.forEach(v => { sideSet.add((v - 1 + n) % n); sideSet.add(v % n); });
+          const sides = [...sideSet];
+          drag = { type: 'boxgroup', k, startPt: cm, moved: false,
+            vertIdx: bx.verts.slice(),
+            startVerts: bx.verts.map(i => ({ ...this.S.verts[i] })),
+            vh: bx.verts.map(i => el.querySelector('#vh' + i)),
+            vhit: bx.verts.map(i => el.querySelector('#vhit' + i)),
+            sides,
+            fl: sides.map(i => el.querySelector('#fl' + i)),
+            fll: sides.map(i => el.querySelector('#fll' + i)),
+            poly: t };
           el.setPointerCapture(e.pointerId); e.preventDefault();
           return;
         }
@@ -1052,6 +1080,36 @@ class DenahEditor {
           if (drag.hitb) { drag.hitb.setAttribute('cx', bx); drag.hitb.setAttribute('cy', by); }
           if (drag.lbl) { drag.lbl.setAttribute('x', X((a.x + b.x) / 2)); drag.lbl.setAttribute('y', Y((a.y + b.y) / 2) - 4); }
           this._updateAlignGuides(snap.guides, snap);
+        } else if (drag.type === 'boxgroup') {
+          if (!drag.moved && dist(cm, drag.startPt) > 4) drag.moved = true;
+          if (!drag.moved) return;
+          const dx = cm.x - drag.startPt.x, dy = cm.y - drag.startPt.y;
+          const cx0 = drag.startVerts.reduce((acc, p) => acc + p.x, 0) / drag.startVerts.length + dx;
+          const cy0 = drag.startVerts.reduce((acc, p) => acc + p.y, 0) / drag.startVerts.length + dy;
+          const candidates = DenahConv.collectAlignCandidates(this.S, { kind: 'box', vertIdx: drag.vertIdx });
+          const TH = (this.S.grid || 20) * 0.8;
+          const snap = DenahConv.findAlignSnap({ x: cx0, y: cy0 }, candidates, TH);
+          const adjX = snap.x - cx0, adjY = snap.y - cy0;
+          drag.vertIdx.forEach((vi, idx) => {
+            this.S.verts[vi] = { x: drag.startVerts[idx].x + dx + adjX, y: drag.startVerts[idx].y + dy + adjY };
+          });
+          this._lastGuides = snap.guides;
+          drag.vertIdx.forEach((vi, idx) => {
+            const p = this.S.verts[vi], px2 = X(p.x), py2 = Y(p.y);
+            if (drag.vh[idx]) { drag.vh[idx].setAttribute('cx', px2); drag.vh[idx].setAttribute('cy', py2); }
+            if (drag.vhit[idx]) { drag.vhit[idx].setAttribute('cx', px2); drag.vhit[idx].setAttribute('cy', py2); }
+          });
+          drag.sides.forEach((si, idx) => {
+            const n = this.S.verts.length;
+            const a = this.S.verts[si], b = this.S.verts[(si + 1) % n];
+            if (drag.fl[idx]) { drag.fl[idx].setAttribute('x1', X(a.x)); drag.fl[idx].setAttribute('y1', Y(a.y)); drag.fl[idx].setAttribute('x2', X(b.x)); drag.fl[idx].setAttribute('y2', Y(b.y)); }
+            if (drag.fll[idx]) {
+              drag.fll[idx].setAttribute('x', X((a.x + b.x) / 2)); drag.fll[idx].setAttribute('y', Y((a.y + b.y) / 2) - 5);
+              drag.fll[idx].textContent = 'F' + (si + 1) + ' · ' + (Math.round(dist(a, b) * 10) / 10);
+            }
+          });
+          if (drag.poly) drag.poly.setAttribute('points', drag.vertIdx.map(vi => `${X(this.S.verts[vi].x)},${Y(this.S.verts[vi].y)}`).join(' '));
+          this._updateAlignGuides(snap.guides, snap);
         }
       }
     });
@@ -1124,6 +1182,29 @@ class DenahEditor {
             a: { x: m.a.x + shiftX, y: m.a.y + shiftY },
             b: { x: m.b.x + shiftX, y: m.b.y + shiftY },
           };
+        }
+        this._hideAlignGuides();
+      }
+      else if (drag.type === 'boxgroup') {
+        if (drag.moved) {
+          const gx = (this._lastGuides || []).find(g => g.axis === 'x');
+          const gy = (this._lastGuides || []).find(g => g.axis === 'y');
+          const cen = {
+            x: drag.vertIdx.reduce((acc, vi) => acc + this.S.verts[vi].x, 0) / drag.vertIdx.length,
+            y: drag.vertIdx.reduce((acc, vi) => acc + this.S.verts[vi].y, 0) / drag.vertIdx.length,
+          };
+          // PENTING: sama seperti supline (Task 4) — JANGAN bandingkan nilai (===) ke guide.ref di sini.
+          // `cen` adalah hasil rekomputasi rata-rata dari vertex yang masing-masing sudah digeser lewat
+          // rantai aritmatika terpisah di pointermove — bisa beda dikit scr floating-point dari nilai
+          // yang dicocokkan waktu itu, walau axis itu barusan PERSIS ter-align (pelajaran dari bug nyata
+          // yang ketemu & diperbaiki 2x di Task 4, kelas bug sama: "lurus pas drag, bengkok pas lepas").
+          // Cukup cek KEHADIRAN guide di this._lastGuides: kalau ada, percaya posisi sekarang apa adanya.
+          const snappedCen = {
+            x: gx ? cen.x : this.snap(cen.x),
+            y: gy ? cen.y : this.snap(cen.y),
+          };
+          const shiftX = snappedCen.x - cen.x, shiftY = snappedCen.y - cen.y;
+          drag.vertIdx.forEach(vi => { const p = this.S.verts[vi]; this.S.verts[vi] = { x: p.x + shiftX, y: p.y + shiftY }; });
         }
         this._hideAlignGuides();
       }
