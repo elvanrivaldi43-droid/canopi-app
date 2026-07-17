@@ -137,7 +137,7 @@ class DenahEditor {
       if (!this.S.matDefault.support) this.S.matDefault.support = first;
       if (!this.S.matDefault.tiang) this.S.matDefault.tiang = first;
     }
-    this.undoStack = [];
+    this.undoStack = []; this.redoStack = [];
     this.mode = 'bentuk';
     this.armed = null;      // 'addV' | 'delV' | 'addSupport' | 'addBox'
     this.addSupportPt = null;
@@ -262,6 +262,7 @@ class DenahEditor {
   </div>
   <div class="de-quickbar">
     <span class="de-mini" data-role="btnUndo">Undo</span>
+    <span class="de-mini" data-role="btnRedo">Redo</span>
     <span class="de-mini" data-role="btnFullscreen">Perbesar Layar</span>
   </div>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
@@ -304,6 +305,7 @@ class DenahEditor {
     this._q('[data-role=btnAddV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'addV'; this.boxPreview = null; this.setHint('Klik sisi frame untuk sisipkan sudut baru.'); this.renderBoxPanel(); };
     this._q('[data-role=btnDelV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'delV'; this.boxPreview = null; this.setHint('Klik sudut untuk menghapus (min 3 sudut).'); this.renderBoxPanel(); };
     this._q('[data-role=btnUndo]').onclick = () => this.undo();
+    this._q('[data-role=btnRedo]').onclick = () => this.redo();
     this._q('[data-role=btnAddSupport]').onclick = () => { if (this.mode !== 'support') return; this.armed = 'addSupport'; this.addSupportPt = null; this.setHint('Klik titik ke-1 support…'); };
     this._q('[data-role=btnAddBox]').onclick = () => {
       if (this.mode !== 'bentuk') return;
@@ -510,11 +512,22 @@ class DenahEditor {
   }
 
   // ---- Undo ----
-  pushUndo() { this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift(); }
+  // pushUndo() dipanggil sebelum SETIAP mutasi (satu titik terpusat) — cabang baru selalu
+  // membuang riwayat redo lama, sama seperti undo/redo di editor pada umumnya.
+  pushUndo() { this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift(); this.redoStack = []; }
   undo() {
     this.armed = null; this.boxPreview = null;
     if (!this.undoStack.length) { this.setHint('Tak ada langkah untuk di-undo'); return; }
+    this.redoStack.push(JSON.stringify(this.S)); if (this.redoStack.length > 40) this.redoStack.shift();
     Object.assign(this.S, JSON.parse(this.undoStack.pop()));
+    this.syncInputs();
+    this.render();
+  }
+  redo() {
+    this.armed = null; this.boxPreview = null;
+    if (!this.redoStack.length) { this.setHint('Tak ada langkah untuk di-redo'); return; }
+    this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift();
+    Object.assign(this.S, JSON.parse(this.redoStack.pop()));
     this.syncInputs();
     this.render();
   }
@@ -576,7 +589,7 @@ class DenahEditor {
 
   resetBox() {
     this.armed = null; this.boxPreview = null;
-    this.undoStack = [];
+    this.undoStack = []; this.redoStack = [];
     const L = +(this._q('[data-role=inL]').value) || 400;
     const P = +(this._q('[data-role=inP]').value) || 300;
     this.S.verts = [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: P }, { x: 0, y: P }];
