@@ -831,7 +831,7 @@ class DenahEditor {
     (S.combinedBoxes || []).forEach((bx, k) => {
       const pts = bx.verts.map(i => S.verts[i]).filter(Boolean);
       if (pts.length !== bx.verts.length) return; // index rusak (harusnya sudah tersaring reindex Task 5)
-      s += `<polygon points="${pts.map(p => `${X(p.x)},${Y(p.y)}`).join(' ')}" fill="transparent" data-boxgroup="${k}" style="cursor:grab"/>`;
+      s += `<polygon points="${pts.map(p => `${X(p.x)},${Y(p.y)}`).join(' ')}" fill="transparent" data-boxgroup="${k}" style="cursor:grab;pointer-events:${this.mode === 'bentuk' ? 'auto' : 'none'}"/>`;
     });
     // tiang
     mem.filter(m => m.jenis === 'tiang').forEach((m, i) => { const c = cmap[m.material]; const p = m.geom.p;
