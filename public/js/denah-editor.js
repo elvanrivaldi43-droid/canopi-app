@@ -180,7 +180,7 @@ class DenahEditor {
 .de-tool.on{background:#1e293b;color:#fff}
 .de-mini{padding:9px 13px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:12px;cursor:pointer}
 .de-hint{font-size:12px;color:#64748b;margin:6px 2px;min-height:16px}
-.de-ribbon{position:relative;margin-bottom:10px}
+.de-ribbon{position:sticky;top:0;z-index:15;margin-bottom:10px}
 .de-ribbon-tabs{display:flex;border:1px solid #334155;border-radius:8px;overflow:hidden;background:#1e293b}
 .de-ribbon-tab{flex:1;text-align:center;padding:11px 4px;min-height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:12px;color:#cbd5e1;cursor:pointer;user-select:none;border-right:1px solid #334155}
 .de-ribbon-tab:last-child{border-right:none}
@@ -191,7 +191,7 @@ class DenahEditor {
 .de-ribbon-panel.on{display:block}
 .de-quickbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
 .de-card.de-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;overflow-y:auto;border-radius:0;margin:0;box-shadow:none}
-.de-fullscreen-exit{display:none;position:fixed;top:12px;right:12px;z-index:9001;padding:10px 18px;border-radius:22px;background:#1e293b;color:#fff;border:1px solid #334155;font-size:14px;font-weight:600;cursor:pointer;align-items:center;justify-content:center}
+.de-fullscreen-exit{display:none;flex:0 0 auto;min-height:40px;box-sizing:border-box;padding:0 18px;margin-left:6px;border-radius:8px;background:#f59e0b;color:#1e293b;border:none;font-size:13px;font-weight:700;cursor:pointer;align-items:center;justify-content:center}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block}
@@ -214,6 +214,7 @@ class DenahEditor {
     <span class="de-ribbon-tab" data-tab="besi">Besi</span>
     <span class="de-ribbon-tab" data-tab="mode">Mode</span>
     <span class="de-ribbon-tab" data-tab="sisi">Ukur Sisi</span>
+    <span class="de-fullscreen-exit" data-role="btnFullscreenExit">Selesai</span>
   </div>
   <div class="de-ribbon-strip" data-role="ribbonStrip">
     <div class="de-ribbon-panel" data-panel="ukuran">
@@ -263,7 +264,6 @@ class DenahEditor {
     <span class="de-mini" data-role="btnUndo">Undo</span>
     <span class="de-mini" data-role="btnFullscreen">Perbesar Layar</span>
   </div>
-  <span class="de-fullscreen-exit" data-role="btnFullscreenExit">Selesai</span>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
   <div class="de-canvas-wrap" data-role="canvasWrap">
