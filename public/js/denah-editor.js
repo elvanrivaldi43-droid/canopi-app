@@ -56,6 +56,42 @@ const orthoSnapToPoint = (p, anchor, TH) => {
   if (Math.abs(y - anchor.y) < TH) y = anchor.y;
   return { x, y };
 };
+// Mesin snap generik Kelompok B: cari kandidat titik acuan TERDEKAT per-sumbu (independen X/Y)
+// dalam threshold TH. Dipakai drag-pindah tiang/support-garis/kotak (bindSvg) — beda dari
+// orthoSnapToPoint (Kelompok A, ortho-snap 1 anchor tetap) krn di sini kandidatnya banyak &
+// dipilih yang paling dekat, bukan cuma 1 anchor tetap.
+const findAlignSnap = (p, candidates, TH) => {
+  let x = p.x, y = p.y, guideX = null, guideY = null, bestDx = TH, bestDy = TH;
+  candidates.forEach(c => {
+    const dx = Math.abs(p.x - c.x), dy = Math.abs(p.y - c.y);
+    if (dx < bestDx) { bestDx = dx; x = c.x; guideX = c; }
+    if (dy < bestDy) { bestDy = dy; y = c.y; guideY = c; }
+  });
+  const guides = [];
+  if (guideX) guides.push({ axis: 'x', ref: guideX });
+  if (guideY) guides.push({ axis: 'y', ref: guideY });
+  return { x, y, guides };
+};
+// Kandidat titik acuan align-snap: titik tiang lain, titik ujung+tengah support manual lain,
+// titik tengah tiap sisi frame SAAT INI (S.verts, dihitung ulang tiap panggilan — otomatis ikut
+// kalau sisi berubah panjang karena lekukan/resize). `exclude` mencegah elemen yg sedang digeser
+// sendiri jadi kandidat (nge-snap ke diri sendiri selalu "cocok", tak berguna).
+const collectAlignCandidates = (S, exclude) => {
+  const pts = [];
+  (S.tiang || []).forEach((t, i) => { if (!(exclude && exclude.kind === 'tiang' && exclude.i === i)) pts.push({ x: t.x, y: t.y }); });
+  (S.supportsManual || []).forEach((m, i) => {
+    if (exclude && exclude.kind === 'sup' && exclude.i === i) return;
+    pts.push({ x: m.a.x, y: m.a.y }, { x: m.b.x, y: m.b.y }, { x: (m.a.x + m.b.x) / 2, y: (m.a.y + m.b.y) / 2 });
+  });
+  const skipVerts = (exclude && exclude.kind === 'box' && exclude.vertIdx) || [];
+  const n = S.verts.length;
+  S.verts.forEach((v, i) => {
+    const j = (i + 1) % n;
+    if (skipVerts.includes(i) && skipVerts.includes(j)) return; // sisi internal milik kotak yg lagi digeser sendiri
+    const w = S.verts[j]; pts.push({ x: (v.x + w.x) / 2, y: (v.y + w.y) / 2 });
+  });
+  return pts;
+};
 
 const DenahConv = {
   buildMembers(S) {
@@ -112,6 +148,7 @@ const DenahConv = {
     return isSimplePolygon(out) ? out : null;
   },
   _dist: dist, _bbox: bbox, _orthoSnapToPoint: orthoSnapToPoint,
+  findAlignSnap, collectAlignCandidates,
 };
 
 // ============================================================================
