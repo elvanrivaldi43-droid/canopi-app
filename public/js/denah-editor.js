@@ -1077,15 +1077,23 @@ class DenahEditor {
           const m = this.S.supportsManual[drag.i];
           const gx = (this._lastGuides || []).find(g => g.axis === 'x');
           const gy = (this._lastGuides || []).find(g => g.axis === 'y');
-          const snapPt = p => ({
-            x: (gx && p.x === gx.ref.x) ? p.x : this.snap(p.x),
-            y: (gy && p.y === gy.ref.y) ? p.y : this.snap(p.y),
-          });
-          // Snap SATU ujung (a) ke grid, geser ujung satunya (b) dgn OFFSET SAMA persis — supaya
-          // garis tetap garis lurus yg sama arah/panjangnya, tak melenceng krn snap grid independen.
-          const snappedA = snapPt(m.a);
-          const shiftX = snappedA.x - m.a.x, shiftY = snappedA.y - m.a.y;
-          this.S.supportsManual[drag.i] = { a: snappedA, b: { x: m.b.x + shiftX, y: m.b.y + shiftY } };
+          // Preserve-check HARUS pakai TITIK TENGAH garis, bukan endpoint a — krn align-snap saat
+          // drag (pointermove) dicek thd titik tengah (midStart), bukan endpoint a. Kalau dicek
+          // pakai endpoint a, koordinat a nyaris tak pernah persis sama dgn titik tengah pd sumbu
+          // memanjang garis, jadi guard ini nyaris selalu gagal → snap-grid tetap jalan walau
+          // align-snap sedang aktif → "lurus pas drag, bengkok pas lepas" (kelas bug sama spt
+          // vert/sup, kali ini kena titik tengah bukan endpoint).
+          const mid = { x: (m.a.x + m.b.x) / 2, y: (m.a.y + m.b.y) / 2 };
+          const snappedMid = {
+            x: (gx && mid.x === gx.ref.x) ? mid.x : this.snap(mid.x),
+            y: (gy && mid.y === gy.ref.y) ? mid.y : this.snap(mid.y),
+          };
+          // Geser KEDUA ujung dgn OFFSET SAMA persis — garis tetap lurus, arah/panjang tak berubah.
+          const shiftX = snappedMid.x - mid.x, shiftY = snappedMid.y - mid.y;
+          this.S.supportsManual[drag.i] = {
+            a: { x: m.a.x + shiftX, y: m.a.y + shiftY },
+            b: { x: m.b.x + shiftX, y: m.b.y + shiftY },
+          };
         }
         this._hideAlignGuides();
       }
