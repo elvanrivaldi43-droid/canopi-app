@@ -488,6 +488,9 @@ class DenahEditor {
   destroy() {
     if (this._docPointerDown) document.removeEventListener('pointerdown', this._docPointerDown);
     if (this._docPointerDownRibbon) document.removeEventListener('pointerdown', this._docPointerDownRibbon);
+    // Blok dihapus selagi fullscreen aktif (this.el ke-detach ke <body>) — buang manual,
+    // tak ada parent asli lagi yang otomatis membersihkannya.
+    if (this.el.parentNode === document.body) this.el.remove();
   }
 
   _changed() { if (this.opts.onChange) this.opts.onChange(); }
