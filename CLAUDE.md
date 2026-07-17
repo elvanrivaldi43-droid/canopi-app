@@ -239,4 +239,25 @@ Urutan besar sesudahnya: **1C = fix `buildPenawaran()` denah + jadikan denah def
 
 **Gabungan Kotak DIKONFIRMASI ELVAN (16 Juli) — jalan normal di production** (tambah/lekukan/Terapkan/Undo/blok lain tak terganggu). #9 CLOSED.
 
->>> RESUME POINT — #9 selesai. Sisa utang lama (opsional, tak mendesak): foto bar #12 cutting list PA-DUTA (tutup validasi 4x8=9, lihat "Temuan validasi PA-DUTA" di atas). Kalau tidak ada itu, cek Roadmap buat prioritas berikutnya (kalibrasi lanjut / consumable fixed+variabel / dst). <<<
+**16-17 Juli 2026 — #10 Kelompok A (zoom+ukuran+ortho-support+ribbon+fullscreen) SELESAI & DIKONFIRMASI ELVAN, 10 iterasi deploy dalam 1 hari:**
+
+6 permintaan update UI DenahEditor (16 Juli) dipecah 3 kelompok: **A** = zoom+ukuran+ortho-support (dikerjakan), **B** = drag-pindah-besi+snap-tengah (belum), **C** = saran-kotak-2-arah (belum). Detail lengkap ada di tabel #10 di atas.
+
+Kelompok A dikerjakan via brainstorm→spec→plan→subagent-driven-development (fresh subagent per task + code review tiap task + final whole-branch review), lalu 9 iterasi PERBAIKAN lanjutan berdasarkan tes nyata Elvan di HP (5 foto dikirim via upload-inbox, sangat membantu diagnosis — beberapa bug baru ketemu akar pastinya setelah lihat foto, bukan dari deskripsi teks). Semua di `public/js/denah-editor.js`, plan: `docs/superpowers/plans/2026-07-16-denah-ui-kelompok-a-*.md` (implementation/fixes/fullscreen-mode), ledger lengkap tiap task: `.superpowers/sdd/progress.md`.
+
+**Fitur/fix yang jadi (dikonfirmasi Elvan):**
+- Ribbon 5-tab (Ukuran/Support/Besi/Mode/Ukur Sisi) — akhirnya jadi overlay melayang+sticky (2 iterasi gagal sebelumnya: push-down mendorong kanvas turun, lalu tombol Selesai numpuk panel ribbon)
+- Pinch-zoom+pan+tombol Reset
+- **Mode Layar Penuh** ("Perbesar Layar") — `this.el` di-reparent ke `document.body` selama aktif, LALU BALIK ke posisi asli saat "Selesai". Alasan: `position:fixed` RUSAK di Safari iOS kalau elemen bersarang di kontainer `overflow-y:auto`+`-webkit-overflow-scrolling:touch` (app pakai ini di `.page-content`, `layouts/app.blade.php`) — elemen ikut ke-scroll bareng kontainer, bukan nempel viewport beneran. **Pelajaran penting buat modal/overlay lain di masa depan: cek dulu apa bersarang di `.page-content` sebelum pakai `position:fixed` polos.**
+- Ortho-snap support manual, plus bug "lurus pas drag, bengkok pas lepas jari" — snap-grid tanpa syarat di `pointerup` menggeser lagi sumbu yang barusan ortho-snap ke anchor non-kelipatan-grid (anchor sering presisi dari resize/"Ukur Sisi", bukan kelipatan grid). **Diperbaiki di 2 cabang drag terpisah** (`sup` lalu ketahuan lagi di `vert`/sudut poligon, pola bug identik) — **pelajaran: kalau perbaiki bug kelas ini, cek SEMUA cabang serupa sekaligus, jangan cuma yang dilaporkan duluan**
+- `toCm()`: `getScreenCTM()` → `getBoundingClientRect()` (drag presisi saat zoom, getScreenCTM tak konsisten ngurai CSS transform leluhur di sebagian browser HP)
+- Ukuran visual (titik sudut kecil, garis+label besar, konsisten ke titik handle support manual juga)
+- Undo + **Redo** baru (redoStack dibersihkan di `pushUndo()` — satu titik terpusat, otomatis kepakai di semua ~13 lokasi mutasi)
+- Popup "Ganti Besi": label nama batang (Frame F3/Support S5/Tiang T2 + panjang cm, nomor SAMA persis kayak di kanvas) + tombol Batal + clamp posisi biar tak kepotong tepi layar
+
+**BELUM DIKERJAKAN (sengaja ditunda, daftar tunggu — bukan lupa):**
+- Magnifier/offset-indicator biar jari tak nutupin garis pas drag presisi (zoom & support manual) — masalah UX umum, perlu didesain
+- Input panjang diketik utk support manual (kayak "Ukur Sisi" tapi utk support) — Elvan sendiri usul "mungkin bagian selanjutnya"
+- `.de-matmenu` (popup ganti-besi) SENDIRI masih bersarang di `.page-content` di mode non-fullscreen — berpotensi kena bug iOS Safari yang sama (lihat di atas) kalau discroll SELAGI popup terbuka. BELUM ada laporan nyata dari Elvan — jangan diperbaiki sebelum ada bukti, sesuai prinsip "jangan asumsi bug ada."
+
+>>> RESUME POINT — #10 Kelompok A selesai & dikonfirmasi. LANJUT: #10 Kelompok B (drag-pindah-besi + snap-tengah) — brainstorming belum mulai, mulai dari situ. Setelah B: Kelompok C (saran-kotak-2-arah). Utang lama opsional tak mendesak: foto bar #12 cutting list PA-DUTA (tutup validasi 4x8=9). <<<
