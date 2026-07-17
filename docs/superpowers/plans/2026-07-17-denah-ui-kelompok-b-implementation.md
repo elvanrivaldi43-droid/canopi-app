@@ -948,10 +948,12 @@ Ganti jadi:
     (S.combinedBoxes || []).forEach((bx, k) => {
       const pts = bx.verts.map(i => S.verts[i]).filter(Boolean);
       if (pts.length !== bx.verts.length) return; // index rusak (harusnya sudah tersaring reindex Task 5)
-      s += `<polygon points="${pts.map(p => `${X(p.x)},${Y(p.y)}`).join(' ')}" fill="transparent" data-boxgroup="${k}" style="cursor:grab"/>`;
+      s += `<polygon points="${pts.map(p => `${X(p.x)},${Y(p.y)}`).join(' ')}" fill="transparent" data-boxgroup="${k}" style="cursor:grab;pointer-events:${this.mode === 'bentuk' ? 'auto' : 'none'}"/>`;
     });
     // tiang
 ```
+
+**Catatan revisi (17 Juli, setelah implementasi):** kode Step 2 di atas sudah termasuk `pointer-events:${this.mode==='bentuk'?'auto':'none'}` — versi pertama (tanpa ini) sempat lolos ke commit lalu ketahuan review: polygon transparan itu selalu ada di DOM di SEMUA mode, jadi walau taps di mode lain cuma DIABAIKAN oleh handler (`!this.armed && t.dataset.boxgroup`), polygon-nya sendiri tetap MENANG hit-test SVG di atas garis frame/support yang ketiban — blokir tap "Ganti Besi"/"+ Sudut" di sisi kotak itu di mode lain. Fix: `pointer-events:none` kecuali mode Bentuk (satu-satunya mode yang perlu drag-kotak).
 
 - [ ] **Step 3: Tambah pointerdown untuk tap badan kotak**
 
