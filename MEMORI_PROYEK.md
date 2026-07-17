@@ -33,8 +33,8 @@
 
 ## LANGKAH SELANJUTNYA (urut)
 
-1. **#10 Kelompok B: MENUNGGU TES ELVAN di production** (`/rab-opsi`, HP asli) — drag tiang/support-garis/kotak-support + snap-tengah. Kalau ada bug/laporan, **LANJUT DARI SINI** (perbaiki dulu sebelum Kelompok C).
-2. **#10 Kelompok C (saran-kotak-2-arah):** setelah B dikonfirmasi Elvan.
+1. **#10 Kelompok B: SUDAH DEPLOY, BELUM DITES Elvan** (`/rab-opsi`, HP asli) — drag tiang/support-garis/kotak-support + snap-tengah. **Elvan pilih lanjut ke Kelompok C dulu tanpa tes B** (17 Juli) — risiko: kalau nanti ada bug, lebih susah pastikan asalnya dari B atau C krn dua-duanya belum divalidasi terpisah. Tetap MENUNGGU TES kapan pun Elvan sempat.
+2. **#10 Kelompok C (saran-kotak-2-arah):** SEDANG DIKERJAKAN — brainstorming dimulai 17 Juli (lanjut dari sini kalau sesi terputus).
 3. Item tunda dari Kelompok A (opsional, kalau Elvan minta): magnifier drag, input panjang support manual, fix `.de-matmenu` iOS Safari kalau ada laporan nyata.
 4. Foto **bar #12** cutting list PA-DUTA (opsional) → tutup validasi 4x8=9.
 
