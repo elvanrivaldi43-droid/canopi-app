@@ -35,7 +35,7 @@ Kedua kasus ini secara teknis sama: "selagi drag, tawarkan nempel ke suatu titik
 
 | # | Keputusan | Detail |
 |---|---|---|
-| 1 | State baru | `S.combinedBoxes`: array `{verts: [i0,i1,i2,i3], sideA: idx, sideB: idx}`. `verts` = index vertex di `S.verts` yang membentuk 1 kotak dari Gabungan Kotak. `sideA`/`sideB` = index 2 vertex sisi frame asal kotak itu nempel (dipakai buat cari titik tengah sisi terkini). |
+| 1 | State baru | `S.combinedBoxes`: array `{verts: [i0,i1,i2,i3]}`. `verts` = index vertex di `S.verts` yang membentuk 1 kotak dari Gabungan Kotak. **Revisi implementasi:** `sideA`/`sideB` terpisah ternyata tak perlu — titik tengah sisi governing sudah otomatis ikut sebagai kandidat align-snap lewat `collectAlignCandidates` (yang mengecualikan hanya sisi yang sepenuhnya di dalam kotak), jadi cukup `verts` saja. |
 | 2 | Diisi kapan | Otomatis di dalam `combineBox()`, waktu "+ Tambah Kotak" dipakai — tidak ada input tambahan dari user. |
 | 3 | Invalidasi | Kalau salah satu vertex di suatu entry `combinedBoxes` dihapus lewat mode "−Sudut", entry itu dibuang (kotak dianggap sudah bukan satu kesatuan lagi, drag-kotak-utuh untuk area itu tidak berlaku, tapi vertex-nya tetap bisa di-drag satu-satu seperti sudut biasa). |
 | 4 | Yang TIDAK berubah | `S.verts`, `S.tiang`, `S.supportsManual` tetap format sama persis. `combinedBoxes` murni bantu UI drag, tidak dikirim ke `CuttingController`/mesin hitung harga, tidak memengaruhi `DenahConv` konversi member. |
