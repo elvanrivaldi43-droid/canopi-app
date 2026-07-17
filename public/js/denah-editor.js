@@ -792,7 +792,7 @@ class DenahEditor {
       // garis tampak (tanpa event) + garis transparan lebar (target ketuk) + label S{n}·panjang
       s += `<line ${manual ? `id="sm${m.id.slice(3)}"` : ''} x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="${c}" stroke-width="${manual ? 3 : 2}"><title>${m.material} • ${m.panjang}cm</title></line>`;
       s += `<line x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="transparent" stroke-width="14" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
-      s += `<text x="${X(mx)}" y="${Y(my) - 4}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">S${i + 1} · ${m.panjang}</text>`; });
+      s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${X(mx)}" y="${Y(my) - 4}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">S${i + 1} · ${m.panjang}</text>`; });
     if (this.mode === 'support') mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
       ['a', 'b'].forEach(end => { const p = m.geom[end], cx = X(p.x), cy = Y(p.y);
         s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;
@@ -917,10 +917,23 @@ class DenahEditor {
           else { this.pushUndo(); this.S.supportsManual.push({ a: this.addSupportPt, b: { x: this.snap(cm.x), y: this.snap(cm.y) } }); this.addSupportPt = null; this.armed = null; this.setHint(); this.render(); }
           return;
         }
+        if (t.dataset.id && t.dataset.id.startsWith('Sm_')) {
+          const i = +t.dataset.id.slice(3);
+          const m = this.S.supportsManual[i];
+          this.pushUndo();
+          // Tunggu ada gerakan dulu sebelum diputuskan drag-pindah-garis-utuh atau tap-hapus
+          // (perilaku lama) — sama pola dgn tiang di Task 3.
+          drag = { type: 'supline', i, startPt: cm, moved: false,
+            startA: { ...m.a }, startB: { ...m.b },
+            line: el.querySelector('#sm' + i), hit: t, lbl: el.querySelector('#smlbl' + i),
+            ha: el.querySelector('#smh' + i + 'a'), hb: el.querySelector('#smh' + i + 'b'),
+            hita: el.querySelector('[data-sm="' + i + '"][data-end="a"]'),
+            hitb: el.querySelector('[data-sm="' + i + '"][data-end="b"]') };
+          el.setPointerCapture(e.pointerId); e.preventDefault(); return;
+        }
         if (t.dataset.id && t.dataset.id.startsWith('S')) {
           this.pushUndo(); const id = t.dataset.id;
-          if (id.startsWith('Sm_')) { this.S.supportsManual.splice(+id.slice(3), 1); }
-          else { this.S.removed[id] = !this.S.removed[id]; }
+          this.S.removed[id] = !this.S.removed[id];
           this.render();
         }
       } else if (this.mode === 'besi') {
@@ -986,6 +999,28 @@ class DenahEditor {
           if (drag.tc) { drag.tc.setAttribute('cx', px2); drag.tc.setAttribute('cy', py2); }
           if (drag.tl) { drag.tl.setAttribute('x', px2 + 9); drag.tl.setAttribute('y', py2 + 4); }
           this._updateAlignGuides(snap.guides, snap);
+        } else if (drag.type === 'supline') {
+          if (!drag.moved && dist(cm, drag.startPt) > 4) drag.moved = true;
+          if (!drag.moved) return;
+          const dx = cm.x - drag.startPt.x, dy = cm.y - drag.startPt.y;
+          const midStart = { x: (drag.startA.x + drag.startB.x) / 2 + dx, y: (drag.startA.y + drag.startB.y) / 2 + dy };
+          const candidates = DenahConv.collectAlignCandidates(this.S, { kind: 'sup', i: drag.i });
+          const TH = (this.S.grid || 20) * 0.8;
+          const snap = DenahConv.findAlignSnap(midStart, candidates, TH);
+          const adjX = snap.x - midStart.x, adjY = snap.y - midStart.y;
+          const a = { x: drag.startA.x + dx + adjX, y: drag.startA.y + dy + adjY };
+          const b = { x: drag.startB.x + dx + adjX, y: drag.startB.y + dy + adjY };
+          this.S.supportsManual[drag.i] = { a, b };
+          this._lastGuides = snap.guides;
+          const ax = X(a.x), ay = Y(a.y), bx = X(b.x), by = Y(b.y);
+          if (drag.line) { drag.line.setAttribute('x1', ax); drag.line.setAttribute('y1', ay); drag.line.setAttribute('x2', bx); drag.line.setAttribute('y2', by); }
+          if (drag.hit) { drag.hit.setAttribute('x1', ax); drag.hit.setAttribute('y1', ay); drag.hit.setAttribute('x2', bx); drag.hit.setAttribute('y2', by); }
+          if (drag.ha) { drag.ha.setAttribute('cx', ax); drag.ha.setAttribute('cy', ay); }
+          if (drag.hb) { drag.hb.setAttribute('cx', bx); drag.hb.setAttribute('cy', by); }
+          if (drag.hita) { drag.hita.setAttribute('cx', ax); drag.hita.setAttribute('cy', ay); }
+          if (drag.hitb) { drag.hitb.setAttribute('cx', bx); drag.hitb.setAttribute('cy', by); }
+          if (drag.lbl) { drag.lbl.setAttribute('x', X((a.x + b.x) / 2)); drag.lbl.setAttribute('y', Y((a.y + b.y) / 2) - 4); }
+          this._updateAlignGuides(snap.guides, snap);
         }
       }
     });
@@ -1032,6 +1067,25 @@ class DenahEditor {
             x: (gx && p.x === gx.ref.x) ? p.x : this.snap(p.x),
             y: (gy && p.y === gy.ref.y) ? p.y : this.snap(p.y),
           };
+        }
+        this._hideAlignGuides();
+      }
+      else if (drag.type === 'supline') {
+        if (!drag.moved) {
+          this.S.supportsManual.splice(drag.i, 1);
+        } else {
+          const m = this.S.supportsManual[drag.i];
+          const gx = (this._lastGuides || []).find(g => g.axis === 'x');
+          const gy = (this._lastGuides || []).find(g => g.axis === 'y');
+          const snapPt = p => ({
+            x: (gx && p.x === gx.ref.x) ? p.x : this.snap(p.x),
+            y: (gy && p.y === gy.ref.y) ? p.y : this.snap(p.y),
+          });
+          // Snap SATU ujung (a) ke grid, geser ujung satunya (b) dgn OFFSET SAMA persis — supaya
+          // garis tetap garis lurus yg sama arah/panjangnya, tak melenceng krn snap grid independen.
+          const snappedA = snapPt(m.a);
+          const shiftX = snappedA.x - m.a.x, shiftY = snappedA.y - m.a.y;
+          this.S.supportsManual[drag.i] = { a: snappedA, b: { x: m.b.x + shiftX, y: m.b.y + shiftY } };
         }
         this._hideAlignGuides();
       }
