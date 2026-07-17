@@ -903,7 +903,20 @@ class DenahEditor {
       }
     });
     const end = () => { if (!drag) return;
-      if (drag.type === 'vert') { const vi = drag.vi; this.S.verts[vi] = { x: this.snap(this.S.verts[vi].x), y: this.snap(this.S.verts[vi].y) }; }
+      if (drag.type === 'vert') {
+        // Sama seperti support manual di bawah: snap-grid tanpa syarat bisa menggeser lagi sudut
+        // yang barusan pas ortho-snap-kan ke sudut tetangga (pv/nx sering tak persis kelipatan
+        // grid) — sisi vertikal jadi lurus tapi sisi horizontal (atau sebaliknya) miring lagi pas
+        // dilepas, hasil akhir tidak siku. Kalau sumbu itu SUDAH persis sama salah satu tetangga,
+        // pertahankan persis.
+        const vi = drag.vi, n = this.S.verts.length;
+        const pv = this.S.verts[(vi - 1 + n) % n], nx = this.S.verts[(vi + 1) % n];
+        const v = this.S.verts[vi];
+        this.S.verts[vi] = {
+          x: (v.x === pv.x || v.x === nx.x) ? v.x : this.snap(v.x),
+          y: (v.y === pv.y || v.y === nx.y) ? v.y : this.snap(v.y),
+        };
+      }
       else if (drag.type === 'sup') {
         // Snap grid biasa BISA menggeser lagi titik yang barusan pas ortho-snap-kan ke anchor
         // (anchor sering tak persis kelipatan grid — datang dari resize/"Ukur Sisi" presisi yang
