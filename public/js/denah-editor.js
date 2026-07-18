@@ -952,7 +952,12 @@ class DenahEditor {
           const sup = el.querySelector('#supLayer'); if (sup) sup.style.opacity = '0.25';
         } else if (t.dataset.id && t.dataset.id.startsWith('F')) { this.typeSide(+t.dataset.id.slice(1)); }
       } else if (this.mode === 'tiang') {
-        const hit = this.S.tiang.findIndex(p => dist(p, cm) < this.S.grid * 1.5);
+        // Threshold sentuh berbasis PIKSEL layar (24 satuan SVG, dikonversi ke cm lewat SC) — BUKAN
+        // cm dunia (grid*1.5, bug lama: di denah besar/zoom-out, itu bisa jadi cuma beberapa piksel,
+        // jauh lebih kecil dari ukuran jari beneran, bikin tap-tepat-di-tiang dianggap meleset/kosong
+        // -> tiang baru terus-menerus tertambah). Sama pola r=24 hit-area titik sudut poligon.
+        const TH = 24 / this.SC;
+        const hit = this.S.tiang.findIndex(p => dist(p, cm) < TH);
         this.pushUndo();
         if (hit >= 0) {
           // Tunggu ada gerakan jari dulu (lihat pointermove) sebelum diputuskan drag-pindah atau
