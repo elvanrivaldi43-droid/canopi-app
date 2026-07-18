@@ -254,6 +254,8 @@ class DenahEditor {
 .de-matmenu{position:fixed;z-index:9999;display:none;background:#fff;border:1px solid #334155;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:8px}
 .de-matmenu select{width:150px}
 .de-matmenu .de-mrow{display:flex;gap:6px;margin-top:6px}
+.de-tiangmenu{position:fixed;z-index:9999;display:none;flex-direction:column;gap:4px;background:#fff;border:1px solid #334155;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:6px}
+.de-tiangmenu.show{display:flex}
 </style>
 <div class="de-card">
   <div class="de-ribbon">
@@ -327,6 +329,11 @@ class DenahEditor {
   <div data-role="matMenuLabel" style="font-size:12px;font-weight:700;color:#334155;margin-bottom:6px"></div>
   <select data-role="matPick"></select>
   <div class="de-mrow"><span class="de-mini" data-role="matApply">Ganti</span><span class="de-mini" data-role="matClear">Pakai default</span><span class="de-mini" data-role="matCancel">Batal</span></div>
+</div>
+<div class="de-tiangmenu" data-role="tiangMenu">
+  <span class="de-mini" data-role="tiangMenuGanti">Ganti Besi</span>
+  <span class="de-mini" data-role="tiangMenuHapus">Hapus</span>
+  <span class="de-mini" data-role="tiangMenuCancel">Batal</span>
 </div>`;
   }
 
@@ -387,10 +394,22 @@ class DenahEditor {
       if (this.menuId) { this.pushUndo(); delete this.S.matOverride[this.menuId]; this._q('[data-role=matMenu]').style.display = 'none'; this.render(); }
     };
     this._q('[data-role=matCancel]').onclick = () => { this._q('[data-role=matMenu]').style.display = 'none'; };
+
+    // Menu tekan-tahan tiang (Ganti Besi / Hapus) — pengganti tap-toggle lama yang ambigu sama drag.
+    this._q('[data-role=tiangMenuHapus]').onclick = () => {
+      if (this._tiangMenuIdx != null) { this.pushUndo(); this.S.tiang.splice(this._tiangMenuIdx, 1); this._closeTiangMenu(); this.render(); }
+    };
+    this._q('[data-role=tiangMenuGanti]').onclick = e => {
+      if (this._tiangMenuIdx != null) { const id = 'T' + this._tiangMenuIdx; this._closeTiangMenu(); this.openMatMenu(e, id); }
+    };
+    this._q('[data-role=tiangMenuCancel]').onclick = () => this._closeTiangMenu();
+
     this._docPointerDown = (e) => {
       const menu = this._q('[data-role=matMenu]');
+      const tmenu = this._q('[data-role=tiangMenu]');
       const canvas = this._q('.de-canvas');
       if (menu && menu.style.display === 'block' && !menu.contains(e.target) && !(canvas && canvas.contains(e.target))) menu.style.display = 'none';
+      if (tmenu && tmenu.classList.contains('show') && !tmenu.contains(e.target) && !(canvas && canvas.contains(e.target))) this._closeTiangMenu();
     };
     document.addEventListener('pointerdown', this._docPointerDown);
   }
@@ -555,7 +574,7 @@ class DenahEditor {
       bentuk: 'Mode Bentuk: seret bulatan sudut. Ketuk sisi frame untuk ketik panjang cm. "+ Sudut"/"− Sudut" untuk L/lekuk.',
       besi: 'Mode Ganti besi: klik batang/tiang di denah → pilih besi (atau balik ke default).',
       support: 'Mode Support: klik garis support untuk hapus/kembalikan. "Tambah manual" untuk gawang/WF melintang.',
-      tiang: 'Mode Tiang: klik untuk taruh tiang (snap grid). Klik tiang lagi untuk hapus.',
+      tiang: 'Mode Tiang: ketuk tempat kosong untuk taruh tiang (snap grid). Seret tiang yang sudah ada untuk pindah, tekan-tahan untuk menu Ganti Besi/Hapus.',
     };
     this._q('[data-role=hint]').textContent = extra || HINTS[this.mode];
   }
@@ -720,6 +739,22 @@ class DenahEditor {
     menu.style.left = left + 'px';
     menu.style.top = top + 'px';
   }
+
+  // Menu tekan-tahan tiang (Ganti Besi / Hapus) — dipicu dari bindSvg() saat tap-tahan di tiang
+  // yang sudah ada, TANPA gerak jari (kalau gerak, jadi drag-pindah biasa, bukan menu). Pola posisi
+  // clamp-ke-viewport sama persis openMatMenu() di atas.
+  openTiangMenu(evt, i) {
+    this._tiangMenuIdx = i;
+    const menu = this._q('[data-role=tiangMenu]');
+    menu.style.left = '0px'; menu.style.top = '0px'; menu.classList.add('show');
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let left = evt.clientX + 6, top = evt.clientY + 6;
+    if (left + mw > window.innerWidth) left = Math.max(6, evt.clientX - mw - 6);
+    if (top + mh > window.innerHeight) top = Math.max(6, evt.clientY - mh - 6);
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+  }
+  _closeTiangMenu() { this._q('[data-role=tiangMenu]').classList.remove('show'); this._tiangMenuIdx = null; }
 
   // Panel input span/menjorok + Terapkan/Batal — cuma tampil selagi armed === 'addBox'.
   renderBoxPanel() {
@@ -958,14 +993,27 @@ class DenahEditor {
         // -> tiang baru terus-menerus tertambah). Sama pola r=24 hit-area titik sudut poligon.
         const TH = 24 / this.SC;
         const hit = this.S.tiang.findIndex(p => dist(p, cm) < TH);
-        this.pushUndo();
         if (hit >= 0) {
-          // Tunggu ada gerakan jari dulu (lihat pointermove) sebelum diputuskan drag-pindah atau
-          // tap-hapus (perilaku lama) — keduanya mulai dari gestur yang sama.
-          drag = { type: 'tiang', i: hit, startPt: cm, moved: false,
+          // pushUndo() SENGAJA belum dipanggil di sini (beda dari drag lain di file ini) — banyak
+          // gestur di tiang berakhir TANPA mutasi sama sekali (tap sekejap, buka menu lalu Batal),
+          // jadi tiap cabang yang BENERAN mengubah data (gerak pertama di pointermove, tiangMenuHapus)
+          // motong undo snapshot-nya sendiri persis sebelum mutasi. "Ganti Besi" pakai push milik
+          // matApply yang sudah ada, tak perlu tambahan di sini.
+          // Sentuh+geser tiang yang sudah ada SELALU cuma pindah (persis titik sudut, tak ada lagi
+          // nebak-nebak tap-vs-drag). Tekan-tahan TANPA gerak -> menu Ganti Besi/Hapus (pola klik-
+          // kanan PC). Tap sekejap tanpa gerak & lepas sebelum 450ms -> tak ada aksi (aman, bukan
+          // hapus diam-diam seperti perilaku lama).
+          const myDrag = { type: 'tiang', i: hit, startPt: cm, moved: false,
             tc: el.querySelector('#tc' + hit), tl: el.querySelector('#tl' + hit) };
+          drag = myDrag;
           el.setPointerCapture(e.pointerId); e.preventDefault();
+          myDrag.longPressTimer = setTimeout(() => {
+            if (drag !== myDrag || myDrag.moved) return; // gestur ini sudah berubah/berakhir, batal
+            this.openTiangMenu(e, hit);
+            drag = null; // gestur "dipakai" buat menu, jangan lanjut jadi drag/hapus pas pointerup
+          }, 450);
         } else {
+          this.pushUndo();
           this.S.tiang.push({ x: this.snap(cm.x), y: this.snap(cm.y) });
           this.render();
         }
@@ -1052,7 +1100,15 @@ class DenahEditor {
           const poly = el.querySelector('[data-boxprev]');
           if (poly) poly.setAttribute('points', [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' '));
         } else if (drag.type === 'tiang') {
-          if (!drag.moved && dist(cm, drag.startPt) > 4) drag.moved = true;
+          if (!drag.moved && dist(cm, drag.startPt) > 4) {
+            drag.moved = true;
+            if (drag.longPressTimer) { clearTimeout(drag.longPressTimer); drag.longPressTimer = null; }
+            // pushUndo() persis di sini (gerak nyata pertama kali terdeteksi, SEBELUM posisi ditulis
+            // baris di bawah) — bukan di pointerdown (byk gestur tiang berakhir tanpa mutasi sama
+            // sekali) atau di end() (posisi sudah berubah duluan lewat pointermove, kepagian/salah
+            // snapshot kalau push di situ).
+            this.pushUndo();
+          }
           if (!drag.moved) return;
           const candidates = DenahConv.collectAlignCandidates(this.S, { kind: 'tiang', i: drag.i });
           const TH = (this.S.grid || 20) * 0.8;
@@ -1148,10 +1204,8 @@ class DenahEditor {
       }
       else if (drag.type === 'box') { this.boxPreview.offset = this.snap(this.boxPreview.offset); }
       else if (drag.type === 'tiang') {
-        if (!drag.moved) {
-          // Tak gerak = perilaku lama (tap tiang = hapus). Posisi belum diubah krn moved masih false.
-          this.S.tiang.splice(drag.i, 1);
-        } else {
+        if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
+        if (drag.moved) {
           // Sama pola fix Kelompok A (vert/sup): kalau sumbu SUDAH persis sama titik align-snap yg
           // aktif barusan, jangan snap-grid lagi di situ — cegah "lurus pas drag, bengkok pas lepas".
           const p = this.S.tiang[drag.i];
@@ -1162,6 +1216,9 @@ class DenahEditor {
             y: (gy && p.y === gy.ref.y) ? p.y : this.snap(p.y),
           };
         }
+        // !moved dan menu belum sempat kebuka (dilepas cepat < 450ms) -> tak ada aksi sama sekali,
+        // tiang tetap di tempat semula. Beda dari perilaku lama (tap = hapus) yang bikin ambigu
+        // sama drag — sekarang hapus/ganti-besi cuma lewat menu tekan-tahan (openTiangMenu).
         this._hideAlignGuides();
       }
       else if (drag.type === 'supline') {
