@@ -331,6 +331,7 @@ class DenahEditor {
   <div class="de-mrow"><span class="de-mini" data-role="matApply">Ganti</span><span class="de-mini" data-role="matClear">Pakai default</span><span class="de-mini" data-role="matCancel">Batal</span></div>
 </div>
 <div class="de-tiangmenu" data-role="tiangMenu">
+  <span class="de-mini" data-role="tiangMenuTambah">Tambah Tiang</span>
   <span class="de-mini" data-role="tiangMenuGanti">Ganti Besi</span>
   <span class="de-mini" data-role="tiangMenuHapus">Hapus</span>
   <span class="de-mini" data-role="tiangMenuCancel">Batal</span>
@@ -395,7 +396,14 @@ class DenahEditor {
     };
     this._q('[data-role=matCancel]').onclick = () => { this._q('[data-role=matMenu]').style.display = 'none'; };
 
-    // Menu tekan-tahan tiang (Ganti Besi / Hapus) — pengganti tap-toggle lama yang ambigu sama drag.
+    // Menu tekan-tahan tiang — SATU pola dipakai buat DUA konteks: tiang yang sudah ada (Ganti
+    // Besi/Hapus, this._tiangMenuIdx) DAN tempat kosong (Tambah, this._tiangAddPt) — dua-duanya
+    // tak pernah aktif bareng, tombol yang tak relevan disembunyikan (lihat openTiangMenu/
+    // openTiangAddMenu). Tak ada lagi commit otomatis/instan di mana pun — SEMUA mutasi tiang
+    // (tambah/hapus/ganti besi) sekarang WAJIB lewat tap eksplisit di salah satu tombol menu ini.
+    this._q('[data-role=tiangMenuTambah]').onclick = () => {
+      if (this._tiangAddPt) { this.pushUndo(); this.S.tiang.push({ x: this._tiangAddPt.x, y: this._tiangAddPt.y }); this._closeTiangMenu(); this.render(); }
+    };
     this._q('[data-role=tiangMenuHapus]').onclick = () => {
       if (this._tiangMenuIdx != null) { this.pushUndo(); this.S.tiang.splice(this._tiangMenuIdx, 1); this._closeTiangMenu(); this.render(); }
     };
@@ -574,7 +582,7 @@ class DenahEditor {
       bentuk: 'Mode Bentuk: seret bulatan sudut. Ketuk sisi frame untuk ketik panjang cm. "+ Sudut"/"− Sudut" untuk L/lekuk.',
       besi: 'Mode Ganti besi: klik batang/tiang di denah → pilih besi (atau balik ke default).',
       support: 'Mode Support: klik garis support untuk hapus/kembalikan. "Tambah manual" untuk gawang/WF melintang.',
-      tiang: 'Mode Tiang: ketuk tempat kosong untuk taruh tiang (snap grid). Seret tiang yang sudah ada untuk pindah, tekan-tahan untuk menu Ganti Besi/Hapus.',
+      tiang: 'Mode Tiang: tekan-tahan tempat kosong untuk menu Tambah Tiang. Seret tiang yang sudah ada untuk pindah, tekan-tahan untuk menu Ganti Besi/Hapus.',
     };
     this._q('[data-role=hint]').textContent = extra || HINTS[this.mode];
   }
@@ -740,11 +748,28 @@ class DenahEditor {
     menu.style.top = top + 'px';
   }
 
-  // Menu tekan-tahan tiang (Ganti Besi / Hapus) — dipicu dari bindSvg() saat tap-tahan di tiang
-  // yang sudah ada, TANPA gerak jari (kalau gerak, jadi drag-pindah biasa, bukan menu). Pola posisi
-  // clamp-ke-viewport sama persis openMatMenu() di atas.
+  // Menu tekan-tahan tiang — dipicu dari bindSvg() saat tekan-tahan TANPA gerak jari (kalau gerak,
+  // jadi drag-pindah biasa / gerak dibatalkan, bukan menu). Dua konteks pakai 1 popup yang sama:
+  // tiang yang SUDAH ADA (Ganti Besi/Hapus) via openTiangMenu(), atau tempat KOSONG (Tambah) via
+  // openTiangAddMenu() — saling eksklusif, tombol yang tak relevan disembunyikan.
   openTiangMenu(evt, i) {
     this._tiangMenuIdx = i;
+    this._tiangAddPt = null;
+    this._q('[data-role=tiangMenuTambah]').style.display = 'none';
+    this._q('[data-role=tiangMenuGanti]').style.display = '';
+    this._q('[data-role=tiangMenuHapus]').style.display = '';
+    this._showTiangMenuAt(evt);
+  }
+  openTiangAddMenu(evt, x, y) {
+    this._tiangMenuIdx = null;
+    this._tiangAddPt = { x, y };
+    this._q('[data-role=tiangMenuTambah]').style.display = '';
+    this._q('[data-role=tiangMenuGanti]').style.display = 'none';
+    this._q('[data-role=tiangMenuHapus]').style.display = 'none';
+    this._showTiangMenuAt(evt);
+  }
+  // Posisi clamp-ke-viewport sama persis openMatMenu() di atas.
+  _showTiangMenuAt(evt) {
     const menu = this._q('[data-role=tiangMenu]');
     menu.style.left = '0px'; menu.style.top = '0px'; menu.classList.add('show');
     const mw = menu.offsetWidth, mh = menu.offsetHeight;
@@ -754,7 +779,11 @@ class DenahEditor {
     menu.style.left = left + 'px';
     menu.style.top = top + 'px';
   }
-  _closeTiangMenu() { this._q('[data-role=tiangMenu]').classList.remove('show'); this._tiangMenuIdx = null; }
+  _closeTiangMenu() {
+    this._q('[data-role=tiangMenu]').classList.remove('show');
+    this._tiangMenuIdx = null;
+    this._tiangAddPt = null;
+  }
 
   // Panel input span/menjorok + Terapkan/Batal — cuma tampil selagi armed === 'addBox'.
   renderBoxPanel() {
@@ -1013,32 +1042,24 @@ class DenahEditor {
             drag = null; // gestur "dipakai" buat menu, jangan lanjut jadi drag/hapus pas pointerup
           }, 450);
         } else {
-          // Kalau tap meleset TIPIS dari tiang lain (di luar TH tapi masih dekat) -> JANGAN diam-
-          // diam nambah tiang baru. Bug nyata dari Elvan: pas coba pegang/tekan-tahan tiang lama
-          // dan jarinya sedikit geser dari target, dulu langsung nyasar nambah duplikat baru —
-          // ganggu krn sekarang interaksi tiang lama jadi lebih sering dipakai (geser/tekan-tahan).
-          // Zona penyangga 2x TH: dianggap "mungkin maksudnya pegang tiang itu", didiamkan saja
-          // (bukan dianggap tempat kosong). Taruh baru cuma jalan kalau BENAR-BENAR jauh dari semua
-          // tiang yang ada.
-          const dekatTiangLain = this.S.tiang.some(p => dist(p, cm) < TH * 2);
-          if (!dekatTiangLain) {
-            // JANGAN commit langsung di pointerdown. Bug nyata dari Elvan: pas mulai gestur
-            // pinch-zoom 2 jari, jari PERTAMA yg mendarat di tempat kosong sudah langsung nambah
-            // tiang baru — SEBELUM jari ke-2 nyusul & _wireZoom() sadar ini pinch, bukan tap
-            // (beda dari drag vert/sup/box yg aman dibatalkan krn belum ada mutasi sebelum
-            // digeser; taruh-tiang-baru dulu committed INSTAN, tak ada jendela buat batal sama
-            // sekali). Tunda 150ms: kalau _wireZoom() kirim pointercancel sintetis (jari ke-2
-            // kedeteksi) SEBELUM timer ini nyala, end() di bawah yang batalkan.
-            const pending = { type: 'tiangPendingAdd', x: this.snap(cm.x), y: this.snap(cm.y) };
-            drag = pending;
-            pending.timer = setTimeout(() => {
-              if (drag !== pending) return;
-              this.pushUndo();
-              this.S.tiang.push({ x: pending.x, y: pending.y });
-              drag = null;
-              this.render();
-            }, 150);
-          }
+          // REDESAIN TOTAL (18 Juli, langsung permintaan Elvan setelah 3 percobaan tambal-sulam
+          // meleset): taruh tiang baru TAK LAGI commit sendiri lewat tap/timer sama sekali.
+          // Sekarang WAJIB tekan-tahan dulu (450ms, persis pola tiang yang sudah ada di atas),
+          // baru muncul menu "Tambah Tiang" — user harus tap tombol itu buat beneran nambah.
+          // Ini otomatis menutup 2 celah dari percobaan sebelumnya sekaligus, bukan cuma
+          // ditambal lagi: (a) tap meleset dikit dari tiang lama tak lagi diam-diam nambah
+          // duplikat — nambah baru kini juga butuh tekan-tahan+konfirmasi, bukan cuma tap;
+          // (b) jari pertama gestur pinch-zoom yang mendarat di tempat kosong tak lagi nambah
+          // apa pun — pointercancel dari jari ke-2 (lihat _wireZoom()) membatalkan timer 450ms
+          // ini jauh sebelum menu sempat muncul, apalagi sebelum ada tombol yang bisa dipencet.
+          const myAdd = { type: 'tiangPendingPlace', startPt: cm, x: this.snap(cm.x), y: this.snap(cm.y), moved: false };
+          drag = myAdd;
+          el.setPointerCapture(e.pointerId); e.preventDefault();
+          myAdd.longPressTimer = setTimeout(() => {
+            if (drag !== myAdd || myAdd.moved) return;
+            this.openTiangAddMenu(e, myAdd.x, myAdd.y);
+            drag = null;
+          }, 450);
         }
       } else if (this.mode === 'support') {
         if (t.dataset.sm != null) {
@@ -1142,6 +1163,15 @@ class DenahEditor {
           if (drag.tc) { drag.tc.setAttribute('cx', px2); drag.tc.setAttribute('cy', py2); }
           if (drag.tl) { drag.tl.setAttribute('x', px2 + 9); drag.tl.setAttribute('y', py2 + 4); }
           this._updateAlignGuides(snap.guides, snap);
+        } else if (drag.type === 'tiangPendingPlace') {
+          // Jari gerak berarti niatnya BUKAN tekan-tahan diam (mungkin geser pandangan/tak sengaja)
+          // — batalkan niat taruh tiang sama sekali, jangan taruh apa pun. Beda dari tiang yang
+          // sudah ada (gerak = pindah): di tempat kosong belum ada apa-apa buat "dipindah".
+          if (!drag.moved && dist(cm, drag.startPt) > 4) {
+            drag.moved = true;
+            if (drag.longPressTimer) { clearTimeout(drag.longPressTimer); drag.longPressTimer = null; }
+            drag = null;
+          }
         } else if (drag.type === 'supline') {
           if (!drag.moved && dist(cm, drag.startPt) > 4) drag.moved = true;
           if (!drag.moved) return;
@@ -1197,16 +1227,13 @@ class DenahEditor {
         }
       }
     });
-    const end = (ev) => { if (!drag) return;
-      if (drag.type === 'tiangPendingAdd') {
-        clearTimeout(drag.timer);
-        // pointerup asli (jari cuma 1, benar-benar tap) -> commit sekarang, tak perlu nunggu timer.
-        // pointercancel (jari ke-2 pinch-zoom kedeteksi, dikirim _wireZoom()) -> batal, tak nambah.
-        if (!ev || ev.type !== 'pointercancel') {
-          this.pushUndo();
-          this.S.tiang.push({ x: drag.x, y: drag.y });
-        }
-        drag = null; this.render(); return;
+    const end = () => { if (!drag) return;
+      if (drag.type === 'tiangPendingPlace') {
+        // Lepas jari SEBELUM menu "Tambah Tiang" sempat muncul (< 450ms, atau dibatalkan gerak/
+        // pointercancel pinch-zoom) -> tak ada aksi sama sekali, tak nambah apa pun. Nambah beneran
+        // CUMA lewat tap tombol "Tambah Tiang" di menu (lihat openTiangAddMenu di _wireControls()).
+        if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
+        drag = null; return;
       }
       if (drag.type === 'vert') {
         // Sama seperti support manual di bawah: snap-grid tanpa syarat bisa menggeser lagi sudut
