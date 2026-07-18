@@ -1013,9 +1013,19 @@ class DenahEditor {
             drag = null; // gestur "dipakai" buat menu, jangan lanjut jadi drag/hapus pas pointerup
           }, 450);
         } else {
-          this.pushUndo();
-          this.S.tiang.push({ x: this.snap(cm.x), y: this.snap(cm.y) });
-          this.render();
+          // Kalau tap meleset TIPIS dari tiang lain (di luar TH tapi masih dekat) -> JANGAN diam-
+          // diam nambah tiang baru. Bug nyata dari Elvan: pas coba pegang/tekan-tahan tiang lama
+          // dan jarinya sedikit geser dari target, dulu langsung nyasar nambah duplikat baru —
+          // ganggu krn sekarang interaksi tiang lama jadi lebih sering dipakai (geser/tekan-tahan).
+          // Zona penyangga 2x TH: dianggap "mungkin maksudnya pegang tiang itu", didiamkan saja
+          // (bukan dianggap tempat kosong). Taruh baru cuma jalan kalau BENAR-BENAR jauh dari semua
+          // tiang yang ada.
+          const dekatTiangLain = this.S.tiang.some(p => dist(p, cm) < TH * 2);
+          if (!dekatTiangLain) {
+            this.pushUndo();
+            this.S.tiang.push({ x: this.snap(cm.x), y: this.snap(cm.y) });
+            this.render();
+          }
         }
       } else if (this.mode === 'support') {
         if (t.dataset.sm != null) {
