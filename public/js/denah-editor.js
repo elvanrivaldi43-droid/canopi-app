@@ -1022,9 +1022,22 @@ class DenahEditor {
           // tiang yang ada.
           const dekatTiangLain = this.S.tiang.some(p => dist(p, cm) < TH * 2);
           if (!dekatTiangLain) {
-            this.pushUndo();
-            this.S.tiang.push({ x: this.snap(cm.x), y: this.snap(cm.y) });
-            this.render();
+            // JANGAN commit langsung di pointerdown. Bug nyata dari Elvan: pas mulai gestur
+            // pinch-zoom 2 jari, jari PERTAMA yg mendarat di tempat kosong sudah langsung nambah
+            // tiang baru — SEBELUM jari ke-2 nyusul & _wireZoom() sadar ini pinch, bukan tap
+            // (beda dari drag vert/sup/box yg aman dibatalkan krn belum ada mutasi sebelum
+            // digeser; taruh-tiang-baru dulu committed INSTAN, tak ada jendela buat batal sama
+            // sekali). Tunda 150ms: kalau _wireZoom() kirim pointercancel sintetis (jari ke-2
+            // kedeteksi) SEBELUM timer ini nyala, end() di bawah yang batalkan.
+            const pending = { type: 'tiangPendingAdd', x: this.snap(cm.x), y: this.snap(cm.y) };
+            drag = pending;
+            pending.timer = setTimeout(() => {
+              if (drag !== pending) return;
+              this.pushUndo();
+              this.S.tiang.push({ x: pending.x, y: pending.y });
+              drag = null;
+              this.render();
+            }, 150);
           }
         }
       } else if (this.mode === 'support') {
@@ -1184,7 +1197,17 @@ class DenahEditor {
         }
       }
     });
-    const end = () => { if (!drag) return;
+    const end = (ev) => { if (!drag) return;
+      if (drag.type === 'tiangPendingAdd') {
+        clearTimeout(drag.timer);
+        // pointerup asli (jari cuma 1, benar-benar tap) -> commit sekarang, tak perlu nunggu timer.
+        // pointercancel (jari ke-2 pinch-zoom kedeteksi, dikirim _wireZoom()) -> batal, tak nambah.
+        if (!ev || ev.type !== 'pointercancel') {
+          this.pushUndo();
+          this.S.tiang.push({ x: drag.x, y: drag.y });
+        }
+        drag = null; this.render(); return;
+      }
       if (drag.type === 'vert') {
         // Sama seperti support manual di bawah: snap-grid tanpa syarat bisa menggeser lagi sudut
         // yang barusan pas ortho-snap-kan ke sudut tetangga (pv/nx sering tak persis kelipatan
