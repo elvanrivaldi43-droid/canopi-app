@@ -33,8 +33,8 @@
 
 ## LANGKAH SELANJUTNYA (urut)
 
-1. **#10 Kelompok B: SUDAH DEPLOY, BELUM DITES Elvan** (`/rab-opsi`, HP asli) — drag tiang/support-garis/kotak-support + snap-tengah. **Elvan pilih lanjut ke Kelompok C dulu tanpa tes B** (17 Juli) — risiko: kalau nanti ada bug, lebih susah pastikan asalnya dari B atau C krn dua-duanya belum divalidasi terpisah. Tetap MENUNGGU TES kapan pun Elvan sempat.
-2. **#10 Kelompok C (saran-kotak-2-arah):** SEDANG DIKERJAKAN — brainstorming dimulai 17 Juli (lanjut dari sini kalau sesi terputus).
+1. **#10 Kelompok B: SEDANG DITES Elvan di HP (mulai 18 Juli), ketemu bug nyata & sudah 1 diperbaiki.** Tiang susah digeser/tap-malah-nambah-terus — DIPERBAIKI (commit `68472e5`, bukti video, detail lengkap: `.superpowers/sdd/progress.md` § "ITERASI KELOMPOK B-1"). **MASIH TERBUKA, tunggu bukti/jawaban Elvan:** (a) auto-support gampang hilang kena jari sedikit — beda kelas bug dari tiang, butuh video; (b) Ganti Besi kotak tambahan masih nyangkut — belum jelas ini bug atau salah mode; (c) support manual align-snap kurang "melekat" + minta feedback visual pas tarik support manual baru; (d) permintaan baru: support hasil rekomendasi mesin (auto) ikut bisa digeser+snap (bukan cuma manual) — ini scope baru, bukan bug. **Tombol "Lanjut"/"+Opsi" macet di HP Elvan — DIKONFIRMASI TAK TERKAIT Kelompok B**, perlu diselidiki terpisah (belum ada bukti/video masuk).
+2. **#10 Kelompok C (saran-kotak-2-arah):** plan implementasi sudah ditulis & disetujui (`docs/superpowers/plans/2026-07-17-denah-ui-kelompok-c-implementation.md`), **BELUM MULAI IMPLEMENTASI** — sengaja ditunda, Elvan minta tes Kelompok B dulu (18 Juli). Lanjut ke sini kalau Elvan bilang "lanjut implementasi Kelompok C".
 3. Item tunda dari Kelompok A (opsional, kalau Elvan minta): magnifier drag, input panjang support manual, fix `.de-matmenu` iOS Safari kalau ada laporan nyata.
 4. Foto **bar #12** cutting list PA-DUTA (opsional) → tutup validasi 4x8=9.
 
