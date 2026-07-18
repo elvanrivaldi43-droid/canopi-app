@@ -690,6 +690,18 @@ class DenahEditor {
     return { x: (localX - this.PAD) / this.SC, y: (localY - this.PAD) / this.SC };
   }
 
+  // Rasio TAMPIL svg saat ini (rect.width layar / lebar intrinsik viewBox) — BEDA dari this.SC
+  // (skala auto-fit konten ke viewBox, dihitung sekali per render, TETAP walau layar disusutkan
+  // CSS max-width:100% di HP sempit atau di-pinch-zoom). Dipakai buat threshold sentuh (radius hit-
+  // test tiang) biar toleransinya konsisten dgn PIKSEL LAYAR beneran, sama basis kayak toCm() di
+  // atas — bug nyata: threshold lama (24/this.SC saja) di HP lebar ~360px jadi cuma ~12-13px
+  // toleransi sentuh beneran (bukan 24px yg dimaksud), bikin tap tepat di tiang sering dianggap
+  // meleset -> gagal digeser & tekan-tahan-nya nyasar buka menu "Tambah Tiang".
+  screenScale(el) {
+    const svgW = el.width.baseVal.value;
+    return svgW ? el.getBoundingClientRect().width / svgW : 1;
+  }
+
   // Set panjang sisi F(i) ke nilai pasti: geser vertex tujuan sepanjang arah sisi.
   // PRESISI: terima koma (148,5), TIDAK di-snap ke grid.
   setSideLength(i, raw) {
@@ -1016,11 +1028,16 @@ class DenahEditor {
           const sup = el.querySelector('#supLayer'); if (sup) sup.style.opacity = '0.25';
         } else if (t.dataset.id && t.dataset.id.startsWith('F')) { this.typeSide(+t.dataset.id.slice(1)); }
       } else if (this.mode === 'tiang') {
-        // Threshold sentuh berbasis PIKSEL layar (24 satuan SVG, dikonversi ke cm lewat SC) — BUKAN
-        // cm dunia (grid*1.5, bug lama: di denah besar/zoom-out, itu bisa jadi cuma beberapa piksel,
-        // jauh lebih kecil dari ukuran jari beneran, bikin tap-tepat-di-tiang dianggap meleset/kosong
-        // -> tiang baru terus-menerus tertambah). Sama pola r=24 hit-area titik sudut poligon.
-        const TH = 24 / this.SC;
+        // Threshold sentuh berbasis PIKSEL LAYAR BENERAN (24px, dibagi screenScale() dulu baru SC) —
+        // BUKAN cm dunia (grid*1.5, bug lama gelombang 1: di denah besar/zoom-out jadi cuma beberapa
+        // piksel) DAN BUKAN cuma dibagi SC doang (bug lama gelombang 2, 18 Juli: SC itu skala auto-
+        // fit KONTEN ke viewBox, tetap sama walau HP nyusutin tampilan svg via CSS max-width:100% —
+        // di layar HP ~360px lebar, itu bikin toleransi sentuh NYATA cuma ~12-13px, bukan ~24px yg
+        // dimaksud, jadi tap tepat di tiang sering dianggap meleset/kosong -> susah digeser & tekan-
+        // tahan nyasar buka menu "Tambah Tiang" alih-alih "Ganti Besi/Hapus"). Sama pola r=24 hit-
+        // area titik sudut poligon (itu elemen SVG asli, otomatis ikut skala tampil — ini versi JS-
+        // nya harus disamakan basisnya manual lewat screenScale()).
+        const TH = 24 / this.screenScale(el) / this.SC;
         const hit = this.S.tiang.findIndex(p => dist(p, cm) < TH);
         if (hit >= 0) {
           // pushUndo() SENGAJA belum dipanggil di sini (beda dari drag lain di file ini) — banyak
