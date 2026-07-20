@@ -241,9 +241,9 @@ class DenahEditor {
 .de-quickbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
 .de-card.de-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;overflow-y:auto;border-radius:0;margin:0;box-shadow:none}
 .de-fullscreen-exit{display:none;flex:0 0 auto;min-height:40px;box-sizing:border-box;padding:0 18px;margin-left:6px;border-radius:8px;background:#f59e0b;color:#1e293b;border:none;font-size:13px;font-weight:700;cursor:pointer;align-items:center;justify-content:center}
-.de-canvas-wrap{position:relative;touch-action:none;overflow:hidden}
+.de-canvas-wrap{position:relative;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
-.de-canvas svg{max-width:100%;touch-action:none;display:block}
+.de-canvas svg{max-width:100%;touch-action:none;display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-zoom-reset{position:absolute;right:10px;bottom:10px;min-width:44px;min-height:44px;padding:0 14px;border-radius:22px;background:rgba(15,23,42,.85);color:#e2e8f0;border:1px solid #334155;font-size:13px;display:none;align-items:center;justify-content:center;cursor:pointer;user-select:none}
 .de-zoom-reset.show{display:flex}
 .de-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:#475569}
@@ -402,7 +402,7 @@ class DenahEditor {
     // openTiangAddMenu). Tak ada lagi commit otomatis/instan di mana pun — SEMUA mutasi tiang
     // (tambah/hapus/ganti besi) sekarang WAJIB lewat tap eksplisit di salah satu tombol menu ini.
     this._q('[data-role=tiangMenuTambah]').onclick = () => {
-      if (this._tiangAddPt) { this.pushUndo(); this.S.tiang.push({ x: this._tiangAddPt.x, y: this._tiangAddPt.y }); this._closeTiangMenu(); this.render(); }
+      if (this._tiangAddPt) { this.pushUndo(); this.S.tiang.push(this.clampTiang(this._tiangAddPt)); this._closeTiangMenu(); this.render(); }
     };
     this._q('[data-role=tiangMenuHapus]').onclick = () => {
       if (this._tiangMenuIdx != null) { this.pushUndo(); this.S.tiang.splice(this._tiangMenuIdx, 1); this._closeTiangMenu(); this.render(); }
@@ -510,7 +510,16 @@ class DenahEditor {
     const mid2 = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
     wrap.addEventListener('pointerdown', e => {
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // Cegah event mouse-kompat (disintesis sebagian browser/WebView dari 1 sentuhan jari asli)
+      // ikut dihitung sebagai jari ke-2 -> pinch nyasar padahal cuma 1 tangan. Pinch cuma masuk
+      // akal dari sentuhan/pena asli, bukan mouse.
+      if (e.pointerType === 'mouse') return;
+      // Jaga-jaga: buang entry pointer basi (>2 detik) sebelum nambah yang baru -- andai ADA 1
+      // pointerup/pointercancel yg somehow gak nyampe wrap (mis. race kondisi lain), entry lama
+      // gak numpuk selamanya dan bikin tap tunggal BERIKUTNYA keitung "jari ke-2" (pinch palsu).
+      const nowTs = Date.now();
+      for (const [pid, pv] of pointers) { if (nowTs - (pv.t || nowTs) > 2000) pointers.delete(pid); }
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, t: nowTs });
       if (pointers.size === 2) {
         // jari ke-2 ini mungkin persis di atas vertex/support/box lain — cegah
         // bindSvg() (bubble-phase, listener di svg) memproses pointerdown ini
@@ -576,6 +585,24 @@ class DenahEditor {
   _changed() { if (this.opts.onChange) this.opts.onChange(); }
 
   snap(v) { return Math.round(v / this.S.grid) * this.S.grid; }
+
+  // Batasi posisi tiang tetap di dalam area yang BENERAN kegambar svg -- bug nyata dari Elvan:
+  // tiang digeser sampai keluar area gambar utama (lewat sisi atas) jadi kepotong (svg
+  // overflow:hidden default) -> tak kelihatan/tak bisa disentuh lagi. Ini kejadian LIVE saat drag
+  // (attribute cx/cy di-update manual di pointermove tanpa render() ulang), jadi klem harus di
+  // titik mutasi posisi, bukan cuma pas render.
+  // PENTING: batas bawah BUKAN 0 -- render() kasih bantalan PAD (this.PAD satuan svg / this.SC)
+  // di SEMUA sisi termasuk kiri/atas verts=0, itu jatah nyata yg MEMANG kegambar (bukan cuma di
+  // dalam bentuk utama). Kalau batas bawahnya dipatok 0, tiang gak akan pernah bisa ditaruh di
+  // ATAS/KIRI bentuk utama sama sekali -- padahal itu justru kasus asli yg mau diselesaikan
+  // (tiang pinggir kanopi yg menjorok ke atas/kiri). 8cm inset dari tepi svg (bukan tepi verts)
+  // biar gak pas mepet piksel.
+  clampTiang(pt) {
+    const inset = 8;
+    const minC = -(this.PAD / this.SC) + inset;
+    const maxX = (this.domW || 400) - inset, maxY = (this.domH || 400) - inset;
+    return { x: Math.min(maxX, Math.max(minC, pt.x)), y: Math.min(maxY, Math.max(minC, pt.y)) };
+  }
 
   setHint(extra) {
     const HINTS = {
@@ -868,11 +895,16 @@ class DenahEditor {
     const S = this.S;
     const mem = DenahConv.buildMembers(S);
     const cmap = colorMap(mem);
-    const bb = bbox(S.verts);
+    // bbox HARUS ikut tiang (bukan cuma S.verts) -- tiang boleh digeser keluar bentuk utama (mis.
+    // tiang pinggir kanopi yg menjorok), kalau kanvas cuma dihitung dari verts, tiang di luar situ
+    // kepotong dari area gambar (svg overflow:hidden default) -> gak kegambar penuh, susah/tak bisa
+    // disentuh lagi. Bug nyata dari Elvan: tiang digeser ke luar kotak utama jadi tak ketemu lagi.
+    const bb = bbox([...S.verts, ...S.tiang]);
     const inLraw = +(this._q('[data-role=inL]').value) || 0;
     const inPraw = +(this._q('[data-role=inP]').value) || 0;
     const domW = Math.max(bb.x1, inLraw) * 1.12 + 20, domH = Math.max(bb.y1, inPraw) * 1.12 + 20;
     this.SC = Math.min(560 / domW, 400 / domH); if (!isFinite(this.SC) || this.SC <= 0) this.SC = 0.5;
+    this.domW = domW; this.domH = domH; // dipakai clampTiang() biar tiang gak bisa digeser keluar kanvas
     const PAD = this.PAD;
     const W = domW * this.SC + PAD * 2, H = domH * this.SC + PAD * 2;
     const X = x => PAD + x * this.SC, Y = y => PAD + y * this.SC;
@@ -909,14 +941,19 @@ class DenahEditor {
       if (pts.length !== bx.verts.length) return; // index rusak (harusnya sudah tersaring reindex Task 5)
       s += `<polygon points="${pts.map(p => `${X(p.x)},${Y(p.y)}`).join(' ')}" fill="transparent" data-boxgroup="${k}" style="cursor:grab;pointer-events:${this.mode === 'bentuk' ? 'auto' : 'none'}"/>`;
     });
-    // tiang
+    // vertex: hit-area besar transparan (mudah ditekan di HP) + bulatan tampak (tak makan event).
+    // Hit-area cuma aktif mode Bentuk (sama pola kotak-support di atas) -- sebelumnya tak digating,
+    // jadi walau tak dipakai logika hit-test mode Tiang (itu murni jarak-cm, bukan e.target), tetap
+    // salah/inkonsisten kalau area sentuh gede nongol di mode lain.
+    S.verts.forEach((v, i) => { const cx = X(v.x), cy = Y(v.y);
+      s += `<circle id="vhit${i}" cx="${cx}" cy="${cy}" r="24" fill="transparent" data-vert="${i}" class="vhit" style="cursor:grab;pointer-events:${this.mode === 'bentuk' ? 'auto' : 'none'}"/>`;
+      s += `<circle id="vh${i}" cx="${cx}" cy="${cy}" r="5" fill="#fff" stroke="#f59e0b" stroke-width="2.5" class="vh" style="pointer-events:none"/>`; });
+    // tiang -- SENGAJA dirender SETELAH titik sudut (di atas), bukan sebelum. Bug nyata dari Elvan:
+    // tiang yang ditaruh pas di titik sudut kotak jadi ketutup bulatan putih titik sudut (elemen
+    // belakangan menang tampil di atas), keliatan cuma 1 titik & susah dibedain/ditemuin lagi.
     mem.filter(m => m.jenis === 'tiang').forEach((m, i) => { const c = cmap[m.material]; const p = m.geom.p;
       s += `<circle id="tc${i}" cx="${X(p.x)}" cy="${Y(p.y)}" r="6" fill="${c}" stroke="#0f2740" stroke-width="1.5" data-id="${m.id}" class="hit"><title>Tiang ${m.material} • ${m.panjang}cm</title></circle>`;
       s += `<text id="tl${i}" x="${X(p.x) + 9}" y="${Y(p.y) + 4}" fill="#fbbf24" font-size="10" paint-order="stroke" stroke="#0f2740" stroke-width="3">T${i + 1}</text>`; });
-    // vertex: hit-area besar transparan (mudah ditekan di HP) + bulatan tampak (tak makan event)
-    S.verts.forEach((v, i) => { const cx = X(v.x), cy = Y(v.y);
-      s += `<circle id="vhit${i}" cx="${cx}" cy="${cy}" r="24" fill="transparent" data-vert="${i}" class="vhit" style="cursor:grab"/>`;
-      s += `<circle id="vh${i}" cx="${cx}" cy="${cy}" r="5" fill="#fff" stroke="#f59e0b" stroke-width="2.5" class="vh" style="pointer-events:none"/>`; });
     if (this.armed === 'addBox' && this.boxPreview.sisiIdx != null) {
       const pv = this.computeBoxPreviewVerts();
       const pts = [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' ');
@@ -1174,12 +1211,13 @@ class DenahEditor {
           const candidates = DenahConv.collectAlignCandidates(this.S, { kind: 'tiang', i: drag.i });
           const TH = (this.S.grid || 20) * 0.8;
           const snap = DenahConv.findAlignSnap(cm, candidates, TH);
-          this.S.tiang[drag.i] = { x: snap.x, y: snap.y };
+          const clamped = this.clampTiang(snap);
+          this.S.tiang[drag.i] = clamped;
           this._lastGuides = snap.guides;
-          const px2 = PAD + snap.x * this.SC, py2 = PAD + snap.y * this.SC;
+          const px2 = PAD + clamped.x * this.SC, py2 = PAD + clamped.y * this.SC;
           if (drag.tc) { drag.tc.setAttribute('cx', px2); drag.tc.setAttribute('cy', py2); }
           if (drag.tl) { drag.tl.setAttribute('x', px2 + 9); drag.tl.setAttribute('y', py2 + 4); }
-          this._updateAlignGuides(snap.guides, snap);
+          this._updateAlignGuides(snap.guides, clamped);
         } else if (drag.type === 'tiangPendingPlace') {
           // Jari gerak berarti niatnya BUKAN tekan-tahan diam (mungkin geser pandangan/tak sengaja)
           // — batalkan niat taruh tiang sama sekali, jangan taruh apa pun. Beda dari tiang yang
