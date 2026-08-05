@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\IzinAbsen;
 use App\Models\Absensi;
 use App\Models\User;
+use App\Services\TelegramService;
 
 class IzinAbsenController extends Controller
 {
@@ -220,12 +221,12 @@ class IzinAbsenController extends Controller
 
         // Notif ke karyawan
         $karyawan = User::find($request->user_id);
-        if ($karyawan?->no_hp) {
+        if ($karyawan) {
             $pesan = "📋 *INFO DINAS LUAR*\n"
                    . "Kamu dijadwalkan dinas luar pada ".($izin->tanggal->format('d/m/Y'))."\n"
                    . "Keterangan: {$request->alasan}\n"
                    . "GPS absen bebas pada hari tersebut.";
-            $this->kirimWA($karyawan->no_hp, $pesan);
+            app(TelegramService::class)->kirim($karyawan->telegram_chat_id, $pesan);
         }
 
         return back()->with('success', 'Dinas luar berhasil dicatat.');
@@ -256,8 +257,8 @@ class IzinAbsenController extends Controller
 
     private function kirimNotifPengajuan(User $user, IzinAbsen $izin): void
     {
-        // Kirim ke mandor (level 3) dan owner (level 1)
-        $penerima = User::whereIn('level', [1, 3])->whereNotNull('no_hp')->get();
+        // Kirim ke mandor (level 3) dan owner (level 1) yang sudah connect Telegram
+        $penerima = User::whereIn('level', [1, 3])->whereNotNull('telegram_chat_id')->get();
 
         foreach ($penerima as $p) {
             $pesan = "📋 *PENGAJUAN {$izin->tipeLabel()}*\n"
@@ -266,14 +267,13 @@ class IzinAbsenController extends Controller
                    . "Alasan: {$izin->alasan}\n"
                    . "---\n"
                    . "Approve/tolak di: app.kanopibsd.co.id/izin/approval";
-            $this->kirimWA($p->no_hp, $pesan);
+            app(TelegramService::class)->kirim($p->telegram_chat_id, $pesan);
         }
     }
 
     private function kirimNotifHasilIzin(IzinAbsen $izin, string $hasil): void
     {
         $user = $izin->user;
-        if (!$user->no_hp) return;
 
         $icon  = $hasil === 'approved' ? '✅' : '❌';
         $label = $hasil === 'approved' ? 'DISETUJUI' : 'DITOLAK';
@@ -283,24 +283,6 @@ class IzinAbsenController extends Controller
                . ($izin->catatan_mandor ? "Catatan: {$izin->catatan_mandor}\n" : '')
                . "---\n"
                . "Detail di: app.kanopibsd.co.id/izin";
-        $this->kirimWA($user->no_hp, $pesan);
-    }
-
-    private function kirimWA(string $noHp, string $pesan): void
-    {
-        $token = env('FONNTE_TOKEN', '');
-        if (!$token) return;
-
-        $noHp = preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $noHp));
-        $ch   = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => 'https://api.fonnte.com/send',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => ['target' => $noHp, 'message' => $pesan],
-            CURLOPT_HTTPHEADER     => ['Authorization: ' . $token],
-        ]);
-        curl_exec($ch);
-        curl_close($ch);
+        app(TelegramService::class)->kirim($user->telegram_chat_id, $pesan);
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Kasbon;
 use App\Models\User;
+use App\Services\TelegramService;
 
 class KasbonKaryawanController extends Controller
 {
@@ -125,11 +126,11 @@ class KasbonKaryawanController extends Controller
             'ttd_tanggal'       => now(),
         ]);
 
-        // Notif WA ke owner
+        // Notif Telegram ke owner
         $owner = User::where('level', 1)->first();
-        if ($owner?->no_hp) {
+        if ($owner) {
             $warningText = $isWarning ? "\n⚠️ PERHATIAN: Gaji bersih akan < Rp 500.000 setelah cicilan!" : '';
-            $this->kirimWA($owner->no_hp,
+            app(TelegramService::class)->kirim($owner->telegram_chat_id,
                 "💳 *PENGAJUAN KASBON*\n" .
                 "Dari: {$user->name} ({$user->jabatan})\n" .
                 "Kategori: {$kasbon->kategoriLabel()}\n" .
@@ -192,22 +193,5 @@ class KasbonKaryawanController extends Controller
         </body></html>";
 
         return response($html)->header('Content-Type', 'text/html');
-    }
-
-    private function kirimWA(string $noHp, string $pesan): void
-    {
-        $token = env('FONNTE_TOKEN', '');
-        if (!$token) return;
-        $noHp = preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $noHp));
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => 'https://api.fonnte.com/send',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => ['target' => $noHp, 'message' => $pesan],
-            CURLOPT_HTTPHEADER     => ['Authorization: ' . $token],
-        ]);
-        curl_exec($ch);
-        curl_close($ch);
     }
 }

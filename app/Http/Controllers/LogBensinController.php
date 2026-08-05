@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LogBensin;
 use App\Models\Kendaraan;
 use App\Models\User;
+use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -203,7 +204,7 @@ class LogBensinController extends Controller
     private function kirimNotifBoros(LogBensin $log, float $aktual, float $standar): void
     {
         $owner = User::where('level', 1)->first();
-        if (!$owner || !$owner->no_hp) return;
+        if (!$owner) return;
 
         $driver   = $log->driver->name ?? '-';
         $kend     = $log->kendaraan->nama ?? '-';
@@ -223,27 +224,6 @@ class LogBensinController extends Controller
                . "_Cek kondisi kendaraan atau cara mengemudi._\n\n"
                . "_CanopiBSD v2_";
 
-        $this->kirimWA($owner->no_hp, $pesan);
-    }
-
-    private function kirimWA(string $noHp, string $pesan): void
-    {
-        try {
-            $token = getenv('FONNTE_TOKEN');
-            if (!$token) return;
-
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL            => 'https://api.fonnte.com/send',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => ['target' => $noHp, 'message' => $pesan],
-                CURLOPT_HTTPHEADER     => ["Authorization: {$token}"],
-            ]);
-            curl_exec($ch);
-            curl_close($ch);
-        } catch (\Exception $e) {
-            // silent fail
-        }
+        app(TelegramService::class)->kirim($owner->telegram_chat_id, $pesan);
     }
 }
