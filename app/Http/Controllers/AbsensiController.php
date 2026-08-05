@@ -122,13 +122,14 @@ class AbsensiController extends Controller
             return response()->json(['success'=>false,'message'=>"📍 Lokasi terlalu jauh ({$this->formatJarak($jarak)}). Pastikan kamu sudah berada di lokasi kerja."]);
         }
 
-        // Validasi kode absen (tetap wajib walau luar kota)
+        // Validasi kode absen (tetap wajib walau luar kota) — harus kode milik user ini sendiri
         $kode      = strtoupper(trim($request->kode));
         $kodeValid = \App\Models\KodeAbsen::whereDate('tanggal', today())
+                                          ->where('user_id', $user->id)
                                           ->where('kode', $kode)
                                           ->exists();
         if (!$kodeValid) {
-            return response()->json(['success'=>false,'message'=>'❌ Kode absen salah! Cek kode di WhatsApp kamu.']);
+            return response()->json(['success'=>false,'message'=>'❌ Kode absen salah! Cek kode di Telegram kamu.']);
         }
 
         $fotoPath     = $this->simpanFotoBase64($request->foto,'absensi/'.$user->id.'/'.today()->format('Ymd'));
@@ -178,8 +179,10 @@ class AbsensiController extends Controller
 
     public function validasiKode(Request $request)
     {
+        $user  = Auth::user();
         $kode  = strtoupper(trim($request->kode ?? ''));
         $valid = \App\Models\KodeAbsen::whereDate('tanggal', today())
+                                      ->where('user_id', $user->id)
                                       ->where('kode', $kode)
                                       ->exists();
         return response()->json(['valid' => $valid]);
