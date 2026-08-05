@@ -327,7 +327,11 @@ ALTER TABLE kode_absen ADD UNIQUE INDEX IF NOT EXISTS kode_absen_tanggal_user_un
 
 **Belum diverifikasi eksplisit (bukan blocker, sekadar catatan buat sesi depan kalau ada laporan):** cron jam 06:30 WIB besok jalan otomatis via **cronjob.org eksternal** (bukan cPanel Cron Jobs — lihat memory `cron-scheduling-cronjob-org.md`), belum ada konfirmasi langsung dari Elvan bahwa kode absen personal beneran masuk pagi itu. Kalau ada laporan "kode gak masuk", cek dashboard cronjob.org dulu (bukan cPanel), baru cek isi `kode_absen` tabel/log Laravel.
 
-**Sisa kerjaan lintas kedua migrasi ini:**
-- Task 12 (independen, belum dikerjakan): rotasi token bot Owner (`ApprovalController.php`, masih hardcode) ke `.env` — tunggu Elvan revoke token lama dulu via BotFather.
+**Task 12 SELESAI (5 Agustus, sore) — token bot Owner sudah dirotasi.** Elvan revoke token lama via BotFather, token baru diisi ke `.env` server (`TELEGRAM_OWNER_TOKEN`, `TELEGRAM_OWNER_CHAT_ID=8385647457`), `ApprovalController.php::kirimTelegram()` diubah dari hardcode ke `getenv()` — commit `b5dbefd`, sudah push+deploy, **diverifikasi Elvan langsung**: trigger approval RAB, notif Telegram tetap masuk pakai token baru. Token lama yang sempat ke-expose di histori commit publik sudah tidak valid lagi (di-revoke).
+
+**>>> SEMUA 12 TASK DARI KEDUA MIGRASI (Fonnte→Telegram + Kode Absen Per-Karyawan) SELESAI & LIVE per 5 Agustus 2026. Tidak ada task nyisa dari sesi ini. <<<**
+
+**Sisa kerjaan (di luar scope kedua migrasi ini, dicatat biar gak lupa, bukan urgent):**
 - `public/cron-kpi.php` masih dead code (bug pre-existing, `bootstrap/autoload.php` tak ada sejak Laravel 5.5+) — notif KPI bulanan lewat Telegram belum jalan sampai ini diperbaiki terpisah.
 - Token Fonnte lama masih ada di histori git — akun sudah banned, risiko rendah, tapi belum di-revoke di dashboard Fonnte.
+- Belum ada konfirmasi eksplisit cron kode-absen jalan otomatis besok pagi (06:30 WIB) via cronjob.org — cek kalau ada laporan "kode gak masuk" (lihat memory `cron-scheduling-cronjob-org.md`).
