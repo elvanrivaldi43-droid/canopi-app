@@ -10,6 +10,8 @@ Elvan mau pindah dari Fonnte (berbayar) ke Telegram bot dulu untuk semua notifik
 
 **Riwayat penting yang diverifikasi ulang di sesi ini:** dugaan lama "app/Services tidak kebaca di Niagahoster" (alasan kenapa dulu kode Fonnte ditulis berulang di 9 file, bukan 1 service) **terbukti tidak akurat sebagai aturan umum** — diuji langsung di production (deploy class dummy baru ke `app/Services/`, dipanggil lewat endpoint sementara, berhasil di-autoload normal, lalu file tes dihapus). Kemungkinan besar akar masalah dulu adalah `FonnteService.php` memang tidak pernah selesai dibuat/ter-commit, bukan keterbatasan hosting. Karena itu, desain ini AMAN pakai 1 service class terpusat.
 
+**Temuan keamanan penting (ubah desain penyimpanan token):** repo GitHub project ini **PUBLIC** (dicek via GitHub API: `private: false`). Token bot Telegram Owner yang sekarang (hardcode di `ApprovalController.php`) dan 2 token Fonnte (`config/services.php`, `AppServiceProvider.php`) **sudah ke-expose beneran** di histori commit publik — bukan cuma risiko teoretis. Karena itu, token bot Telegram karyawan yang baru **TIDAK boleh** ikut pola hardcode-di-kode yang sama — harus di `.env` (sudah dicek: `.env` masuk `.gitignore`, tidak pernah ter-commit sekali pun, aman). Rotasi token lama yang sudah expose ditangani terpisah di luar scope kode ini (lihat catatan di akhir dokumen).
+
 ## Tujuan
 - Semua notifikasi yang sekarang lewat Fonnte (absensi, izin, kasbon, log bensin, luar kota, gaji, tugas harian, SP karyawan, hasil ujian, KPI, approval RAB) pindah ke Telegram.
 - Hilangkan duplikasi kode `kirimWA()` di 9+ file jadi 1 service terpusat.
@@ -38,7 +40,7 @@ Elvan mau pindah dari Fonnte (berbayar) ke Telegram bot dulu untuk semua notifik
   - Ambil `$user->telegram_chat_id`; kalau kosong → return (skip diam-diam)
   - Kirim via `curl` ke `https://api.telegram.org/bot<token>/sendMessage`, `parse_mode=Markdown` (supaya `*teks tebal*` yang sudah dipakai di semua pesan lama tetap render tebal, bukan tampil sebagai asterisk mentah)
   - Bungkus try/catch, silent-fail + `Log::error()` — pola sama persis seperti kode Fonnte lama (jangan sampai gagal kirim notif bikin fitur utama ikut error)
-  - Token bot disimpan di `config/services.php` → `'telegram_karyawan' => ['token' => '...']` (hardcode di kode, bukan `.env`, konsisten dengan pola bot Owner yang sudah ada)
+  - Token bot dibaca dari `.env` (`getenv('TELEGRAM_KARYAWAN_TOKEN')`) — **BUKAN** hardcode di file PHP, karena repo ini public (lihat "Temuan keamanan" di atas). Tambahkan juga `TELEGRAM_KARYAWAN_TOKEN=` (kosong) di `.env.example` sebagai dokumentasi, tanpa nilai asli.
 
 ### C. Webhook & setup bot
 1. Bot Telegram baru dibuat manual oleh Elvan via `@BotFather` (`/newbot`) — **terpisah dari bot Owner** (alasan: bot Owner dipakai untuk approval RAB yang sensitif finansial, tidak dicampur trafik 14 karyawan; juga supaya logic webhook baru tidak menyentuh kode approval yang sudah terbukti jalan)
@@ -47,6 +49,7 @@ Elvan mau pindah dari Fonnte (berbayar) ke Telegram bot dulu untuk semua notifik
    - Kalau `text` cocok pola `/start <token>`: cari user dengan `telegram_link_token` itu, simpan `chat_id`, kosongkan token, balas via `sendMessage` ke `chat.id` ("✅ Berhasil terhubung, Kak {nama}!")
    - Kalau tidak cocok/tidak ketemu: abaikan (return 200 OK tetap, supaya Telegram tidak retry terus)
 3. Setelah bot dibuat & kode di-deploy, daftarkan webhook 1x manual (buka URL `https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://app.kanopibsd.co.id/telegram/karyawan/webhook` sekali di browser)
+4. Token bot ditaruh di `.env` di server (lewat File Manager cPanel/edit langsung, bukan lewat deploy FTP karena `.env` sengaja di-exclude dari deploy — lihat `deploy.yml`), **bukan** di file kode manapun
 
 ## Migrasi database
 SQL manual via phpMyAdmin (idempotent, pola sama seperti `panjang_batang_cm` sebelumnya — bukan lewat `artisan migrate`, konsisten dengan cara kerja yang sudah biasa dipakai di project ini):
@@ -75,7 +78,7 @@ Semua call-site `$this->kirimWA($xxx->no_hp, $pesan)` → `app(TelegramService::
 
 ## Rollout (urutan)
 1. Deploy kode (service + webhook + UI tombol profil) + jalankan SQL migrasi
-2. Elvan bikin bot via @BotFather, isi token ke `config/services.php`, daftarkan webhook
+2. Elvan bikin bot via @BotFather, isi token ke `.env` di server (bukan ke file kode), daftarkan webhook
 3. Umumkan ke 14 karyawan untuk klik "Hubungkan Telegram" di halaman profil masing-masing (langkah operasional, di luar kode)
 4. Sebelum karyawan connect, notifikasi untuk mereka di-skip diam-diam — tidak mengganggu fitur utama
 
@@ -83,3 +86,4 @@ Semua call-site `$this->kirimWA($xxx->no_hp, $pesan)` → `app(TelegramService::
 - Indikator admin "siapa yang sudah/belum connect Telegram" — susulan kalau dibutuhkan
 - Tombol putus/reconnect Telegram — v1 cukup connect sekali; edit manual via DB kalau ada kasus ganti HP/akun Telegram
 - WhatsApp Business API resmi — rencana masa depan terpisah
+- **Rotasi token lama yang sudah expose** (bot Telegram Owner di `ApprovalController.php`, 2 token Fonnte) — dikerjakan Elvan langsung di luar sesi ini (bukan lewat kode/plan implementasi), tapi WAJIB dilakukan supaya token lama yang sudah publik itu tidak bisa disalahgunakan lagi. Setelah token diganti, `ApprovalController.php` perlu diupdate dengan token baru (commit terpisah, kecil).
