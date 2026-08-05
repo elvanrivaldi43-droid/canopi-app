@@ -16,6 +16,7 @@ $kernel->bootstrap();
 
 use App\Models\User;
 use App\Models\KodeAbsen;
+use App\Services\TelegramService;
 use Carbon\Carbon;
 
 $log = [];
@@ -47,7 +48,7 @@ if (!$kodeHariIni) {
 
 $karyawan = User::where('level', '!=', 1) // bukan owner
                 ->where('status', 'aktif')
-                ->whereNotNull('no_hp')
+                ->whereNotNull('telegram_chat_id')
                 ->get();
 
 $terkirim = 0;
@@ -66,18 +67,15 @@ foreach ($karyawan as $k) {
            . "Kode berlaku untuk hari ini saja.\n"
            . "_CanopiBSD System_";
 
-    $result = kirimWA($k->no_hp, $pesan);
+    $result = app(TelegramService::class)->kirim($k->telegram_chat_id, $pesan);
 
     if ($result) {
         $terkirim++;
-        $log[] = "✓ Terkirim ke: {$k->name} ({$k->no_hp})";
+        $log[] = "✓ Terkirim ke: {$k->name}";
     } else {
         $gagal++;
-        $log[] = "✗ Gagal ke: {$k->name} ({$k->no_hp})";
+        $log[] = "✗ Gagal ke: {$k->name}";
     }
-
-    // Delay 1 detik antar kirim (hindari rate limit Fonnte)
-    sleep(1);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -95,29 +93,3 @@ echo "\n✅ Terkirim : {$terkirim}\n";
 echo "❌ Gagal    : {$gagal}\n";
 echo "\n=== SELESAI ===";
 echo '</pre>';
-
-// ═══════════════════════════════════════════════════════
-// HELPER
-// ═══════════════════════════════════════════════════════
-
-function kirimWA(string $noHp, string $pesan): bool
-{
-    $token = env('FONNTE_TOKEN', '');
-    if (!$token) return false;
-
-    $noHp = preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $noHp));
-
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL            => 'https://api.fonnte.com/send',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => ['target' => $noHp, 'message' => $pesan],
-        CURLOPT_HTTPHEADER     => ['Authorization: ' . $token],
-    ]);
-    $result = curl_exec($ch);
-    curl_close($ch);
-
-    $data = json_decode($result, true);
-    return $data['status'] ?? false;
-}

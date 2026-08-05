@@ -20,6 +20,7 @@ $kernel->bootstrap();
 use App\Models\User;
 use App\Models\Absensi;
 use App\Models\IzinAbsen;
+use App\Services\TelegramService;
 use Carbon\Carbon;
 
 $jam     = now()->format('H:i');
@@ -67,15 +68,15 @@ if ($jam >= '13:00' && $jam <= '13:15') {
                 'potongan_telat'      => 0,
             ]);
 
-            kirimWA($k->no_hp,
+            app(TelegramService::class)->kirim($k->telegram_chat_id,
                 "⚠️ *INFO ABSENSI*\n" .
                 "Hai {$k->name}, kamu tercatat ALPHA hari ini ({$tanggal->format('d/m/Y')}) karena tidak absen masuk.\n" .
                 "Jika ada kesalahan, hubungi mandor untuk koreksi."
             );
 
-            $mandorOwner = User::whereIn('level', [1, 3])->whereNotNull('no_hp')->get();
+            $mandorOwner = User::whereIn('level', [1, 3])->whereNotNull('telegram_chat_id')->get();
             foreach ($mandorOwner as $m) {
-                kirimWA($m->no_hp,
+                app(TelegramService::class)->kirim($m->telegram_chat_id,
                     "❌ *ALPHA*\n" .
                     "{$k->name} ({$k->jabatan}) tidak masuk tanpa keterangan hari ini ({$tanggal->format('d/m/Y')})."
                 );
@@ -109,15 +110,15 @@ if ($jam >= '20:00' && $jam <= '20:15') {
 
         $k = $absen->user;
 
-        kirimWA($k->no_hp,
+        app(TelegramService::class)->kirim($k->telegram_chat_id,
             "⚠️ *INFO ABSENSI*\n" .
             "Hai {$k->name}, kamu tercatat ALPHA karena tidak absen pulang hari ini ({$tanggal->format('d/m/Y')}).\n" .
             "Hubungi mandor jika ada kesalahan."
         );
 
-        $mandorOwner = User::whereIn('level', [1, 3])->whereNotNull('no_hp')->get();
+        $mandorOwner = User::whereIn('level', [1, 3])->whereNotNull('telegram_chat_id')->get();
         foreach ($mandorOwner as $m) {
-            kirimWA($m->no_hp,
+            app(TelegramService::class)->kirim($m->telegram_chat_id,
                 "❌ *TIDAK ABSEN PULANG*\n" .
                 "{$k->name} ({$k->jabatan}) tidak absen pulang hari ini — otomatis ALPHA."
             );
@@ -141,26 +142,3 @@ if (empty($log)) {
 }
 echo "\n=== SELESAI ===";
 echo '</pre>';
-
-// ═══════════════════════════════════════════════════════
-// Helper kirim WA via Fonnte
-// ═══════════════════════════════════════════════════════
-function kirimWA(?string $noHp, string $pesan): void
-{
-    if (!$noHp) return;
-    $token = env('FONNTE_TOKEN', '');
-    if (!$token) return;
-
-    $noHp = preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $noHp));
-
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL            => 'https://api.fonnte.com/send',
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => ['target' => $noHp, 'message' => $pesan],
-        CURLOPT_HTTPHEADER     => ['Authorization: ' . $token],
-    ]);
-    curl_exec($ch);
-    curl_close($ch);
-}
