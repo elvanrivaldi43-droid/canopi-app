@@ -61,7 +61,7 @@
         </div>
 
         {{-- Tombol Aksi --}}
-        @if(auth()->user()->level === 1)
+        @if(auth()->user()->level == 1)
         <div style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.05);text-align:center;font-size:13px;color:#64748B;">
             Fitur absen masuk khusus karyawan, tidak berlaku untuk Owner.
         </div>
