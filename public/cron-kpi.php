@@ -20,7 +20,7 @@ $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 $app->boot();
 
 use App\Services\KpiService;
-use App\Services\FonnteService;
+use App\Services\TelegramService;
 use App\Models\KpiKinerja;
 use App\Models\User;
 use Carbon\Carbon;
@@ -55,7 +55,6 @@ try {
     // 3. Kirim notif WA ke semua karyawan
     echo "\n=== KIRIM NOTIF WA ===\n";
     $namaBulan = Carbon::create($tahun, $bulan, 1)->locale('id')->isoFormat('MMMM YYYY');
-    $fonnte = new FonnteService();
 
     $kpiList = KpiKinerja::where('bulan', $bulan)
         ->where('tahun', $tahun)
@@ -64,7 +63,7 @@ try {
 
     foreach ($kpiList as $kpi) {
         $user = $kpi->user;
-        if (!$user || !$user->no_hp) continue;
+        if (!$user) continue;
 
         $bintang = str_repeat('⭐', $kpi->bintang);
         $bonus   = $kpi->bonus_nominal > 0
@@ -88,13 +87,13 @@ try {
         $msg .= "\nCek detail di: app.kanopibsd.co.id\n";
         $msg .= "— Pusat Kanopi BSD";
 
-        $fonnte->kirim($user->no_hp, $msg);
-        echo "WA terkirim ke {$user->name}\n";
+        app(TelegramService::class)->kirim($user->telegram_chat_id, $msg);
+        echo "Telegram terkirim ke {$user->name}\n";
     }
 
     // 4. Notif ke owner: ringkasan + bintang + usulan SP
     $owner = User::where('level', 1)->first();
-    if ($owner && $owner->no_hp) {
+    if ($owner) {
         $totalKaryawan = $kpiList->count();
         $bintang5 = $kpiList->where('bintang', 5)->where('is_alpha', 0)->count();
         $redZone  = $kpiList->where('total_poin', '<', 45)->count();
@@ -110,8 +109,8 @@ try {
         $msgOwner .= "\nCek detail di: app.kanopibsd.co.id/kpi\n";
         $msgOwner .= "— Sistem CanopiBSD";
 
-        $fonnte->kirim($owner->no_hp, $msgOwner);
-        echo "WA ringkasan terkirim ke Owner\n";
+        app(TelegramService::class)->kirim($owner->telegram_chat_id, $msgOwner);
+        echo "Telegram ringkasan terkirim ke Owner\n";
     }
 
     echo "\n=== SELESAI " . date('H:i:s') . " ===\n";

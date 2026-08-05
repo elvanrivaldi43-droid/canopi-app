@@ -10,7 +10,7 @@ use App\Models\UjianSesi;
 use App\Models\UjianJawaban;
 use App\Models\User;
 use App\Services\KpiService;
-use App\Services\FonnteService;
+use App\Services\TelegramService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -141,10 +141,9 @@ class KpiController extends Controller
                 'catatan_owner'     => $request->catatan,
             ]);
 
-            // Notif WA ke karyawan
-            $fonnte = new FonnteService();
+            // Notif Telegram ke karyawan
             $user = $sp->user;
-            if ($user && $user->no_hp) {
+            if ($user) {
                 $msg = "⚠️ *Surat Peringatan — " . strtoupper($sp->level_sp) . "*\n\n";
                 $msg .= "Hai {$user->name},\n";
                 $msg .= "Kamu menerima " . strtoupper($sp->level_sp) . " per tanggal " . now()->format('d/m/Y') . ".\n\n";
@@ -152,7 +151,7 @@ class KpiController extends Controller
                 $msg .= "Pemulihan: Pertahankan poin kinerja ≥60 selama 3 bulan berturut untuk SP turun level.\n\n";
                 $msg .= "Hubungi owner jika ada pertanyaan.\n";
                 $msg .= "— Pusat Kanopi BSD";
-                $fonnte->kirim($user->no_hp, $msg);
+                app(TelegramService::class)->kirim($user->telegram_chat_id, $msg);
             }
 
             return back()->with('success', 'SP berhasil dikonfirmasi dan notifikasi WA terkirim.');
@@ -417,9 +416,8 @@ class KpiController extends Controller
         $service = new KpiService();
         $service->hitungRapor($user, $sesi->periode, $sesi->tahun);
 
-        // Notif WA hasil ujian
-        if ($user && $user->no_hp) {
-            $fonnte = new FonnteService();
+        // Notif Telegram hasil ujian
+        if ($user) {
             $periode = $sesi->periode === 'januari' ? 'Januari' : 'Juli';
             $msg = "📝 *Hasil Ujian {$periode} {$sesi->tahun}*\n\n";
             $msg .= "Hai {$user->name}!\n";
@@ -428,7 +426,7 @@ class KpiController extends Controller
             $msg .= "📊 Nilai: {$nilai}/100\n\n";
             $msg .= "Lihat detail rapor di: app.kanopibsd.co.id/kpi/ujian/hasil\n";
             $msg .= "— Pusat Kanopi BSD";
-            $fonnte->kirim($user->no_hp, $msg);
+            app(TelegramService::class)->kirim($user->telegram_chat_id, $msg);
         }
     }
 
