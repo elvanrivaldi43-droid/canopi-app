@@ -11,6 +11,7 @@ use App\Models\RateKondisi;
 use App\Models\MasterMaterial;
 use App\Models\PipelineLead;
 use App\Models\User;
+use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -363,12 +364,12 @@ class ProjectController extends Controller
     }
 
     // ============================================================
-    // NOTIFIKASI WA (via Fonnte)
+    // NOTIFIKASI TELEGRAM
     // ============================================================
     private function notifKondisiKhusus(Project $project, RateKondisi $rate)
     {
         $owner = User::where('level', 1)->first();
-        if (!$owner || !$owner->no_hp) return;
+        if (!$owner) return;
 
         $pesan = "🔔 *Project Baru - Kondisi Khusus*\n\n"
             . "Project: *{$project->kode_project}*\n"
@@ -380,13 +381,13 @@ class ProjectController extends Controller
             . "Rate kenek: Rp " . number_format($rate->rate_kenek_final, 0, ',', '.') . "/hari\n\n"
             . "Silakan login untuk approve kondisi kerja ini.";
 
-        $this->kirimWA($owner->no_hp, $pesan);
+        app(TelegramService::class)->kirim($owner->telegram_chat_id, $pesan);
     }
 
     private function notifMelebihiRab(Project $project, ProjectMaterial $material, $rabItem)
     {
         $owner = User::where('level', 1)->first();
-        if (!$owner || !$owner->no_hp) return;
+        if (!$owner) return;
 
         $rabNominal = $rabItem ? 'Rp ' . number_format($rabItem->total_pokok, 0, ',', '.') : '-';
 
@@ -397,23 +398,6 @@ class ProjectController extends Controller
             . "Batas RAB: {$rabNominal}\n\n"
             . "Silakan login untuk approve atau tolak pembelian ini.";
 
-        $this->kirimWA($owner->no_hp, $pesan);
-    }
-
-    private function kirimWA($noHp, $pesan)
-    {
-        try {
-            $token = config('services.fonnte.token', '');
-            if (!$token) return;
-
-            \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => $token,
-            ])->post('https://api.fonnte.com/send', [
-                'target'  => $noHp,
-                'message' => $pesan,
-            ]);
-        } catch (\Exception $e) {
-            // Silent fail — jangan sampai WA error bikin fitur utama error
-        }
+        app(TelegramService::class)->kirim($owner->telegram_chat_id, $pesan);
     }
 }

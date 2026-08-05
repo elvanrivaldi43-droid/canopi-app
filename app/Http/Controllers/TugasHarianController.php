@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\TugasHarian;
 use App\Models\TugasAssignee;
 use App\Models\User;
+use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -251,11 +252,11 @@ class TugasHarianController extends Controller
         if (in_array($request->status, ['selesai', 'tidak_selesai'])) {
             $tugas    = TugasHarian::with('pembuat')->find($id);
             $pembuat  = $tugas->pembuat;
-            if ($pembuat && $pembuat->no_hp) {
+            if ($pembuat) {
                 $label  = $request->status === 'selesai' ? '✅ SELESAI' : '❌ TIDAK SELESAI';
                 $catatan = $request->catatan_karyawan ? "\nCatatan: {$request->catatan_karyawan}" : '';
                 $pesan  = "📋 *Update Tugas*\n\n*{$tugas->judul}*\n\n{$label} oleh {$user->name}{$catatan}\n\nTanggal: " . now()->format('d/m/Y H:i');
-                $this->kirimWA($pembuat->no_hp, $pesan);
+                app(TelegramService::class)->kirim($pembuat->telegram_chat_id, $pesan);
             }
         }
 
@@ -296,33 +297,6 @@ class TugasHarianController extends Controller
 
         $pesan = "📋 *TUGAS BARU*\n\nHalo {$karyawan->name}!\n\nKamu mendapat tugas baru:\n\n*{$prioritasEmoji} {$tugas->judul}*\n\nTanggal: {$tanggal}{$jam}{$lokasi}{$desk}\n\nSilakan buka aplikasi untuk update status tugas.\n\n_CanopiBSD v2_";
 
-        $this->kirimWA($karyawan->no_hp, $pesan);
-    }
-
-    // ----------------------------------------------------------------
-    // PRIVATE — kirim WA via Fonnte
-    // ----------------------------------------------------------------
-    private function kirimWA(string $noHp, string $pesan): void
-    {
-        try {
-            $token = getenv('FONNTE_TOKEN');
-            if (!$token) return;
-
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL            => 'https://api.fonnte.com/send',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => [
-                    'target'  => $noHp,
-                    'message' => $pesan,
-                ],
-                CURLOPT_HTTPHEADER => ["Authorization: {$token}"],
-            ]);
-            curl_exec($ch);
-            curl_close($ch);
-        } catch (\Exception $e) {
-            // Silent fail — tidak mengganggu flow utama
-        }
+        app(TelegramService::class)->kirim($karyawan->telegram_chat_id, $pesan);
     }
 }
