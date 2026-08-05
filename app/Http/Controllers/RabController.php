@@ -13,6 +13,7 @@ use App\Models\RabMarginSetting;
 use App\Models\RabHeader;
 use App\Models\RabApprovalRequest;
 use App\Models\RabTtd;
+use App\Services\TelegramService;
 use App\Models\PipelineLead;
 use App\Models\Project;
 use App\Services\RabKalkulasiService;
@@ -410,7 +411,7 @@ class RabController extends Controller
     private function kirimNotifApprovalWa(RabHeader $rab, float $diskon): void
     {
         $owner = \App\Models\User::where('level', 1)->first();
-        if (!$owner || !$owner->no_hp) return;
+        if (!$owner) return;
 
         $pembuat = Auth::user();
         $lead = $rab->lead;
@@ -423,53 +424,28 @@ class RabController extends Controller
             . "Oleh: {$pembuat->name}\n\n"
             . "Approve/tolak di: " . url('/rab/approval');
 
-        $this->kirimWa($owner->no_hp, $pesan);
+        app(TelegramService::class)->kirim($owner->telegram_chat_id, $pesan);
     }
 
     private function kirimNotifDeal(RabHeader $rab): void
     {
-        $lead = $rab->lead;
-        if (!$lead || !$lead->no_hp) return;
-
-        $pesan = "Halo {$lead->nama_customer}, terima kasih sudah mempercayakan kanopi Anda kepada kami!\n\n"
-            . "Detail pesanan:\n"
-            . "No RAB: {$rab->nomor_rab}\n"
-            . "Total: " . $rab->hargaFinalFormatted() . "\n\n"
-            . "Silakan transfer DP ke:\n"
-            . "Bank BCA: 1234567890\n"
-            . "A/N: Pusat Kanopi BSD\n\n"
-            . "Setelah transfer, mohon konfirmasi ke kami. Terima kasih!";
-
-        $this->kirimWa($lead->no_hp, $pesan);
+        // Dinonaktifkan sementara (2026-08-05) — customer/lead bukan User sistem,
+        // tidak bisa "Hubungkan Telegram" seperti karyawan. Fonnte (WA) sudah banned.
+        // Menunggu WhatsApp Business API resmi (roadmap CLAUDE.md #5).
+        return;
     }
 
     private function kirimNotifHasilApproval(RabApprovalRequest $apr): void
     {
         $peminta = $apr->peminta;
-        if (!$peminta || !$peminta->no_hp) return;
+        if (!$peminta) return;
 
         $status = $apr->status === 'approved' ? 'DISETUJUI' : 'DITOLAK';
         $pesan = "Info Request Diskon RAB {$apr->rab->nomor_rab}\n"
             . "Status: {$status}\n"
             . ($apr->catatan_owner ? "Catatan owner: {$apr->catatan_owner}" : '');
 
-        $this->kirimWa($peminta->no_hp, $pesan);
-    }
-
-    private function kirimWa(string $noHp, string $pesan): void
-    {
-        try {
-            $token = config('services.fonnte.token');
-            if (!$token) return;
-            \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => $token
-            ])->post('https://api.fonnte.com/send', [
-                'target'  => $noHp,
-                'message' => $pesan,
-            ]);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('WA RAB gagal: ' . $e->getMessage());
-        }
+        app(TelegramService::class)->kirim($peminta->telegram_chat_id, $pesan);
     }
 
     // ============================================================
