@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'level' => \App\Http\Middleware\CheckLevel::class,
         ]);
+        $middleware->validateCsrfTokens(except: [
+            'telegram/karyawan/webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

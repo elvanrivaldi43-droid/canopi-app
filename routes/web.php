@@ -15,6 +15,7 @@ use App\Http\Controllers\LogBensinController;
 use App\Http\Controllers\KpiController;
 use App\Http\Controllers\MasterMaterialController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\TelegramWebhookController;
 
 
 // Halaman utama → redirect ke login
@@ -28,6 +29,10 @@ require __DIR__.'/auth.php';
 // ─── REGISTRASI KARYAWAN (Publik, tanpa login) ─────────────
 Route::get('/registrasi-karyawan/{token}', [RegistrasiKaryawanController::class, 'show'])->name('registrasi.show');
 Route::post('/registrasi-karyawan/{token}', [RegistrasiKaryawanController::class, 'simpan'])->name('registrasi.simpan');
+
+// ─── TELEGRAM WEBHOOK KARYAWAN (Publik, dipanggil server Telegram) ─────────────
+Route::post('/telegram/karyawan/webhook', [TelegramWebhookController::class, 'handle'])
+    ->name('telegram.webhook.karyawan');
 
 // Redirect setelah login sesuai level
 Route::middleware('auth')->get('/dashboard', function () {
