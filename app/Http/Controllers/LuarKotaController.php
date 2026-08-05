@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LuarKota;
 use App\Models\User;
+use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -178,7 +179,7 @@ class LuarKotaController extends Controller
                . "GPS akan dicatat tapi tidak mempengaruhi validasi.\n\n"
                . "_CanopiBSD v2_";
 
-        $this->kirimWA($karyawan->no_hp, $pesan);
+        app(TelegramService::class)->kirim($karyawan->telegram_chat_id, $pesan);
     }
 
     private function kirimNotifUpdate(User $karyawan, LuarKota $lk): void
@@ -194,24 +195,6 @@ class LuarKotaController extends Controller
                . "📅 Selesai: {$selesai}\n\n"
                . "_CanopiBSD v2_";
 
-        $this->kirimWA($karyawan->no_hp, $pesan);
-    }
-
-    private function kirimWA(string $noHp, string $pesan): void
-    {
-        try {
-            $token = getenv('FONNTE_TOKEN');
-            if (!$token) return;
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL            => 'https://api.fonnte.com/send',
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST           => true,
-                CURLOPT_POSTFIELDS     => ['target' => $noHp, 'message' => $pesan],
-                CURLOPT_HTTPHEADER     => ["Authorization: {$token}"],
-            ]);
-            curl_exec($ch);
-            curl_close($ch);
-        } catch (\Exception $e) {}
+        app(TelegramService::class)->kirim($karyawan->telegram_chat_id, $pesan);
     }
 }

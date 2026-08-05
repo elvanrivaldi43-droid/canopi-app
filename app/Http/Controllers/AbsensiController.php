@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Absensi;
 use App\Models\User;
 use App\Models\LuarKota;
+use App\Services\TelegramService;
 
 class AbsensiController extends Controller
 {
@@ -557,20 +558,10 @@ class AbsensiController extends Controller
 
     private function kirimNotifKendala(User $user,Absensi $absen,Request $request): void
     {
-        $penerima=User::whereIn('level',[1,3])->whereNotNull('no_hp')->get();
+        $penerima=User::whereIn('level',[1,3])->whereNotNull('telegram_chat_id')->get();
         $jenisLabel=self::JENIS_KENDALA[$request->jenis_kendala]??$request->jenis_kendala;
         foreach ($penerima as $p) {
-            $this->kirimWA($p->no_hp,"⚠️ *LAPORAN KENDALA*\nKaryawan: {$user->name}\nJabatan: {$user->jabatan}\nTanggal: ".today()->format('d/m/Y')."\nKendala: {$jenisLabel}\nKeterangan: {$request->deskripsi_kendala}\n---\nCek detail di app.kanopibsd.co.id");
+            app(TelegramService::class)->kirim($p->telegram_chat_id,"⚠️ *LAPORAN KENDALA*\nKaryawan: {$user->name}\nJabatan: {$user->jabatan}\nTanggal: ".today()->format('d/m/Y')."\nKendala: {$jenisLabel}\nKeterangan: {$request->deskripsi_kendala}\n---\nCek detail di app.kanopibsd.co.id");
         }
-    }
-
-    private function kirimWA(string $noHp,string $pesan): void
-    {
-        $token=env('FONNTE_TOKEN','');
-        if (!$token) return;
-        $noHp=preg_replace('/^0/','62',preg_replace('/[^0-9]/','',$noHp));
-        $ch=curl_init();
-        curl_setopt_array($ch,[CURLOPT_URL=>'https://api.fonnte.com/send',CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>['target'=>$noHp,'message'=>$pesan],CURLOPT_HTTPHEADER=>['Authorization: '.$token]]);
-        curl_exec($ch); curl_close($ch);
     }
 }

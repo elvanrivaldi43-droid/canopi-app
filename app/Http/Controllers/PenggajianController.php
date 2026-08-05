@@ -11,6 +11,7 @@ use App\Models\Kasbon;
 use App\Models\PotonganInsidental;
 use App\Models\TabunganKaryawan;
 use App\Services\GajiService;
+use App\Services\TelegramService;
 
 class PenggajianController extends Controller
 {
@@ -141,14 +142,14 @@ class PenggajianController extends Controller
             $this->gajiService->prosesBayar($slip, Auth::id());
 
             $user = $slip->user;
-            if ($user->no_hp) {
+            if ($user) {
                 $pesan = "💰 *SLIP GAJI*\n"
                        . "Hai {$user->name}!\n"
                        . "{$slip->periodeLabel()} {$slip->namaBulan()} {$slip->tahun}\n"
                        . "Gaji bersih: Rp " . number_format($slip->gaji_bersih, 0, ',', '.') . "\n"
                        . "---\n"
                        . "Lihat slip lengkap di: app.kanopibsd.co.id/penggajian/slip-saya";
-                $this->kirimWA($user->no_hp, $pesan);
+                app(TelegramService::class)->kirim($user->telegram_chat_id, $pesan);
             }
 
             return back()->with('success', "Gaji {$slip->user->name} berhasil diproses.");
@@ -267,8 +268,8 @@ class PenggajianController extends Controller
         ]);
 
         $karyawan = $kasbon->user;
-        if ($karyawan?->no_hp) {
-            $this->kirimWA($karyawan->no_hp,
+        if ($karyawan) {
+            app(TelegramService::class)->kirim($karyawan->telegram_chat_id,
                 "✅ *KASBON DISETUJUI*\n" .
                 "Hai {$karyawan->name}, kasbon kamu disetujui!\n" .
                 "Nominal: Rp " . number_format($kasbon->nominal,0,',','.') . "\n" .
@@ -301,8 +302,8 @@ class PenggajianController extends Controller
         ]);
 
         $karyawan = $kasbon->user;
-        if ($karyawan?->no_hp) {
-            $this->kirimWA($karyawan->no_hp,
+        if ($karyawan) {
+            app(TelegramService::class)->kirim($karyawan->telegram_chat_id,
                 "❌ *KASBON DITOLAK*\n" .
                 "Hai {$karyawan->name}, kasbon kamu ditolak.\n" .
                 "Nominal: Rp " . number_format($kasbon->nominal,0,',','.') . "\n" .
@@ -356,20 +357,4 @@ class PenggajianController extends Controller
         return back()->with('success', 'Tabungan lebaran berhasil diupdate.');
     }
 
-    private function kirimWA(string $noHp, string $pesan): void
-    {
-        $token = env('FONNTE_TOKEN', '');
-        if (!$token) return;
-        $noHp = preg_replace('/^0/', '62', preg_replace('/[^0-9]/', '', $noHp));
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => 'https://api.fonnte.com/send',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => ['target' => $noHp, 'message' => $pesan],
-            CURLOPT_HTTPHEADER     => ['Authorization: ' . $token],
-        ]);
-        curl_exec($ch);
-        curl_close($ch);
-    }
 }
