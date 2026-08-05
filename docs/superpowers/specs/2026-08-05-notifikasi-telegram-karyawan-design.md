@@ -23,6 +23,7 @@ Elvan mau pindah dari Fonnte (berbayar) ke Telegram bot dulu untuk semua notifik
 - Tidak menyentuh bot Telegram Owner yang sudah ada di `ApprovalController.php` (approval nego RAB) — tetap terpisah.
 - Tidak membangun WhatsApp Business API resmi sekarang (rencana masa depan, di luar scope ini).
 - Tidak membangun UI admin untuk melihat status "siapa yang sudah connect Telegram" — kalau dibutuhkan, ini kerjaan susulan terpisah.
+- **Tidak menangani notifikasi ke customer/lead** — `RabController::kirimNotifDeal()` kirim WA ke `$lead->no_hp` (customer, bukan `User` sistem, tidak bisa "Hubungkan Telegram"). Lihat catatan di "Di luar scope / ditunda".
 
 ## Arsitektur
 
@@ -76,7 +77,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_link_token VARCHAR(64) NULL;
 - Baris `putenv('FONNTE_TOKEN=...')` di `app/Providers/AppServiceProvider.php`
 
 **Diubah (ganti pemanggilan):**
-Semua call-site `$this->kirimWA($xxx->no_hp, $pesan)` → `app(TelegramService::class)->kirim($xxx, $pesan)` — parameter berubah dari string nomor HP jadi objek `User` (dicek sudah semua call-site memang sudah punya objek user yang di-resolve duluan sebelum manggil, jadi ini perubahan langsung tanpa perlu lookup tambahan).
+Semua call-site `$this->kirimWA($xxx->no_hp, $pesan)` → `app(TelegramService::class)->kirim($xxx, $pesan)` — parameter berubah dari string nomor HP jadi objek `User` (dicek sudah semua call-site memang sudah punya objek user yang di-resolve duluan sebelum manggil, jadi ini perubahan langsung tanpa perlu lookup tambahan). Guard lama yang mengecek `no_hp` sebelum kirim (mis. `if ($owner?->no_hp)`, `whereNotNull('no_hp')`) diganti jadi cek keberadaan user saja (`TelegramService::kirim()` sudah menangani skip internal kalau `telegram_chat_id` kosong) — beberapa query recipient (`IzinAbsenController::kirimNotifPengajuan`, `AbsensiController::kirimNotifKendala`) filter `whereNotNull('no_hp')` diganti jadi `whereNotNull('telegram_chat_id')` supaya hanya kirim ke yang sudah connect.
+
+**Dikecualikan (tetap pakai kode lama untuk sementara, TIDAK dihapus):**
+- `RabController::kirimNotifDeal()` — kirim WA ke `$lead->no_hp` (customer/lead, bukan `User` sistem). Karena Fonnte sudah banned, fungsi ini **dinonaktifkan (early return, skip diam-diam)**, bukan dipindah ke Telegram — customer tidak bisa "Hubungkan Telegram" seperti karyawan. Ditandai sebagai utang, ditangani nanti bareng WhatsApp Business API resmi (roadmap CLAUDE.md #5).
 
 ## Rollout (urutan)
 1. Deploy kode (service + webhook + UI tombol profil) + jalankan SQL migrasi
