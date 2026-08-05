@@ -73,7 +73,7 @@
   <div class="card-dark">
     <div class="section-label">🔑 Kode Absen Hari Ini</div>
     <div style="color:#64748b; font-size:12px; margin-bottom:10px;">
-      Cek kode di WhatsApp kamu yang dikirim jam 06:30
+      Cek kode di Telegram kamu yang dikirim jam 06:30
     </div>
     <div class="kode-input-wrap">
       <input type="text" id="inputKode" class="kode-input"
@@ -81,7 +81,7 @@
              oninput="this.value=this.value.toUpperCase(); cekKode(this.value)">
     </div>
     <div class="kode-status" id="kodeStatus" style="color:#64748b;">
-      Masukkan 6 karakter kode dari WhatsApp
+      Masukkan 6 karakter kode dari Telegram
     </div>
   </div>
 
@@ -207,7 +207,7 @@ function cekKode(kode) {
 
   if (kode.length < 6) {
     input.className = 'kode-input';
-    status.textContent = 'Masukkan 6 karakter kode dari WhatsApp';
+    status.textContent = 'Masukkan 6 karakter kode dari Telegram';
     status.style.color = '#64748b';
     kodeValid = false;
     cekSubmit();
@@ -233,7 +233,7 @@ function cekKode(kode) {
         status.style.color = '#10b981';
       } else {
         input.className = 'kode-input invalid';
-        status.textContent = '❌ Kode salah! Cek WA kamu.';
+        status.textContent = '❌ Kode salah! Cek Telegram kamu.';
         status.style.color = '#ef4444';
       }
       cekSubmit();
@@ -280,7 +280,7 @@ function cekSubmit() {
 
   // Update info
   const missing = [];
-  if (!kodeValid) missing.push('kode WA');
+  if (!kodeValid) missing.push('kode Telegram');
   if (!fotoData) missing.push('foto selfie');
   if (!gpsValid) missing.push('GPS valid');
   info.textContent = siap ? '' : 'Lengkapi: ' + missing.join(', ');

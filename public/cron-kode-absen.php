@@ -33,48 +33,55 @@ $karyawan = User::where('level', '!=', 1) // bukan owner
 $terkirim = 0;
 $gagal    = 0;
 $sudahAda = 0;
+$skip     = 0;
 
 foreach ($karyawan as $k) {
-    $existing = KodeAbsen::whereDate('tanggal', $tanggal)->where('user_id', $k->id)->first();
+    try {
+        $existing = KodeAbsen::whereDate('tanggal', $tanggal)->where('user_id', $k->id)->first();
 
-    if ($existing) {
-        $kode = $existing->kode;
-        $sudahAda++;
-    } else {
-        $kode = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
-        KodeAbsen::create([
-            'kode'    => $kode,
-            'tanggal' => $tanggal,
-            'user_id' => $k->id,
-        ]);
-    }
+        if ($existing) {
+            $kode = $existing->kode;
+            $sudahAda++;
+        } else {
+            $kode = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
+            KodeAbsen::create([
+                'kode'    => $kode,
+                'tanggal' => $tanggal,
+                'user_id' => $k->id,
+            ]);
+        }
 
-    if (!$k->telegram_chat_id) {
-        $log[] = "⏭ Skip (belum connect Telegram): {$k->name} — kode: {$kode}";
-        continue;
-    }
+        if (!$k->telegram_chat_id) {
+            $log[] = "⏭ Skip (belum connect Telegram): {$k->name} — kode: {$kode}";
+            $skip++;
+            continue;
+        }
 
-    $pesan = "🏠 *PUSAT KANOPI BSD*\n"
-           . "━━━━━━━━━━━━━━━━━━\n"
-           . "📅 " . $tanggal->translatedFormat('l, d F Y') . "\n\n"
-           . "🔑 *KODE ABSEN KAMU HARI INI:*\n"
-           . "┌─────────────┐\n"
-           . "│   *{$kode}*   │\n"
-           . "└─────────────┘\n\n"
-           . "⏰ Absen masuk mulai jam *06:30*\n"
-           . "📍 Pastikan kamu berada di lokasi kerja\n\n"
-           . "Kode ini cuma buat kamu, jangan dibagikan ke orang lain.\n"
-           . "Berlaku untuk hari ini saja.\n"
-           . "_CanopiBSD System_";
+        $pesan = "🏠 *PUSAT KANOPI BSD*\n"
+               . "━━━━━━━━━━━━━━━━━━\n"
+               . "📅 " . $tanggal->translatedFormat('l, d F Y') . "\n\n"
+               . "🔑 *KODE ABSEN KAMU HARI INI:*\n"
+               . "┌─────────────┐\n"
+               . "│   *{$kode}*   │\n"
+               . "└─────────────┘\n\n"
+               . "⏰ Absen masuk mulai jam *06:30*\n"
+               . "📍 Pastikan kamu berada di lokasi kerja\n\n"
+               . "Kode ini cuma buat kamu, jangan dibagikan ke orang lain.\n"
+               . "Berlaku untuk hari ini saja.\n"
+               . "_CanopiBSD System_";
 
-    $result = app(TelegramService::class)->kirim($k->telegram_chat_id, $pesan);
+        $result = app(TelegramService::class)->kirim($k->telegram_chat_id, $pesan);
 
-    if ($result) {
-        $terkirim++;
-        $log[] = "✓ Terkirim ke: {$k->name}";
-    } else {
+        if ($result) {
+            $terkirim++;
+            $log[] = "✓ Terkirim ke: {$k->name}";
+        } else {
+            $gagal++;
+            $log[] = "✗ Gagal ke: {$k->name}";
+        }
+    } catch (\Throwable $e) {
         $gagal++;
-        $log[] = "✗ Gagal ke: {$k->name}";
+        $log[] = "✗ ERROR untuk {$k->name}: " . $e->getMessage();
     }
 }
 
@@ -91,5 +98,6 @@ foreach ($log as $l) echo $l . "\n";
 echo "\n✅ Terkirim   : {$terkirim}\n";
 echo "❌ Gagal      : {$gagal}\n";
 echo "♻️  Sudah ada  : {$sudahAda}\n";
+echo "⏭  Belum connect: {$skip}\n";
 echo "\n=== SELESAI ===";
 echo '</pre>';

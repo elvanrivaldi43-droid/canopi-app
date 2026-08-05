@@ -196,16 +196,11 @@ class AbsensiController extends Controller
                         ->orderBy('name')
                         ->get();
 
-        $kodeList = \App\Models\KodeAbsen::whereDate('tanggal', $tanggal)
-                                         ->whereNotNull('user_id')
-                                         ->get()
-                                         ->keyBy('user_id');
-
-        $data = $karyawan->map(function ($k) use ($kodeList) {
+        $data = $karyawan->map(function ($k) {
             return [
                 'nama'      => $k->name,
                 'jabatan'   => $k->jabatan,
-                'kode'      => $kodeList[$k->id]->kode ?? null,
+                'kode'      => \App\Models\KodeAbsen::kodeHariIniUntuk($k),
                 'connected' => (bool) $k->telegram_chat_id,
             ];
         });

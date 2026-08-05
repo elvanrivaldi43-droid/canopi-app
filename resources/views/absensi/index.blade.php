@@ -61,7 +61,12 @@
         </div>
 
         {{-- Tombol Aksi --}}
-        @if(!$absenHariIni || !$absenHariIni->jam_masuk)
+        @if(auth()->user()->level === 1)
+        <div style="padding:14px;border-radius:12px;background:rgba(255,255,255,0.05);text-align:center;font-size:13px;color:#64748B;">
+            Fitur absen masuk khusus karyawan, tidak berlaku untuk Owner.
+        </div>
+
+        @elseif(!$absenHariIni || !$absenHariIni->jam_masuk)
         <a href="{{ route('absensi.form-masuk') }}"
            style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:14px;font-size:15px;font-weight:700;text-decoration:none;color:#0F1117;background:linear-gradient(135deg,#C9A84C,#A8872E);min-height:54px;">
             📷 ABSEN MASUK SEKARANG
