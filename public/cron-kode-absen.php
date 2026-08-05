@@ -16,6 +16,7 @@ $kernel->bootstrap();
 
 use App\Models\User;
 use App\Models\KodeAbsen;
+use App\Models\Absensi;
 use App\Services\TelegramService;
 use Carbon\Carbon;
 
@@ -26,8 +27,14 @@ $tanggal = today();
 // GENERATE + KIRIM KODE PER KARYAWAN
 // ═══════════════════════════════════════════════════════
 
+// Karyawan yang izin/sakit/cuti/dinas luar hari ini gak usah dikasih kode absen
+$offHariIni = Absensi::whereDate('tanggal', $tanggal)
+                     ->whereIn('status', ['sakit', 'izin', 'cuti', 'dinas_luar'])
+                     ->pluck('user_id');
+
 $karyawan = User::where('level', '!=', 1) // bukan owner
                 ->where('status', 'aktif')
+                ->whereNotIn('id', $offHariIni)
                 ->get();
 
 $terkirim = 0;
