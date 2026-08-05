@@ -261,3 +261,35 @@ Kelompok A dikerjakan via brainstorm→spec→plan→subagent-driven-development
 - `.de-matmenu` (popup ganti-besi) SENDIRI masih bersarang di `.page-content` di mode non-fullscreen — berpotensi kena bug iOS Safari yang sama (lihat di atas) kalau discroll SELAGI popup terbuka. BELUM ada laporan nyata dari Elvan — jangan diperbaiki sebelum ada bukti, sesuai prinsip "jangan asumsi bug ada."
 
 >>> RESUME POINT — 18 Juli: REDESAIN TOTAL Tambah Tiang (`0833447`) DIKONFIRMASI ELVAN BAGUS — tekan-tahan wajib + menu konfirmasi berhasil nutup 2 celah lama (tap-meleset, pinch-zoom nyasar) yang B-1..B-4 gagal tutup total. Tes yang sama nemu bug BARU: geser tiang lama susah "kena" + tekan-tahan nyasar buka menu Tambah Tiang. Root cause ketemu (`1c211fb`): threshold hit-test tiang pakai `this.SC` (skala auto-fit konten, TETAP) bukan skala TAMPIL aktual di layar (beda kalau HP nyusutin svg via CSS max-width:100% — di layar 360px toleransi sentuh nyata jadi ~12px, bukan ~24px yang dimaksud). Fix: `screenScale(el)` basis sama kayak `toCm()`. Dibuktikan reproduksi jsdom (kode lama gagal, kode baru lulus) + regresi 18+11 tes lama tetap hijau, sudah di-push. **LANJUT: tunggu Elvan tes ulang fix ini + Kelompok B di HP** (B-1..B-4 kemungkinan besar juga ketutup lewat fix yang sama, cek ulang jangan diasumsikan). Kalau ada laporan bug tiang baru lagi, JANGAN tambal cepat, minta video/reproduksi dulu. **Terpisah, belum diselidiki:** tombol "Lanjut → Finalisasi"/"+ Opsi" macet di HP Elvan (dilaporkan lagi 18 Juli, dulu dikonfirmasi tak terkait Kelompok B) — butuh video, jangan nebak. Setelah tiang beres: rancang pola sama (drag=pindah, tekan-tahan=menu) buat Support manual/otomatis + Frame, lalu lanjut Kelompok C (saran-kotak-2-arah). Utang lama opsional tak mendesak: foto bar #12 cutting list PA-DUTA (tutup validasi 4x8=9). <<<
+
+**5 Agustus 2026 — Migrasi notifikasi WA (Fonnte, banned) → Telegram karyawan, Task 1-10 SELESAI (subagent-driven-development), sudah di-merge lokal ke `main` (BELUM di-push).**
+
+Plan: `docs/superpowers/plans/2026-08-05-notifikasi-telegram-karyawan.md` (spec: `docs/superpowers/specs/2026-08-05-notifikasi-telegram-karyawan-design.md`). 12 task total, dikerjakan lewat subagent-driven-development (fresh implementer + review per task, review akhir whole-branch pakai opus).
+
+**Yang jadi:**
+- `App\Services\TelegramService::kirim(?string $chatId, string $pesan): bool` — satu jalur kirim kanonik, pure PHP, testable tanpa DB (`tests/telegram/test_telegram_service.php`). Token dari `.env` (`TELEGRAM_KARYAWAN_TOKEN`), bukan hardcode.
+- `TelegramWebhookController` — webhook publik (`POST /telegram/karyawan/webhook`, dikecualikan CSRF) yang terima `/start <token>` dari Telegram, simpan `chat_id` ke `users.telegram_chat_id`.
+- Tombol "Hubungkan Telegram" di halaman Profil (deep-link `t.me/<bot>?start=<token>`).
+- 9 controller + 3 file cron dimigrasi dari `kirimWA()`/Fonnte ke `TelegramService` — semua `kirimWA()`/`FonnteService` lama DIHAPUS TOTAL (bukan cuma diganti pemanggilannya). Konfirmasi lewat grep seluruh repo: nol sisa referensi Fonnte/kirimWA di luar 12 file yang disentuh.
+- **Bug tersembunyi ikut ketemu & diperbaiki di sepanjang jalan:** (1) `FonnteService` ternyata TIDAK PERNAH ADA sebagai file — `KpiController`/`cron-kpi.php` motret class itu, artinya jalur SP-notif & hasil-ujian selama ini fatal error kalau kepanggil (sekarang fixed, Task 10). (2) Pola bug berulang: method notif sudah dimigrasi ke Telegram DI DALAMNYA, tapi PEMANGGIL LUAR-nya masih nge-gate pakai `if ($x->no_hp)` — jadi karyawan yang udah connect Telegram tapi belum isi no HP tetap gak dapat notif. Ketemu & di-fix di `LuarKotaController` (Task 6) dan `TugasHarianController` (Task 7), sudah dicek nggak ada di controller lain.
+- Review akhir (whole-branch, model opus) nemu 2 gap Important yang langsung diperbaiki (commit `81951c6`): `parse_mode=Markdown` bikin pesan GAGAL TERKIRIM DIAM-DIAM kalau teks bebas (nama customer, alasan izin, dll) mengandung karakter `_`/`*`/`` ` ``/`[` tak berpasangan (Telegram nolak API call-nya) — sekarang retry sekali tanpa Markdown kalau kena. Plus `TelegramService` sebelumnya nol logging — sekarang `Log::error()` kalau token kosong atau API nolak, biar kegagalan kirim kelihatan, bukan senyap kayak insiden Fonnte kemarin.
+- `RabController::kirimNotifDeal()` (notif WA ke customer) SENGAJA dinonaktifkan (early `return`), BUKAN dipindah — customer bukan `User` sistem, gak bisa connect Telegram. Nunggu WhatsApp Business API resmi (roadmap #5 — "Telegram jangan dipaksakan ke karyawan/customer" sekarang jadi pengecualian sengaja untuk karyawan, khusus customer tetap berlaku).
+
+**⚠️ BELUM di-push ke GitHub — JANGAN push sebelum SQL ini jalan di phpMyAdmin production (Elvan konfirmasi 5 Agustus: belum dijalankan):**
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50) NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_link_token VARCHAR(64) NULL;
+```
+Kalau push duluan sebelum SQL jalan: auto-deploy jalan otomatis, `/profil` 500 buat semua 14 karyawan (nulis ke kolom yang belum ada), plus izin/kendala/2 cron ikut error sampai SQL dijalankan.
+
+**Utang lain (dicatat review akhir, TIDAK diperbaiki di branch ini — di luar scope/pre-existing, bukan disembunyikan):**
+- `public/cron-kpi.php` sebenarnya DEAD CODE dari sebelum migrasi ini — motret `bootstrap/autoload.php` yang sudah tak ada sejak Laravel 5.5+ (bug pre-existing, bukan diperkenalkan sesi ini). Notif KPI bulanan lewat Telegram = phantom sampai ini diperbaiki terpisah.
+- Absen kode harian (`cron-kode-absen.php`) sekarang cuma kirim ke karyawan yang sudah connect Telegram, tanpa fallback in-app (kode gak ditampilkan di dashboard manapun) — sama kayak kondisi hari ini (Fonnte sudah mati total), bukan regresi, tapi bikin "connect Telegram" jadi syarat wajib absen. Pertimbangkan tampilkan kode hari ini di dashboard owner/mandor sebagai fallback.
+- Token Fonnte lama masih ada di histori git (repo public) — akun sudah banned jadi risiko rendah, tapi sebaiknya di-revoke juga di dashboard Fonnte.
+- Token bot Owner (approval RAB) di `ApprovalController.php` MASIH hardcode di kode — ini Task 12 (independen, terpisah dari migrasi karyawan ini, tunggu Elvan revoke token lama dulu via BotFather).
+
+**LANJUT (urutan):**
+1. Elvan jalankan SQL di atas di phpMyAdmin production, verifikasi `DESCRIBE users;`
+2. Push `main` ke GitHub → auto-deploy
+3. Task 11 (manual, checklist lengkap ada di plan): bikin bot lewat @BotFather, isi `.env` server (`TELEGRAM_KARYAWAN_TOKEN`, `TELEGRAM_KARYAWAN_BOT_USERNAME`), daftarkan webhook, verifikasi alur hubung-Telegram + kirim notif nyata end-to-end pakai akun sendiri dulu sebelum umumkan ke 14 karyawan
+4. Task 12 (independen, kapan saja setelah Elvan revoke token bot Owner lama via BotFather): pindah token Owner dari hardcode di `ApprovalController.php` ke `.env`
