@@ -99,7 +99,7 @@ class TugasHarianController extends Controller
 
             // Kirim WA notifikasi
             $karyawan = User::find($userId);
-            if ($karyawan && $karyawan->no_hp) {
+            if ($karyawan) {
                 $this->kirimNotifWA($karyawan, $tugas);
 
                 // Tandai notif terkirim
@@ -191,7 +191,7 @@ class TugasHarianController extends Controller
             ]);
             // Kirim WA ke assignee baru
             $karyawan = User::find($userId);
-            if ($karyawan && $karyawan->no_hp) {
+            if ($karyawan) {
                 $this->kirimNotifWA($karyawan, $tugas);
             }
         }
