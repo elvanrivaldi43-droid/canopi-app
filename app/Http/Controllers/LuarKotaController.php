@@ -86,7 +86,7 @@ class LuarKotaController extends Controller
 
             // Notif WA ke karyawan
             $karyawan = User::find($userId);
-            if ($karyawan && $karyawan->no_hp) {
+            if ($karyawan) {
                 $this->kirimNotifAktif($karyawan, $luarKota);
             }
         }
@@ -123,7 +123,7 @@ class LuarKotaController extends Controller
 
         // Notif WA update
         $karyawan = $luarKota->karyawan;
-        if ($karyawan && $karyawan->no_hp) {
+        if ($karyawan) {
             $this->kirimNotifUpdate($karyawan, $luarKota);
         }
 
