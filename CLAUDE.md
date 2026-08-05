@@ -323,10 +323,11 @@ ALTER TABLE kode_absen ADD UNIQUE INDEX IF NOT EXISTS kode_absen_tanggal_user_un
 
 **PENTING, beda dari migrasi Telegram kemarin:** setelah SQL jalan, **cron HARUS di-trigger manual di hari yang sama juga** (`https://app.kanopibsd.co.id/cron-kode-absen.php?key=canopi_cron_2026`) — karyawan yang sudah ada belum otomatis punya kode `user_id` sampai cron pagi berikutnya. Kalau push/SQL dijalankan siang hari, semua karyawan tetap terkunci sampai besok pagi kalau cron gak dipicu manual.
 
-**LANJUT (urutan):**
-1. Elvan jalankan SQL kode_absen di atas, verifikasi `DESCRIBE kode_absen;`
-2. Push `main` ke GitHub → auto-deploy
-3. **WAJIB:** trigger cron manual hari itu juga (URL di atas) — jangan tunggu besok pagi
-4. Tes: buka `/absensi/kode-hari-ini` (Owner), cek tabel muncul kode beda-beda per orang; tes absen masuk pakai 2 akun non-owner beda (kode A gak boleh jalan buat B)
-5. Sosialisasi gabungan ke 14 karyawan: (a) klik "Hubungkan Telegram" di Profil, (b) kode absen sekarang personal per orang, jangan dibagi ke rekan kerja
-6. Task 12 (independen, terpisah): rotasi token bot Owner ke `.env`, tunggu Elvan revoke token lama dulu
+**STATUS 5 Agustus (akhir hari) — SELESAI PENUH & LIVE:** SQL kode_absen sudah jalan, sudah push+deploy, cron manual sudah di-trigger hari itu juga, kode absen per-karyawan aktif di production. Elvan sudah kabari ke SEMUA 14 karyawan buat klik "Hubungkan Telegram" di Profil. **Task 11 (setup bot + rollout karyawan) CLOSED.**
+
+**Belum diverifikasi eksplisit (bukan blocker, sekadar catatan buat sesi depan kalau ada laporan):** cron jam 06:30 WIB besok jalan otomatis via **cronjob.org eksternal** (bukan cPanel Cron Jobs — lihat memory `cron-scheduling-cronjob-org.md`), belum ada konfirmasi langsung dari Elvan bahwa kode absen personal beneran masuk pagi itu. Kalau ada laporan "kode gak masuk", cek dashboard cronjob.org dulu (bukan cPanel), baru cek isi `kode_absen` tabel/log Laravel.
+
+**Sisa kerjaan lintas kedua migrasi ini:**
+- Task 12 (independen, belum dikerjakan): rotasi token bot Owner (`ApprovalController.php`, masih hardcode) ke `.env` — tunggu Elvan revoke token lama dulu via BotFather.
+- `public/cron-kpi.php` masih dead code (bug pre-existing, `bootstrap/autoload.php` tak ada sejak Laravel 5.5+) — notif KPI bulanan lewat Telegram belum jalan sampai ini diperbaiki terpisah.
+- Token Fonnte lama masih ada di histori git — akun sudah banned, risiko rendah, tapi belum di-revoke di dashboard Fonnte.
