@@ -5,13 +5,23 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use App\Models\Absensi;
+use App\Models\User;
 
 class ProfilController extends Controller
 {
     public function index()
     {
         $user     = Auth::user();
+
+        if (!$user->telegram_chat_id && !$user->telegram_link_token) {
+            $user->telegram_link_token = $this->generateTelegramLinkToken();
+            $user->save();
+        }
+
+        $botUsername = getenv('TELEGRAM_KARYAWAN_BOT_USERNAME') ?: '';
+
         $bulanIni = Absensi::where('user_id', $user->id)
                            ->whereMonth('tanggal', now()->month)
                            ->whereYear('tanggal', now()->year)
@@ -41,7 +51,16 @@ class ProfilController extends Controller
             'total_gaji' => $bulanIni->sum('gaji_hari_ini'),
         ];
 
-        return view('profil.index', compact('user', 'stats'));
+        return view('profil.index', compact('user', 'stats', 'botUsername'));
+    }
+
+    private function generateTelegramLinkToken(): string
+    {
+        do {
+            $token = Str::random(32);
+        } while (User::where('telegram_link_token', $token)->exists());
+
+        return $token;
     }
 
     public function update(Request $request)

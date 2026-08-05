@@ -138,6 +138,24 @@
     </div>
   </div>
 
+  {{-- Hubungkan Telegram --}}
+  <div class="card-dark">
+    <div class="section-label">📲 Notifikasi Telegram</div>
+    @if($user->telegram_chat_id)
+      <div class="info-row" style="border-bottom:none;">
+        <span class="info-value" style="color:#34d399;">✅ Sudah terhubung</span>
+      </div>
+    @else
+      <p style="color:#94a3b8; font-size:12px; margin-bottom:12px;">
+        Hubungkan akun Telegram kamu supaya notifikasi (izin, kasbon, gaji, dll) masuk ke Telegram.
+      </p>
+      <a href="https://t.me/{{ $botUsername }}?start={{ $user->telegram_link_token }}"
+         style="display:block; text-align:center; padding:12px; background:#229ED9; color:#fff; border-radius:10px; font-weight:700; text-decoration:none; font-size:14px;">
+        📲 Hubungkan Telegram
+      </a>
+    @endif
+  </div>
+
   {{-- Form Edit Data Diri --}}
   <div class="card-dark">
     <div class="section-label">✏️ Edit Data Diri</div>
