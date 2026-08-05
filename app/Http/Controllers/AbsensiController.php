@@ -188,6 +188,31 @@ class AbsensiController extends Controller
         return response()->json(['valid' => $valid]);
     }
 
+    public function kodeHariIni()
+    {
+        $tanggal  = today();
+        $karyawan = User::where('level', '!=', 1)
+                        ->where('status', 'aktif')
+                        ->orderBy('name')
+                        ->get();
+
+        $kodeList = \App\Models\KodeAbsen::whereDate('tanggal', $tanggal)
+                                         ->whereNotNull('user_id')
+                                         ->get()
+                                         ->keyBy('user_id');
+
+        $data = $karyawan->map(function ($k) use ($kodeList) {
+            return [
+                'nama'      => $k->name,
+                'jabatan'   => $k->jabatan,
+                'kode'      => $kodeList[$k->id]->kode ?? null,
+                'connected' => (bool) $k->telegram_chat_id,
+            ];
+        });
+
+        return view('absensi.kode-hari-ini', ['tanggal' => $tanggal, 'data' => $data]);
+    }
+
     public function cekGps(Request $request)
     {
         $user   = Auth::user();

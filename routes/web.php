@@ -113,6 +113,7 @@ Route::middleware('auth')->prefix('absensi')->name('absensi.')->group(function (
     Route::post('/koreksi-baru/{userId}',   [AbsensiController::class, 'koreksiManual'])->name('koreksi-manual');
     Route::post('/validasi-kode',           [AbsensiController::class, 'validasiKode'])->name('validasi-kode');
     Route::get('/rekap-bulanan',            [AbsensiController::class, 'rekapBulanan'])->name('rekap-bulanan');
+    Route::get('/kode-hari-ini',            [AbsensiController::class, 'kodeHariIni'])->middleware('level:1,3')->name('kode-hari-ini');
 });
 
 // ─── IZIN KARYAWAN ─────────────────────────────────────────
