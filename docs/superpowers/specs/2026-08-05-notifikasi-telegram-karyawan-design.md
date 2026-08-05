@@ -39,11 +39,13 @@ Elvan mau pindah dari Fonnte (berbayar) ke Telegram bot dulu untuk semua notifik
 5. Kalau karyawan belum connect, notifikasi untuknya **di-skip diam-diam** (pola sama seperti sekarang kalau `no_hp` kosong) — tidak melempar error
 
 ### B. Service terpusat pengganti Fonnte
-- File baru: `app/Services/TelegramService.php`, method `kirim(User $user, string $pesan): void`
-  - Ambil `$user->telegram_chat_id`; kalau kosong → return (skip diam-diam)
+- File baru: `app/Services/TelegramService.php`, method `kirim(?string $chatId, string $pesan): bool`
+  - Terima `chat_id` langsung sebagai string (bukan objek `User`) — service ini sengaja dibuat tanpa dependensi Eloquent/facade di jalur utamanya, supaya bisa dites lewat script PHP murni tanpa Laravel/DB (pola sama seperti `CuttingService`, konsisten dengan cara testing yang sudah dipakai di project ini — lihat `tests/rangka/test_*.php`)
+  - Kalau `$chatId` kosong/null → return `false` (skip diam-diam), tanpa mencoba kirim
   - Kirim via `curl` ke `https://api.telegram.org/bot<token>/sendMessage`, `parse_mode=Markdown` (supaya `*teks tebal*` yang sudah dipakai di semua pesan lama tetap render tebal, bukan tampil sebagai asterisk mentah)
   - Bungkus try/catch, silent-fail + `Log::error()` — pola sama persis seperti kode Fonnte lama (jangan sampai gagal kirim notif bikin fitur utama ikut error)
   - Token bot dibaca dari `.env` (`getenv('TELEGRAM_KARYAWAN_TOKEN')`) — **BUKAN** hardcode di file PHP, karena repo ini public (lihat "Temuan keamanan" di atas). Tambahkan juga `TELEGRAM_KARYAWAN_TOKEN=` (kosong) di `.env.example` sebagai dokumentasi, tanpa nilai asli.
+  - Caller yang punya objek `User` tinggal panggil `app(TelegramService::class)->kirim($user->telegram_chat_id, $pesan)`
 
 ### C. Webhook & setup bot
 1. Bot Telegram baru dibuat manual oleh Elvan via `@BotFather` (`/newbot`) — **terpisah dari bot Owner** (alasan: bot Owner dipakai untuk approval RAB yang sensitif finansial, tidak dicampur trafik 14 karyawan; juga supaya logic webhook baru tidak menyentuh kode approval yang sudah terbukti jalan)
@@ -77,7 +79,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_link_token VARCHAR(64) NULL;
 - Baris `putenv('FONNTE_TOKEN=...')` di `app/Providers/AppServiceProvider.php`
 
 **Diubah (ganti pemanggilan):**
-Semua call-site `$this->kirimWA($xxx->no_hp, $pesan)` → `app(TelegramService::class)->kirim($xxx, $pesan)` — parameter berubah dari string nomor HP jadi objek `User` (dicek sudah semua call-site memang sudah punya objek user yang di-resolve duluan sebelum manggil, jadi ini perubahan langsung tanpa perlu lookup tambahan). Guard lama yang mengecek `no_hp` sebelum kirim (mis. `if ($owner?->no_hp)`, `whereNotNull('no_hp')`) diganti jadi cek keberadaan user saja (`TelegramService::kirim()` sudah menangani skip internal kalau `telegram_chat_id` kosong) — beberapa query recipient (`IzinAbsenController::kirimNotifPengajuan`, `AbsensiController::kirimNotifKendala`) filter `whereNotNull('no_hp')` diganti jadi `whereNotNull('telegram_chat_id')` supaya hanya kirim ke yang sudah connect.
+Semua call-site `$this->kirimWA($xxx->no_hp, $pesan)` → `app(TelegramService::class)->kirim($xxx->telegram_chat_id, $pesan)` — parameter tetap string, cuma sumbernya ganti dari `no_hp` ke `telegram_chat_id` (dicek sudah semua call-site memang sudah punya objek user yang di-resolve duluan sebelum manggil, jadi ini perubahan langsung tanpa perlu lookup tambahan). Guard lama yang mengecek `no_hp` sebelum kirim (mis. `if ($owner?->no_hp)`, `whereNotNull('no_hp')`) diganti jadi cek keberadaan user saja (`TelegramService::kirim()` sudah menangani skip internal kalau `telegram_chat_id` kosong) — beberapa query recipient (`IzinAbsenController::kirimNotifPengajuan`, `AbsensiController::kirimNotifKendala`) filter `whereNotNull('no_hp')` diganti jadi `whereNotNull('telegram_chat_id')` supaya hanya kirim ke yang sudah connect.
 
 **Dikecualikan (tetap pakai kode lama untuk sementara, TIDAK dihapus):**
 - `RabController::kirimNotifDeal()` — kirim WA ke `$lead->no_hp` (customer/lead, bukan `User` sistem). Karena Fonnte sudah banned, fungsi ini **dinonaktifkan (early return, skip diam-diam)**, bukan dipindah ke Telegram — customer tidak bisa "Hubungkan Telegram" seperti karyawan. Ditandai sebagai utang, ditangani nanti bareng WhatsApp Business API resmi (roadmap CLAUDE.md #5).
