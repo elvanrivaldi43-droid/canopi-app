@@ -1,7 +1,7 @@
 <?php
 // FILE: public_html/app/public/cron-kode-absen.php
 // Dijalankan via cron job jam 06:30 WIB (23:30 UTC hari sebelumnya)
-// Otomatis generate kode harian + kirim WA ke semua karyawan
+// Otomatis generate kode harian PER KARYAWAN + kirim ke Telegram masing-masing
 
 $key = $argv[1] ?? $_GET['key'] ?? '';
 if ($key !== 'canopi_cron_2026') {
@@ -23,48 +23,48 @@ $log = [];
 $tanggal = today();
 
 // ═══════════════════════════════════════════════════════
-// GENERATE KODE HARIAN
-// ═══════════════════════════════════════════════════════
-
-// Cek apakah kode hari ini sudah ada
-$kodeHariIni = KodeAbsen::whereDate('tanggal', $tanggal)->first();
-
-if (!$kodeHariIni) {
-    // Generate kode 6 karakter alphanumeric
-    $kode = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
-    $kodeHariIni = KodeAbsen::create([
-        'kode'    => $kode,
-        'tanggal' => $tanggal,
-    ]);
-    $log[] = "Kode hari ini: {$kode}";
-} else {
-    $kode = $kodeHariIni->kode;
-    $log[] = "Kode sudah ada: {$kode}";
-}
-
-// ═══════════════════════════════════════════════════════
-// KIRIM WA KE SEMUA KARYAWAN WAJIB ABSEN
+// GENERATE + KIRIM KODE PER KARYAWAN
 // ═══════════════════════════════════════════════════════
 
 $karyawan = User::where('level', '!=', 1) // bukan owner
                 ->where('status', 'aktif')
-                ->whereNotNull('telegram_chat_id')
                 ->get();
 
 $terkirim = 0;
 $gagal    = 0;
+$sudahAda = 0;
 
 foreach ($karyawan as $k) {
+    $existing = KodeAbsen::whereDate('tanggal', $tanggal)->where('user_id', $k->id)->first();
+
+    if ($existing) {
+        $kode = $existing->kode;
+        $sudahAda++;
+    } else {
+        $kode = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
+        KodeAbsen::create([
+            'kode'    => $kode,
+            'tanggal' => $tanggal,
+            'user_id' => $k->id,
+        ]);
+    }
+
+    if (!$k->telegram_chat_id) {
+        $log[] = "⏭ Skip (belum connect Telegram): {$k->name} — kode: {$kode}";
+        continue;
+    }
+
     $pesan = "🏠 *PUSAT KANOPI BSD*\n"
            . "━━━━━━━━━━━━━━━━━━\n"
            . "📅 " . $tanggal->translatedFormat('l, d F Y') . "\n\n"
-           . "🔑 *KODE ABSEN HARI INI:*\n"
+           . "🔑 *KODE ABSEN KAMU HARI INI:*\n"
            . "┌─────────────┐\n"
            . "│   *{$kode}*   │\n"
            . "└─────────────┘\n\n"
            . "⏰ Absen masuk mulai jam *06:30*\n"
            . "📍 Pastikan kamu berada di lokasi kerja\n\n"
-           . "Kode berlaku untuk hari ini saja.\n"
+           . "Kode ini cuma buat kamu, jangan dibagikan ke orang lain.\n"
+           . "Berlaku untuk hari ini saja.\n"
            . "_CanopiBSD System_";
 
     $result = app(TelegramService::class)->kirim($k->telegram_chat_id, $pesan);
@@ -83,13 +83,13 @@ foreach ($karyawan as $k) {
 // ═══════════════════════════════════════════════════════
 
 echo '<pre style="background:#1a1a2e;color:lime;padding:20px;font-family:monospace;">';
-echo "=== KODE ABSEN HARIAN ===\n";
+echo "=== KODE ABSEN HARIAN (PER KARYAWAN) ===\n";
 echo "Waktu  : " . now()->format('d/m/Y H:i:s') . "\n";
-echo "Kode   : {$kode}\n";
 echo "Tanggal: " . $tanggal->format('d/m/Y') . "\n\n";
-echo "--- HASIL PENGIRIMAN ---\n";
+echo "--- HASIL ---\n";
 foreach ($log as $l) echo $l . "\n";
-echo "\n✅ Terkirim : {$terkirim}\n";
-echo "❌ Gagal    : {$gagal}\n";
+echo "\n✅ Terkirim   : {$terkirim}\n";
+echo "❌ Gagal      : {$gagal}\n";
+echo "♻️  Sudah ada  : {$sudahAda}\n";
 echo "\n=== SELESAI ===";
 echo '</pre>';
