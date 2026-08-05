@@ -104,8 +104,9 @@ class ApprovalController extends Controller
     private function kirimTelegram($pesan)
     {
         try {
-            $token  = '8812397501:AAFFLbGTmjmhgV2mSDEc233-6ReCJq_S4Ns';
-            $chatId = '8385647457';
+            $token  = getenv('TELEGRAM_OWNER_TOKEN');
+            $chatId = getenv('TELEGRAM_OWNER_CHAT_ID');
+            if (!$token || !$chatId) return;
             $ch = curl_init("https://api.telegram.org/bot{$token}/sendMessage");
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
