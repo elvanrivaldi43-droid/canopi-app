@@ -284,12 +284,49 @@ Kalau push duluan sebelum SQL jalan: auto-deploy jalan otomatis, `/profil` 500 b
 
 **Utang lain (dicatat review akhir, TIDAK diperbaiki di branch ini — di luar scope/pre-existing, bukan disembunyikan):**
 - `public/cron-kpi.php` sebenarnya DEAD CODE dari sebelum migrasi ini — motret `bootstrap/autoload.php` yang sudah tak ada sejak Laravel 5.5+ (bug pre-existing, bukan diperkenalkan sesi ini). Notif KPI bulanan lewat Telegram = phantom sampai ini diperbaiki terpisah.
-- Absen kode harian (`cron-kode-absen.php`) sekarang cuma kirim ke karyawan yang sudah connect Telegram, tanpa fallback in-app (kode gak ditampilkan di dashboard manapun) — sama kayak kondisi hari ini (Fonnte sudah mati total), bukan regresi, tapi bikin "connect Telegram" jadi syarat wajib absen. Pertimbangkan tampilkan kode hari ini di dashboard owner/mandor sebagai fallback.
+- ~~Absen kode harian tanpa fallback in-app~~ — SUDAH DIPERBAIKI, lihat entri "Kode Absen Per-Karyawan" di bawah (5 Agustus, sesi kedua).
 - Token Fonnte lama masih ada di histori git (repo public) — akun sudah banned jadi risiko rendah, tapi sebaiknya di-revoke juga di dashboard Fonnte.
 - Token bot Owner (approval RAB) di `ApprovalController.php` MASIH hardcode di kode — ini Task 12 (independen, terpisah dari migrasi karyawan ini, tunggu Elvan revoke token lama dulu via BotFather).
 
+**Task 11 progress (5 Agustus) — SQL sudah jalan, sudah push+deploy, bot dibuat, webhook terdaftar, tes koneksi + tes kirim (kode absen) lewat Owner sendiri SUKSES.** Sisa: umumkan ke 14 karyawan buat klik "Hubungkan Telegram" di halaman Profil masing-masing (Step 8, belum dilakukan — nunggu rollout kode-absen-per-karyawan di bawah kelar dulu, biar sosialisasi digabung sekali jalan, bukan dua kali).
+
+**Task 12 (independen, belum dikerjakan):** pindah token Owner dari hardcode di `ApprovalController.php` ke `.env` — tunggu Elvan revoke token lama dulu via BotFather.
+
+---
+
+**5 Agustus 2026 (sesi kedua) — Kode Absen Per-Karyawan SELESAI (subagent-driven-development), sudah di-merge lokal ke `main` (BELUM di-push).**
+
+Lanjutan langsung dari migrasi Telegram di atas — begitu Elvan tes kirim kode absen lewat akun sendiri, langsung kepikiran: kode absen selama ini **satu kode buat SEMUA karyawan per hari** (siapapun yang tahu kode bisa dipakai absen atas nama siapapun — celah titip-absen). Brainstorm→spec→plan→implementasi (4 task) di sesi yang sama.
+
+Spec: `docs/superpowers/specs/2026-08-05-kode-absen-per-karyawan-design.md`. Plan: `docs/superpowers/plans/2026-08-05-kode-absen-per-karyawan.md`.
+
+**Yang jadi:**
+- Tabel `kode_absen` dapat kolom `user_id` — sekarang 1 kode = 1 karyawan = 1 hari (bukan 1 kode buat semua).
+- Cron `cron-kode-absen.php` generate + kirim kode PERSONAL per karyawan aktif (idempotent, aman di-trigger ulang). Karyawan yang belum connect Telegram tetap dapat kode di DB (buat fallback dashboard), cuma gak ada pesan terkirim.
+- **Perbaikan keamanan intinya** (Task 3): `AbsensiController::absenMasuk()` & `validasiKode()` sekarang cek kode HARUS milik user yang login (`where('user_id', $user->id)`), bukan cuma "kode valid hari ini". Kode si A gak bisa dipakai si B walau B tahu kodenya. **Diverifikasi khusus oleh review akhir** (dilacak dari generate di cron sampai validasi di controller, digrep seluruh repo — nol jalur lain yang kelewat).
+- Halaman baru `/absensi/kode-hari-ini` (Owner + Supervisor/Mandor) — tabel kode semua karyawan hari ini + status connect Telegram, buat direlay manual ke yang belum connect.
+
+**Bug ikut ketemu & diperbaiki lewat review akhir (bukan cuma "ready to merge" langsung):**
+- Owner (level 1) ternyata jadi TERKUNCI PERMANEN dari fitur absen masuk (cron sengaja skip level 1) — dicek ke Elvan langsung: **Owner memang gak pernah absen masuk**, jadi tombol "Absen Masuk" disembunyikan khusus buat level 1 (bukan diikutkan ke cron).
+- Supervisor (level 3) punya akses ke halaman `/absensi/kode-hari-ini` tapi TANPA link menu buat nemuinnya (plan sendiri yang kelewat, cuma nambah link di sidebar Owner) — sudah ditambah.
+- Layar tempat karyawan ngetik kode (`form-masuk.blade.php`) masih nyebut "WhatsApp" di 5 tempat — sisa sebelum migrasi Telegram, ketinggalan, bikin instruksi ke karyawan salah arah (WA sudah mati). Sudah diganti semua ke "Telegram".
+- Dashboard fallback tadinya cuma baca doang — karyawan baru/reaktivasi setelah jam 06:30 gak kebagian kode dan dashboard gak bisa nolong. Sekarang self-healing (generate on-the-fly kalau belum ada).
+- Cron loop dikasih try/catch — 1 karyawan error DB gak lagi bikin semua yang setelahnya ikut gagal.
+- 1 fix kecil tambahan dari scoped re-review: perbandingan level pakai `===` (strict) diganti `==` — kolom `level` gak ada cast di model, isu potensial silent-fail yang bisa balikin lagi bug "Owner lihat tombol rusak".
+
+**⚠️ BELUM di-push — sebelum push, jalankan SQL ini dulu di phpMyAdmin production:**
+```sql
+ALTER TABLE kode_absen ADD COLUMN IF NOT EXISTS user_id BIGINT UNSIGNED NULL;
+ALTER TABLE kode_absen ADD UNIQUE INDEX IF NOT EXISTS kode_absen_tanggal_user_unique (tanggal, user_id);
+```
+(Kalau baris index ditolak karena versi MySQL <8.0.29, jalankan tanpa `IF NOT EXISTS` di baris itu saja — detail di spec.)
+
+**PENTING, beda dari migrasi Telegram kemarin:** setelah SQL jalan, **cron HARUS di-trigger manual di hari yang sama juga** (`https://app.kanopibsd.co.id/cron-kode-absen.php?key=canopi_cron_2026`) — karyawan yang sudah ada belum otomatis punya kode `user_id` sampai cron pagi berikutnya. Kalau push/SQL dijalankan siang hari, semua karyawan tetap terkunci sampai besok pagi kalau cron gak dipicu manual.
+
 **LANJUT (urutan):**
-1. Elvan jalankan SQL di atas di phpMyAdmin production, verifikasi `DESCRIBE users;`
+1. Elvan jalankan SQL kode_absen di atas, verifikasi `DESCRIBE kode_absen;`
 2. Push `main` ke GitHub → auto-deploy
-3. Task 11 (manual, checklist lengkap ada di plan): bikin bot lewat @BotFather, isi `.env` server (`TELEGRAM_KARYAWAN_TOKEN`, `TELEGRAM_KARYAWAN_BOT_USERNAME`), daftarkan webhook, verifikasi alur hubung-Telegram + kirim notif nyata end-to-end pakai akun sendiri dulu sebelum umumkan ke 14 karyawan
-4. Task 12 (independen, kapan saja setelah Elvan revoke token bot Owner lama via BotFather): pindah token Owner dari hardcode di `ApprovalController.php` ke `.env`
+3. **WAJIB:** trigger cron manual hari itu juga (URL di atas) — jangan tunggu besok pagi
+4. Tes: buka `/absensi/kode-hari-ini` (Owner), cek tabel muncul kode beda-beda per orang; tes absen masuk pakai 2 akun non-owner beda (kode A gak boleh jalan buat B)
+5. Sosialisasi gabungan ke 14 karyawan: (a) klik "Hubungkan Telegram" di Profil, (b) kode absen sekarang personal per orang, jangan dibagi ke rekan kerja
+6. Task 12 (independen, terpisah): rotasi token bot Owner ke `.env`, tunggu Elvan revoke token lama dulu
