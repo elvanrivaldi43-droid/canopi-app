@@ -334,4 +334,17 @@ ALTER TABLE kode_absen ADD UNIQUE INDEX IF NOT EXISTS kode_absen_tanggal_user_un
 **Sisa kerjaan (di luar scope kedua migrasi ini, dicatat biar gak lupa, bukan urgent):**
 - `public/cron-kpi.php` masih dead code (bug pre-existing, `bootstrap/autoload.php` tak ada sejak Laravel 5.5+) — notif KPI bulanan lewat Telegram belum jalan sampai ini diperbaiki terpisah.
 - Token Fonnte lama masih ada di histori git — akun sudah banned, risiko rendah, tapi belum di-revoke di dashboard Fonnte.
-- Belum ada konfirmasi eksplisit cron kode-absen jalan otomatis besok pagi (06:30 WIB) via cronjob.org — cek kalau ada laporan "kode gak masuk" (lihat memory `cron-scheduling-cronjob-org.md`).
+
+---
+
+**6 Agustus 2026 — Sesi debug notif Telegram: 3 bug ketemu & 2 sudah di-fix, 1 masih menggantung (403 cron via cron-job.org).**
+
+1. **Notif izin ke Owner gak masuk — BUKAN bug, sudah beres.** Akar masalah: akun Elvan sendiri (level 1) belum pernah klik "Hubungkan Telegram" di Profil-nya sendiri (beda bot dari bot approval-RAB yang dipakai sebelumnya). Setelah connect manual, beres.
+
+2. **FIX (live, commit `bf569e8`):** `public/cron-kode-absen.php` dulu ngirim kode absen ke SEMUA karyawan aktif tanpa cek status izin — karyawan yang izin/sakit/cuti hari itu tetap kebagian kode. Sekarang exclude user yang ada row `absensi` hari itu dengan status `sakit`/`izin`/`cuti`/`dinas_luar`.
+
+3. **FIX (live, commit `e69a097`):** `cron-kode-absen.php` ternyata TIDAK idempotent buat pengiriman — walau kode dipakai ulang (gak generate baru), script tetap kirim ULANG pesan Telegram ke semua karyawan connect tiap kali berhasil jalan. Ketauan pas kejadian nyata: karyawan lapor terima kode 4x (04:00, 04:33, 05:10, 06:47) dalam 1 pagi — kombinasi klik gak sengaja + kemungkinan retry cron-job.org + job manual susulan. Sekarang begitu ketemu kode existing → langsung `continue`, gak lanjut kirim.
+
+4. **BELUM SELESAI — `cron-kode-absen.php` sering 403 kalau diakses persis di jam bulat** (06:30:08, 13:00:13, 20:00:15 gagal; 06:47 dua hari berturut-turut sukses). Diagnosa dengan 2 file tes kembar (`cron-test-403.php` tanpa DB, `cron-test-403c.php` Laravel+DB tanpa Telegram — sudah dihapus lagi, commit `7982d37`) membuktikan ini BUKAN soal `.htaccess`/isi script/parsing key (file kembar sukses di jam yang sama saat file asli 403). Dugaan kuat: proteksi anti-bot di hosting (Niagahoster jalan di infra Hostinger/LiteSpeed) kena trigger pas jam bulat rame trafik cron dari banyak pengguna cron-job.org sekaligus — tapi ini **belum dikonfirmasi lewat log server** (gak ada akses cPanel/WAF dari Claude Code, VPS ini beda mesin dari hosting). Sumber kiriman jam 04:00 & 04:33 juga masih misteri — dicek TERBUKTI bukan dari Claude Code (commit pertama sesi ini baru jam 05:07 WIB, dan deploy toh cuma FTP sync, gak pernah trigger endpoint apapun).
+
+**TODO sesi depan:** Elvan cek dashboard cron-job.org — (a) SEMUA job yang ngarah ke `cron-kode-absen.php` (curiga ada job lama/dobel yang kelupaan, itu bisa jelasin kiriman 04:00 & 04:33), (b) response detail (header/body) dari eksekusi yang 403 buat lihat itu block dari layer mana. Kalau gak ketemu akar pastinya, solusi praktis (belum diterapkan): geser jadwal kirim dari jam bulat (06:30) ke jam ganjil (mis. 06:23) — sudah kebukti kerja 2x di jam 06:47.
