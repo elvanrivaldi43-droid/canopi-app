@@ -47,8 +47,9 @@ foreach ($karyawan as $k) {
         $existing = KodeAbsen::whereDate('tanggal', $tanggal)->where('user_id', $k->id)->first();
 
         if ($existing) {
-            $kode = $existing->kode;
             $sudahAda++;
+            $log[] = "⏭ Skip (kode sudah dikirim hari ini): {$k->name}";
+            continue;
         } else {
             $kode = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
             KodeAbsen::create([
