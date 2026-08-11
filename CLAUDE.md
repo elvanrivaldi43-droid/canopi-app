@@ -348,3 +348,36 @@ ALTER TABLE kode_absen ADD UNIQUE INDEX IF NOT EXISTS kode_absen_tanggal_user_un
 4. **BELUM SELESAI — `cron-kode-absen.php` sering 403 kalau diakses persis di jam bulat** (06:30:08, 13:00:13, 20:00:15 gagal; 06:47 dua hari berturut-turut sukses). Diagnosa dengan 2 file tes kembar (`cron-test-403.php` tanpa DB, `cron-test-403c.php` Laravel+DB tanpa Telegram — sudah dihapus lagi, commit `7982d37`) membuktikan ini BUKAN soal `.htaccess`/isi script/parsing key (file kembar sukses di jam yang sama saat file asli 403). Dugaan kuat: proteksi anti-bot di hosting (Niagahoster jalan di infra Hostinger/LiteSpeed) kena trigger pas jam bulat rame trafik cron dari banyak pengguna cron-job.org sekaligus — tapi ini **belum dikonfirmasi lewat log server** (gak ada akses cPanel/WAF dari Claude Code, VPS ini beda mesin dari hosting). Sumber kiriman jam 04:00 & 04:33 juga masih misteri — dicek TERBUKTI bukan dari Claude Code (commit pertama sesi ini baru jam 05:07 WIB, dan deploy toh cuma FTP sync, gak pernah trigger endpoint apapun).
 
 **TODO sesi depan:** Elvan cek dashboard cron-job.org — (a) SEMUA job yang ngarah ke `cron-kode-absen.php` (curiga ada job lama/dobel yang kelupaan, itu bisa jelasin kiriman 04:00 & 04:33), (b) response detail (header/body) dari eksekusi yang 403 buat lihat itu block dari layer mana. Kalau gak ketemu akar pastinya, solusi praktis (belum diterapkan): geser jadwal kirim dari jam bulat (06:30) ke jam ganjil (mis. 06:23) — sudah kebukti kerja 2x di jam 06:47.
+
+---
+
+**11 Agustus 2026 — Fitur baru "Jadwal Libur Per-Karyawan" SELESAI & LIVE (subagent-driven-development, 7 task + final review + 1 fix round).**
+
+Dipicu pertanyaan simpel ("karyawan libur tetap dapat kode absen?"), investigasi nemuin masalah lebih serius: `cron-alpha.php` juga gak kenal jadwal libur — karyawan yang punya hari libur tetap tapi gak pernah ngajuin izin buat itu (dikonfirmasi Elvan: memang gak pernah) bisa ke-tandain **Alpha**, yang motong gaji hari itu DAN langsung jatuhin kelas KPI sebulan ke "none". Plus `GajiService::hitungHariKerja()` ngitung hari kerja SERAGAM (semua hari kecuali Minggu) buat semua karyawan, bias buat siapapun yang liburnya bukan hari Minggu.
+
+Spec: `docs/superpowers/specs/2026-08-11-jadwal-libur-karyawan-design.md`. Plan (7 task): `docs/superpowers/plans/2026-08-11-jadwal-libur-karyawan.md`.
+
+**Yang jadi:**
+- `users.hari_libur_default` (nullable, 0=Minggu..6=Sabtu) — jadwal libur tetap per-karyawan, diisi Owner lewat form edit/tambah karyawan.
+- Tabel `jadwal_libur` — ajuan tukar/skip/tambah libur per-tanggal, alur approval mirip izin (Owner/Mandor approve/tolak, notif Telegram dua arah). Halaman karyawan: `/jadwal-libur` (riwayat) + `/jadwal-libur/ajukan`. Halaman Owner/Mandor: `/jadwal-libur/approval` (link ditaruh di KEDUA sidebar — Owner dan Pipeline/level 3 — biar gak ulang gap lama kayak `kode-hari-ini` yang sempat cuma ada di sidebar Owner).
+- `App\Services\LiburService::isLibur()` — satu sumber kebenaran tunggal (override approved menang, fallback ke default), dipakai di 3 titik yang tadinya nganggep semua karyawan kerja tiap hari: `cron-alpha.php` (skip Alpha), `cron-kode-absen.php` (skip kirim kode), `GajiService::hitungHariKerja()` (hari kerja per-karyawan, bukan seragam).
+- Logic murni (`cocokLiburPada`/`hitungHariKerjaPada`) dipisah dari wrapper database, testable tanpa DB — `tests/jadwal-libur/test_libur_service.php`, 13/13 lulus.
+
+**Ketemu & dibenerin lewat final whole-branch review (opus), sebelum sampai production:**
+- **Kritis:** SQL deploy awal LUPA backfill — tanpa `UPDATE users SET hari_libur_default = 0 WHERE ... IS NULL`, semua 14 karyawan mulai dengan NULL ("gak ada libur"), diam-diam nganggep mereka kerja 31 hari (bukan 26) bulan ini, nurunin persen kehadiran & kelas KPI semua orang di slip gaji berikutnya. Baris `UPDATE` sudah ditambahkan ke SQL final SEBELUM dijalankan Elvan — **dikonfirmasi tidak ada regresi**.
+- **Penting:** `ProfilController` (halaman profil karyawan sendiri) ternyata punya salinan lama logic "kerja tiap hari kecuali Minggu" yang gak kesentuh 7 task awal (konsumer ke-4 yang gak ketauan sampai review whole-branch) — sekarang ikut lewat `LiburService` (nambah parameter opsional `$sampaiHari` buat varian "bulan-berjalan").
+- **Penting:** karyawan yang mendadak kerja di hari liburnya (gak direncanain) gak ada kode absen nunggu — ditambah indikator "🗓️ Libur" di halaman `/absensi/kode-hari-ini` (Owner/Mandor) biar keliatan itu memang libur, bukan error, dan bisa direlay manual kalau perlu.
+- 2 minor ikut dibenerin: karyawan baru sekarang bisa langsung diisi jadwal libur pas dibuat (dulu cuma bisa lewat Edit), dan halaman detail karyawan (`show.blade.php`) sekarang nampilin jadwal libur default-nya.
+
+**⚠️ SQL sudah dijalankan Elvan (11 Agustus) — konfirmasi: tanpa error.** Sudah push + deploy (`commit 8b9ba8e`).
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Set `hari_libur_default` buat minimal 1-2 karyawan lewat form Edit, cek tersimpan.
+- Ajuan jadwal libur dari sisi karyawan → notif Telegram ke Owner/Mandor → approve/tolak → notif balik ke karyawan.
+- Karyawan yang sudah di-set libur: cek `cron-alpha.php` gak nandain dia Alpha di hari itu, dan `cron-kode-absen.php` gak kirim kode ke dia.
+- Slip gaji bulan berikutnya: `hari_kerja` beda per-karyawan sesuai jadwal libur masing-masing (bandingkan minimal 2 karyawan beda jadwal).
+- Halaman `/profil` karyawan sendiri: persen kehadiran & kelas KPI konsisten sama yang di slip gaji Owner (dulu dua sumber logic beda, sekarang seharusnya satu).
+
+**Dicatat, bukan diperbaiki (di luar cakupan sesi ini):**
+- `JadwalLiburController::approve()`/`reject()` gak ada guard "udah diproses" (bisa double-notif kalau di-klik 2x/tab basi) — sengaja dibiarin karena `IzinAbsenController` punya gap yang sama persis, mending konsisten dua-duanya belum diperbaiki daripada beda perlakuan.
+- `LiburService::hitungHariKerja()` ada inkonsistensi kecil gaya kode (`?:` vs `??` buat parameter `$sampaiHari`) — gak kepakai sama caller manapun sekarang (cuma dipanggil dengan nilai ≥1), jadi gak berbahaya, tapi dicatat buat siapapun yang nambah caller baru nanti.
