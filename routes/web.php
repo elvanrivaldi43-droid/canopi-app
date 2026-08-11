@@ -6,6 +6,7 @@ use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\AbsensiController;
 use App\Http\Controllers\RegistrasiKaryawanController;
 use App\Http\Controllers\IzinAbsenController;
+use App\Http\Controllers\JadwalLiburController;
 use App\Http\Controllers\PenggajianController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\KasbonKaryawanController;
@@ -125,6 +126,16 @@ Route::middleware('auth')->prefix('izin')->name('izin.')->group(function () {
     Route::patch('/{izin}/approve',     [IzinAbsenController::class, 'approve'])->name('approve');
     Route::patch('/{izin}/reject',      [IzinAbsenController::class, 'reject'])->name('reject');
     Route::post('/dinas-luar',          [IzinAbsenController::class, 'dinasLuar'])->name('dinas-luar');
+});
+
+// ─── JADWAL LIBUR KARYAWAN ──────────────────────────────────
+Route::middleware('auth')->prefix('jadwal-libur')->name('jadwal-libur.')->group(function () {
+    Route::get('/',                        [JadwalLiburController::class, 'index'])->name('index');
+    Route::get('/ajukan',                  [JadwalLiburController::class, 'create'])->name('create');
+    Route::post('/',                       [JadwalLiburController::class, 'store'])->name('store');
+    Route::get('/approval',                [JadwalLiburController::class, 'approval'])->middleware('level:1,3')->name('approval');
+    Route::patch('/{jadwalLibur}/approve', [JadwalLiburController::class, 'approve'])->middleware('level:1,3')->name('approve');
+    Route::patch('/{jadwalLibur}/reject',  [JadwalLiburController::class, 'reject'])->middleware('level:1,3')->name('reject');
 });
 
 // ─── PENGGAJIAN ─────────────────────────────────────────────
