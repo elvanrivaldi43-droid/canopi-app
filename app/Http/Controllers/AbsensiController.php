@@ -24,12 +24,9 @@ class AbsensiController extends Controller
     const LEVEL_WORKSHOP      = [3, 5, 6];
     const LEVEL_KANTOR        = [2, 4, 7];
     const JAM_BUKA_ABSEN      = '06:30';
-    const JAM_MASUK           = '07:00';
     const JAM_SETENGAH        = '10:00';
     const JAM_MASUK_SIANG     = '13:00';
     const JAM_SKIP_SIANG      = '14:00';
-    const JAM_PULANG          = '16:30';
-    const JAM_LEMBUR          = '17:00';
     const TOLERANSI_SIANG     = 3;
     const POTONGAN_TELAT      = 20000;
     const LEMBUR_MAX_JAM      = 5;
