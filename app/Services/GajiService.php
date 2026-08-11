@@ -8,6 +8,7 @@ use App\Models\Absensi;
 use App\Models\SlipGaji;
 use App\Models\Kasbon;
 use App\Models\TabunganKaryawan;
+use App\Services\LiburService;
 use Carbon\Carbon;
 
 class GajiService
@@ -107,8 +108,8 @@ class GajiService
         $hariTelat = $absensi->where('status', 'telat')->count();
         $hariIzin  = $absensi->whereIn('status', ['sakit','izin','cuti','dinas_luar'])->count();
 
-        // Hari kerja bulan ini (Senin-Sabtu)
-        $hariKerja = $this->hitungHariKerja($bulan, $tahun);
+        // Hari kerja bulan ini (dikurangi jadwal libur karyawan ini)
+        $hariKerja = app(LiburService::class)->hitungHariKerja($user, $bulan, $tahun);
         $persenHadir = $hariKerja > 0 ? ($hariHadir / $hariKerja) * 100 : 0;
 
         // ── Gaji pokok ─────────────────────────────────────
@@ -264,17 +265,6 @@ class GajiService
                       ->whereDay('tanggal', '>=', $dari)
                       ->whereDay('tanggal', '<=', $sampai)
                       ->get();
-    }
-
-    private function hitungHariKerja(int $bulan, int $tahun): int
-    {
-        $hariKerja = 0;
-        $hariAkhir = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
-        for ($i = 1; $i <= $hariAkhir; $i++) {
-            $tgl = Carbon::createFromDate($tahun, $bulan, $i);
-            if ($tgl->dayOfWeek !== Carbon::SUNDAY) $hariKerja++;
-        }
-        return $hariKerja;
     }
 
     private function hitungCicilanKasbon(int $userId): float
