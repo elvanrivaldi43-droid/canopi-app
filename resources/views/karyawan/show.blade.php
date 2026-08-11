@@ -59,6 +59,7 @@
             ['label'=>'No. HP','value'=>$karyawan->no_hp ?? '-','icon'=>'📱'],
             ['label'=>'Masuk Kerja','value'=>$karyawan->tgl_masuk_kerja ? $karyawan->tgl_masuk_kerja->format('d M Y') : '-','icon'=>'📅'],
             ['label'=>'Masa Kerja','value'=>$karyawan->masaKerja(),'icon'=>'⏱️'],
+            ['label'=>'Hari Libur Default','value'=>$karyawan->hari_libur_default !== null ? (\App\Services\LiburService::HARI[$karyawan->hari_libur_default] ?? '-') : 'Tidak ada','icon'=>'🗓️'],
             ['label'=>'Jam Masuk','value'=>$karyawan->jam_masuk,'icon'=>'⏰'],
             ['label'=>'Jam Pulang','value'=>$karyawan->jam_pulang,'icon'=>'🏠'],
         ];

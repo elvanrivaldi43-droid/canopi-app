@@ -83,6 +83,21 @@
                 @error('level')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
             </div>
 
+            {{-- Hari Libur Default --}}
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Hari Libur Default</label>
+                <select name="hari_libur_default"
+                        style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;cursor:pointer;"
+                        :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
+                    <option value="">Tidak ada libur tetap</option>
+                    @foreach(\App\Services\LiburService::HARI as $angka => $nama)
+                    <option value="{{ $angka }}" {{ (string) old('hari_libur_default') === (string) $angka ? 'selected' : '' }}>{{ $nama }}</option>
+                    @endforeach
+                </select>
+                <div style="color:#64748b; font-size:11px; margin-top:6px;">Karyawan tetap bisa ajukan tukar/skip lewat menu Jadwal Libur kalau ada perubahan minggu tertentu.</div>
+                @error('hari_libur_default')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
+            </div>
+
             {{-- Jabatan --}}
             <div style="margin-bottom:16px;">
                 <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Jabatan <span style="color:#EF4444;">*</span></label>

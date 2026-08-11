@@ -40,7 +40,11 @@
                         <div style="font-size:11px;color:#64748b;">{{ $d['jabatan'] }}</div>
                     </td>
                     <td style="padding:10px 14px;font-family:monospace;font-weight:700;letter-spacing:1px;">
-                        {{ $d['kode'] ?? '—' }}
+                        @if($d['libur'])
+                            <span style="font-family:'Segoe UI',sans-serif;font-weight:600;letter-spacing:0;color:#94a3b8;font-size:12px;">🗓️ Libur</span>
+                        @else
+                            {{ $d['kode'] ?? '—' }}
+                        @endif
                     </td>
                     <td style="padding:10px 14px;">
                         @if($d['connected'])

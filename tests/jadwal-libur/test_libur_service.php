@@ -61,5 +61,8 @@ $check('tanpa default + 1 override tambah (nambah 1 libur) -> ngurang 1 hari ker
 $check('Februari 2026 (28 hari, bukan kabisat), tanpa default -> 28 hari kerja',
     $svc->hitungHariKerjaPada(null, [], 2, 2026), 28);
 
+$check('hitungHariKerjaPada dengan cap $sampaiHari=15, tanpa default -> 15 hari kehitung (bukan 31)',
+    $svc->hitungHariKerjaPada(null, [], 8, 2026, 15), 15);
+
 if ($fail) { echo "\n=== ADA YANG GAGAL ===\n"; exit(1); }
 echo "\n=== SEMUA TES LULUS ===\n";

@@ -50,6 +50,7 @@ class KaryawanController extends Controller
             'jam_masuk'       => 'required',
             'jam_pulang'      => 'required',
             'tgl_masuk_kerja' => 'required|date',
+            'hari_libur_default' => 'nullable|integer|between:0,6',
         ]);
 
         $karyawan = User::create([
@@ -68,6 +69,7 @@ class KaryawanController extends Controller
             'tgl_masuk_kerja'   => $request->tgl_masuk_kerja,
             'status'            => 'aktif',
             'status_registrasi' => 'menunggu',
+            'hari_libur_default' => $request->hari_libur_default,
         ]);
 
         if ($request->tunjangan) {

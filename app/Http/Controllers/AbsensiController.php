@@ -10,6 +10,7 @@ use App\Models\Absensi;
 use App\Models\User;
 use App\Models\LuarKota;
 use App\Services\TelegramService;
+use App\Services\LiburService;
 
 class AbsensiController extends Controller
 {
@@ -196,12 +197,15 @@ class AbsensiController extends Controller
                         ->orderBy('name')
                         ->get();
 
-        $data = $karyawan->map(function ($k) {
+        $liburService = app(\App\Services\LiburService::class);
+
+        $data = $karyawan->map(function ($k) use ($tanggal, $liburService) {
             return [
                 'nama'      => $k->name,
                 'jabatan'   => $k->jabatan,
                 'kode'      => \App\Models\KodeAbsen::kodeHariIniUntuk($k),
                 'connected' => (bool) $k->telegram_chat_id,
+                'libur'     => $liburService->isLibur($k, $tanggal),
             ];
         });
 

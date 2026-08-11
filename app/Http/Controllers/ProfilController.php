@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use App\Models\Absensi;
 use App\Models\User;
+use App\Services\LiburService;
 
 class ProfilController extends Controller
 {
@@ -30,7 +31,7 @@ class ProfilController extends Controller
         $hariHadir  = $bulanIni->whereIn('status',['hadir','telat','setengah_hari'])->count();
         $hariAlpha  = $bulanIni->where('status','alpha')->count();
         $hariTelat  = $bulanIni->where('status','telat')->count();
-        $hariKerja  = $this->hitungHariKerja(now()->month, now()->year);
+        $hariKerja  = app(LiburService::class)->hitungHariKerja($user, now()->month, now()->year, now()->day);
         $persenHadir= $hariKerja > 0 ? ($hariHadir/$hariKerja)*100 : 0;
 
         // Hitung kelas KPI
@@ -82,16 +83,5 @@ class ProfilController extends Controller
         ]);
 
         return back()->with('success', 'Profil berhasil diupdate!');
-    }
-
-    private function hitungHariKerja(int $bulan, int $tahun): int
-    {
-        $hariKerja = 0;
-        $hariAkhir = \Carbon\Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
-        for ($i = 1; $i <= now()->day; $i++) {
-            $tgl = \Carbon\Carbon::createFromDate($tahun, $bulan, $i);
-            if ($tgl->dayOfWeek !== \Carbon\Carbon::SUNDAY) $hariKerja++;
-        }
-        return $hariKerja;
     }
 }

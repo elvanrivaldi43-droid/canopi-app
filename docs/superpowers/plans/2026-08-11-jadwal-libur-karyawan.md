@@ -211,6 +211,7 @@ git commit -m "feat: migrasi & model jadwal libur per-karyawan"
 **Catatan buat sesi deploy nanti (bukan step, jangan dieksekusi sekarang):** karena production tidak bisa `php artisan migrate`, sebelum push ke `main`, siapkan SQL idempotent buat Elvan jalankan manual di phpMyAdmin, contoh:
 ```sql
 ALTER TABLE users ADD COLUMN IF NOT EXISTS hari_libur_default TINYINT UNSIGNED NULL;
+UPDATE users SET hari_libur_default = 0 WHERE hari_libur_default IS NULL;
 CREATE TABLE IF NOT EXISTS jadwal_libur (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,

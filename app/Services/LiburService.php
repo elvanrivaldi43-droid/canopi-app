@@ -24,10 +24,10 @@ class LiburService
         return $hariLiburDefault !== null && $tanggal->dayOfWeek === $hariLiburDefault;
     }
 
-    public function hitungHariKerjaPada(?int $hariLiburDefault, array $overrides, int $bulan, int $tahun): int
+    public function hitungHariKerjaPada(?int $hariLiburDefault, array $overrides, int $bulan, int $tahun, ?int $sampaiHari = null): int
     {
         $hariKerja  = 0;
-        $akhirBulan = Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
+        $akhirBulan = $sampaiHari ?? Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
         for ($i = 1; $i <= $akhirBulan; $i++) {
             $tgl = Carbon::createFromDate($tahun, $bulan, $i);
             if (!$this->cocokLiburPada($hariLiburDefault, $overrides, $tgl)) {
@@ -44,12 +44,12 @@ class LiburService
         return $this->cocokLiburPada($user->hari_libur_default, $overrides, $tanggal);
     }
 
-    public function hitungHariKerja(User $user, int $bulan, int $tahun): int
+    public function hitungHariKerja(User $user, int $bulan, int $tahun, ?int $sampaiHari = null): int
     {
         $awal      = Carbon::createFromDate($tahun, $bulan, 1);
-        $akhir     = $awal->copy()->endOfMonth();
+        $akhir     = $sampaiHari ? $awal->copy()->day($sampaiHari) : $awal->copy()->endOfMonth();
         $overrides = $this->ambilOverride($user, $awal, $akhir);
-        return $this->hitungHariKerjaPada($user->hari_libur_default, $overrides, $bulan, $tahun);
+        return $this->hitungHariKerjaPada($user->hari_libur_default, $overrides, $bulan, $tahun, $sampaiHari);
     }
 
     private function ambilOverride(User $user, Carbon $dari, Carbon $sampai): array
