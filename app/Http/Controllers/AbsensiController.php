@@ -315,7 +315,7 @@ class AbsensiController extends Controller
 
         $lokasi        = $this->getLokasiUser($user->level);
         $adaLembur     = $absen->lembur_approved ?? false;
-        $jamLemburMax  = self::JAM_LEMBUR;
+        $jamLemburMax  = substr($user->jam_pulang, 0, 5);
         $absenHariIni  = $absen;
         $luarKotaAktif = LuarKota::getAktif($user->id);
 
