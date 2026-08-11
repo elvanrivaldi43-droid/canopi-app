@@ -127,7 +127,7 @@
 <script>
 function absenPulang() {
     const jamMasuk = '{{ substr($absenHariIni->jam_masuk, 0, 5) }}';
-    const jamPulangNormal = '{{ auth()->user()->jam_pulang ? substr(auth()->user()->jam_pulang, 0, 5) : "16:30" }}';
+    const jamPulangNormal = '{{ auth()->user()->jam_pulang ? substr(auth()->user()->jam_pulang, 0, 5) : "17:00" }}';
     const csrfToken = '{{ csrf_token() }}';
 
     return {
