@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Models\Absensi;
 use App\Models\IzinAbsen;
 use App\Services\TelegramService;
+use App\Services\LiburService;
 use Carbon\Carbon;
 
 $jam     = now()->format('H:i');
@@ -57,8 +58,11 @@ if ($jam >= '13:00' && $jam <= '13:15') {
                              ->where('status', 'alpha')
                              ->exists();
 
-        // Hanya alpha jika: belum masuk sama sekali + tidak ada izin + belum alpha
-        if (!$sudahMasuk && !$adaIzin && !$sudahAlpha) {
+        // Cek apakah hari ini jadwal libur karyawan itu
+        $sedangLibur = app(LiburService::class)->isLibur($k, $tanggal);
+
+        // Hanya alpha jika: belum masuk sama sekali + tidak ada izin + belum alpha + bukan hari libur
+        if (!$sudahMasuk && !$adaIzin && !$sudahAlpha && !$sedangLibur) {
             Absensi::create([
                 'user_id'             => $k->id,
                 'tanggal'             => $tanggal,

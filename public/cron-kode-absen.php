@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Models\KodeAbsen;
 use App\Models\Absensi;
 use App\Services\TelegramService;
+use App\Services\LiburService;
 use Carbon\Carbon;
 
 $log = [];
@@ -44,6 +45,12 @@ $skip     = 0;
 
 foreach ($karyawan as $k) {
     try {
+        if (app(LiburService::class)->isLibur($k, $tanggal)) {
+            $log[] = "⏭ Skip (jadwal libur): {$k->name}";
+            $skip++;
+            continue;
+        }
+
         $existing = KodeAbsen::whereDate('tanggal', $tanggal)->where('user_id', $k->id)->first();
 
         if ($existing) {
