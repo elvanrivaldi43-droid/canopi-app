@@ -136,7 +136,7 @@ class AbsensiController extends Controller
         $fotoPath     = $this->simpanFotoBase64($request->foto,'absensi/'.$user->id.'/'.today()->format('Ymd'));
         $jamSekarang  = now()->format('H:i');
         $setengahHari = $jamSekarang >= self::JAM_SETENGAH;
-        $menitTelat   = $this->hitungMenitTelat($jamSekarang, self::JAM_MASUK);
+        $menitTelat   = $this->hitungMenitTelat($jamSekarang, $user->jam_masuk);
 
         if ($setengahHari) {
             $potongan    = 0;
@@ -347,8 +347,8 @@ class AbsensiController extends Controller
         $setengahHari = $absen->status!=='setengah_hari' && $menitKerja<225;
 
         $lemburJam=$gajiLembur=0;
-        if ($absen->lembur_approved && now()->format('H:i')>=self::JAM_LEMBUR) {
-            $lemburJam  = min(round($this->hitungMenitTelat(now()->format('H:i'),self::JAM_LEMBUR)/60,2),self::LEMBUR_MAX_JAM);
+        if ($absen->lembur_approved && now()->format('H:i')>=substr($user->jam_pulang,0,5)) {
+            $lemburJam  = min(round($this->hitungMenitTelat(now()->format('H:i'),substr($user->jam_pulang,0,5))/60,2),self::LEMBUR_MAX_JAM);
             $gajiLembur = $lemburJam*(($user->gaji_harian??0)/7.5)*1.2;
         }
 
