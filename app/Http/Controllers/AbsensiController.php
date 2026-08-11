@@ -94,7 +94,7 @@ class AbsensiController extends Controller
         $absen = Absensi::where('user_id',$user->id)->whereDate('tanggal',today())->first();
 
         if ($absen?->jam_masuk) return redirect()->route('absensi.index')->with('info','Kamu sudah absen masuk hari ini.');
-        if (now()->format('H:i') < self::JAM_BUKA_ABSEN) return redirect()->route('absensi.index')->with('error','Absen masuk baru bisa mulai jam 06:30');
+        if (now()->format('H:i') < self::JAM_BUKA_ABSEN && !LuarKota::sedangLuarKota($user->id)) return redirect()->route('absensi.index')->with('error','Absen masuk baru bisa mulai jam 06:30');
 
         $lokasi        = $this->getLokasiUser($user->level);
         $setengahHari  = now()->format('H:i') >= self::JAM_SETENGAH;
