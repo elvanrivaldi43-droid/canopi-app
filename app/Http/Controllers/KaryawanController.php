@@ -47,8 +47,8 @@ class KaryawanController extends Controller
             'gaji_bulanan'    => 'nullable|numeric|min:0',
             'uang_makan'      => 'nullable|numeric|min:0',
             'uang_bonus'      => 'nullable|numeric|min:0',
-            'jam_masuk'       => 'required',
-            'jam_pulang'      => 'required',
+            'jam_masuk'       => 'required|date_format:H:i',
+            'jam_pulang'      => 'required|date_format:H:i',
             'tgl_masuk_kerja' => 'required|date',
             'hari_libur_default' => 'nullable|integer|between:0,6',
         ]);
@@ -128,8 +128,8 @@ class KaryawanController extends Controller
             'gaji_bulanan'       => 'nullable|numeric|min:0',
             'uang_makan'         => 'nullable|numeric|min:0',
             'uang_bonus'         => 'nullable|numeric|min:0',
-            'jam_masuk'          => 'required',
-            'jam_pulang'         => 'required',
+            'jam_masuk'          => 'required|date_format:H:i',
+            'jam_pulang'         => 'required|date_format:H:i',
             'tgl_masuk_kerja'    => 'required|date',
             'hari_libur_default' => 'nullable|integer|between:0,6',
         ]);
