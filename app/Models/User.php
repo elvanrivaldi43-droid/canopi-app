@@ -14,7 +14,7 @@ class User extends Authenticatable
         'tgl_masuk_kerja', 'tipe_gaji',
         'nama_bank', 'no_rekening', 'atas_nama',
         'nama_kontak_darurat', 'no_kontak_darurat',
-        'tanggal_bergabung',
+        'tanggal_bergabung', 'hari_libur_default',
     ];
     protected $hidden = ['password', 'remember_token'];
     protected function casts(): array
