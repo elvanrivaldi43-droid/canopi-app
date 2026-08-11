@@ -119,7 +119,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
                 <div>
                     <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Jam Masuk</label>
-                    <input type="time" name="jam_masuk" value="{{ old('jam_masuk', '07:30') }}" required
+                    <input type="time" name="jam_masuk" value="{{ old('jam_masuk', '07:00') }}" required
                            style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;"
                            :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
                 </div>

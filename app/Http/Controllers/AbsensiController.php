@@ -312,11 +312,10 @@ class AbsensiController extends Controller
 
         $lokasi        = $this->getLokasiUser($user->level);
         $adaLembur     = $absen->lembur_approved ?? false;
-        $jamLemburMax  = substr($user->jam_pulang, 0, 5);
         $absenHariIni  = $absen;
         $luarKotaAktif = LuarKota::getAktif($user->id);
 
-        return view('absensi.form-pulang', compact('user','lokasi','absen','absenHariIni','adaLembur','jamLemburMax','luarKotaAktif'));
+        return view('absensi.form-pulang', compact('user','lokasi','absen','absenHariIni','adaLembur','luarKotaAktif'));
     }
 
     public function absenPulang(Request $request)
