@@ -36,6 +36,10 @@
     📤 Ajukan Izin Baru
   </a>
 
+  <a href="{{ route('jadwal-libur.index') }}" style="display:block;text-align:center;border:1px solid #334155;color:#94a3b8;border-radius:10px;padding:12px 20px;font-weight:600;font-size:13px;text-decoration:none;margin-bottom:16px;">
+    🗓️ Jadwal Libur Saya (tukar/skip/tambah)
+  </a>
+
   @forelse($izinList as $izin)
   <div class="card-dark">
     <div class="d-flex justify-content-between align-items-start">
