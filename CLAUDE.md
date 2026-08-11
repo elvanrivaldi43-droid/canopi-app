@@ -381,3 +381,42 @@ Spec: `docs/superpowers/specs/2026-08-11-jadwal-libur-karyawan-design.md`. Plan 
 **Dicatat, bukan diperbaiki (di luar cakupan sesi ini):**
 - `JadwalLiburController::approve()`/`reject()` gak ada guard "udah diproses" (bisa double-notif kalau di-klik 2x/tab basi) — sengaja dibiarin karena `IzinAbsenController` punya gap yang sama persis, mending konsisten dua-duanya belum diperbaiki daripada beda perlakuan.
 - `LiburService::hitungHariKerja()` ada inkonsistensi kecil gaya kode (`?:` vs `??` buat parameter `$sampaiHari`) — gak kepakai sama caller manapun sekarang (cuma dipanggil dengan nilai ≥1), jadi gak berbahaya, tapi dicatat buat siapapun yang nambah caller baru nanti.
+
+---
+
+**11 Agustus 2026 (sesi kedua) — Fitur "Jam Masuk/Pulang Per-Karyawan" SELESAI & di-push (subagent-driven-development, 6 task + final whole-branch review + 1 fix round), kerja langsung di `main` (pilihan Elvan, bukan worktree).**
+
+Lanjutan dari brainstorm yang sempat kepotong sesi sebelumnya (konteks tinggi) — keputusan sudah dikunci waktu itu, sesi ini re-verifikasi kode masih akurat lalu langsung tulis spec+plan+eksekusi. Ganti telat/lembur dari konstanta hardcode (`JAM_MASUK`/`JAM_LEMBUR`, sama buat semua karyawan) ke kolom `users.jam_masuk`/`jam_pulang` per-karyawan yang sudah ada di DB tapi selama ini dekoratif. Spec: `docs/superpowers/specs/2026-08-11-jam-masuk-pulang-per-karyawan-design.md`. Plan: `docs/superpowers/plans/2026-08-11-jam-masuk-pulang-per-karyawan.md`.
+
+**Yang jadi:**
+- `AbsensiController::absenMasuk()`/`absenPulang()` — telat & lembur baca `$user->jam_masuk`/`jam_pulang`, bukan konstanta seragam.
+- Gate `JAM_BUKA_ABSEN` (06:30) dikecualikan buat karyawan mode luar kota aktif (`LuarKota::sedangLuarKota()`) — bisa absen masuk lebih pagi (mis. berangkat jam 3-4 pagi).
+- `JAM_SETENGAH` (10:00) dan absen siang (13:00-14:00) TETAP seragam, sengaja tidak ikut geser per keputusan brainstorm.
+- Validasi `date_format:H:i` ditambah ke field `jam_masuk`/`jam_pulang` di form Karyawan (`KaryawanController::store()`/`update()`).
+- Konstanta mati `JAM_MASUK`/`JAM_LEMBUR`/`JAM_PULANG` dihapus dari `AbsensiController`.
+- Test standalone (pola sama `tests/jadwal-libur/*.php`): `tests/absensi/test_gate_buka_absen.php` (5/5 PASS) + `tests/absensi/test_jam_individu.php` (7/7 PASS, verifikasi nol-regresi format `H:i` vs `H:i:s`).
+
+**Ketemu & dibenerin lewat final whole-branch review (opus), sebelum push:**
+- **Penting:** `resources/views/karyawan/edit.blade.php` render nilai mentah `H:i:s` ke `<input type="time">` — begitu Task 5 nambah `date_format:H:i`, form Edit Karyawan bisa gagal simpan (termasuk field lain yang gak terkait) kalau browser submit `07:00:00` bukan `07:00`. Di-fix `substr(...,0,5)`, mengikuti pola yang sudah ada di `absensi/rekap.blade.php`.
+- **Penting:** default `jam_masuk` di form tambah karyawan baru masih `07:30` — beda dari standar backfill `07:00` yang dikunci di keputusan brainstorm. Karyawan baru pasca-deploy bisa diam-diam dapat ambang telat beda 30 menit dari yang lain. Di-fix ke `07:00`.
+- 2 minor ikut dibenerin: variabel `$jamLemburMax` mati (di-compact ke view yang gak pernah bacanya) dihapus; `tests/absensi/test_jam_individu.php` yang diminta spec tapi kelewat waktu eksekusi 6 task, ditambahkan di ronde fix akhir.
+
+**Dicatat, bukan diperbaiki (temuan reviewer di luar cakupan implementasi, buat jadi perhatian Elvan bukan bug kode):**
+- Kalau `jam_masuk` seorang karyawan di-set LEBIH PAGI dari 06:30 (gate `JAM_BUKA_ABSEN` yang tetap seragam), dia otomatis telat tiap hari tanpa pesan error yang jelas kenapa — kombinasi 2 keputusan brainstorm yang gak saling ketemu. **Kalau mau set jam masuk karyawan, jangan di bawah 06:30.**
+- Gate `JAM_BUKA_ABSEN` cuma dicek di `formMasuk()` (tampilan), endpoint POST `absenMasuk()` gak pernah menegakkannya — pre-existing dari sebelum fitur ini, bukan regresi baru.
+
+**⚠️ SQL backfill WAJIB dijalankan sebelum kode ini aktif dipakai** (dikonfirmasi Elvan sudah/akan dijalankan bareng push 11 Agustus):
+```sql
+UPDATE users SET jam_masuk = '07:00:00', jam_pulang = '17:00:00'
+WHERE status = 'aktif';
+```
+Tanpa ini: karyawan yang belum di-backfill tetap pakai default lama dari migrasi (`07:30`/`17:00`) — bukan crash, cuma diam-diam beda ambang telat 30 menit dari standar armada sampai di-backfill manual.
+
+**Status git:** push ke `main` sukses (commit `0153a2d`, 8 commit total sesi ini) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit.
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Set `jam_masuk` custom (mis. 08:00) buat 1 karyawan, absen jam 07:30 → harus `hadir` bukan `telat`.
+- Karyawan yang jamnya TIDAK di-custom → tetap `telat` di 07:30 seperti sebelumnya (nol-regresi).
+- Karyawan mode luar kota aktif → absen masuk jam 05:00 lolos (dulu diblokir sampai 06:30).
+- Edit karyawan TANPA ubah field jam → simpan berhasil (ini regresi yang sempat ketemu & sudah di-fix, tapi belum dites nyata di production).
+- Lembur dengan `jam_pulang` custom → mulai dihitung dari jam custom, bukan 17:00.
