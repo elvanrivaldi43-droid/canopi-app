@@ -461,3 +461,28 @@ Tanpa ini: `tanggal_baru` gak ada di DB → `LiburService::ambilOverride()` quer
 - Riwayat & approval nampilin 2 tanggal ("dari → ke") buat Tukar.
 - Notif Telegram (ajuan masuk & hasil) buat Tukar nampilin 2 tanggal dengan benar.
 - Coba ajukan tanggal yang bentrok sama ajuan lain (pending/approved) → ditolak.
+
+---
+
+**12 Agustus 2026 (sesi ketiga) — Fitur "Validasi Silang Izin ↔ Jadwal Libur" SELESAI & di-push (subagent-driven-development, 2 task + final whole-branch review + 1 follow-up fix).**
+
+Dipicu pertanyaan Elvan soal beda Izin/Sakit/Cuti vs Tambah Libur — ketauan dua sistem itu gak saling ngecek sama sekali, karyawan bisa dapat ajuan approved di keduanya buat tanggal yang sama. Spec: `docs/superpowers/specs/2026-08-12-validasi-silang-izin-libur-design.md`. Plan: `docs/superpowers/plans/2026-08-12-validasi-silang-izin-libur.md`.
+
+**Yang jadi:**
+- `IzinAbsenController::store()` sekarang cek `JadwalLibur` (tanggal ATAU tanggal_baru) sebelum simpan izin baru.
+- `JadwalLiburController::store()` sekarang cek `IzinAbsen` sebelum simpan ajuan Tukar/Skip/Tambah baru — buat Tukar, dua-duanya (tanggal lama & baru) dicek.
+- Scope per-karyawan (2 karyawan beda boleh bentrok tanggal), status `pending`/`approved` yang dianggap aktif (`rejected` gak menghalangi).
+- `dinasLuar()` (dicatat langsung Owner/Mandor) SENGAJA dikecualikan dari validasi ini — keputusan sadar Owner, bukan celah yang perlu dicegah sistem.
+
+**Ketemu & dibenerin lewat final whole-branch review (opus) + 1 follow-up fix (dikonfirmasi Elvan, bukan diputuskan sepihak):**
+- **Bug lama ikut kebenerin sekalian** (bukan dari fitur ini, tapi jadi lebih kerasa dampaknya): `approve()`/`reject()` di KEDUA controller gak ada penjaga "udah diproses" — tab browser basi bisa approve ulang/approve ajuan yang udah ditolak, yang bisa bikin validasi silang baru ini balik jebol. Ini bug yang sama yang sengaja ditunda pas sesi jadwal-libur sebelumnya (biar dua controller konsisten sama-sama belum dibenerin) — sekarang dibenerin BARENG di keduanya sekaligus (4 fungsi: `IzinAbsenController::approve()`/`reject()`, `JadwalLiburController::approve()`/`reject()`), sekalian nutup bug notif dobel yang juga udah lama ada.
+- **Ketemu efek samping gak sengaja:** query validasi silang di `JadwalLiburController` ternyata otomatis ikut ngeblokir Dinas Luar juga (bukan cuma Izin/Sakit/Cuti) — dikonfirmasi ke Elvan, TERNYATA itu perilaku yang diinginkan (karyawan dinas luar emang gak boleh dapat libur ekstra di tanggal sama), cuma pesan errornya dibenerin biar nyebut "dinas luar" juga.
+
+**Status git:** push ke `main` sukses (commit `89ef840`) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit. **Tidak ada SQL production yang perlu dijalankan** buat fitur ini (murni kode, gak ada tabel/kolom baru).
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Karyawan A ajuin Cuti tanggal X (pending) → coba ajuin Tukar Libur tanggal X → harus ditolak.
+- Karyawan A ajuin Izin tanggal X, Karyawan B (beda orang) ajuin Tukar Libur tanggal X → harus TETAP BISA.
+- Owner catat Dinas Luar di tanggal yang karyawan itu punya ajuan Jadwal Libur aktif → harus TETAP BISA (Dinas Luar dikecualikan dari sisi dia yang nyatet).
+- Karyawan ajuin Jadwal Libur di tanggal yang Owner udah catat Dinas Luar buat dia → harus DITOLAK (arah sebaliknya, baru dikonfirmasi 12 Agustus).
+- Buka 2 tab approval izin/libur, proses salah satu di tab 1, coba approve/tolak lagi di tab 2 (basi) → harus ditolak dengan pesan "Ajuan ini sudah diproses."
