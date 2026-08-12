@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\JadwalLibur;
 use App\Models\User;
 use App\Services\TelegramService;
+use App\Services\LiburService;
+use Carbon\Carbon;
 
 class JadwalLiburController extends Controller
 {
@@ -20,7 +22,17 @@ class JadwalLiburController extends Controller
         $user       = Auth::user();
         $tanggalMin = today()->addDay()->format('Y-m-d');
 
-        return view('jadwal-libur.create', compact('user', 'tanggalMin'));
+        $svc = app(LiburService::class);
+        [$jendelaAwal, $jendelaAkhir] = $svc->jendelaTukarSkip(now());
+
+        $punyaLiburDefault = $user->hari_libur_default !== null;
+        $tanggalKandidat   = $punyaLiburDefault
+            ? $svc->tanggalKandidatLibur($user->hari_libur_default, $jendelaAwal, $jendelaAkhir)
+            : [];
+
+        return view('jadwal-libur.create', compact(
+            'user', 'tanggalMin', 'punyaLiburDefault', 'tanggalKandidat', 'jendelaAwal', 'jendelaAkhir'
+        ));
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -32,26 +44,63 @@ class JadwalLiburController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'tanggal' => 'required|date|after:today',
-            'jenis'   => 'required|in:tambah,batal',
-            'alasan'  => 'nullable|string|max:500',
+            'tanggal'      => 'required|date|after:today',
+            'tanggal_baru' => 'required_if:jenis,tukar|nullable|date|after:today|different:tanggal',
+            'jenis'        => 'required|in:tambah,batal,tukar',
+            'alasan'       => 'nullable|string|max:500',
         ]);
 
-        $sudahAda = JadwalLibur::where('user_id', $user->id)
-                               ->whereDate('tanggal', $request->tanggal)
-                               ->whereIn('status', ['pending', 'approved'])
-                               ->exists();
+        $svc = app(LiburService::class);
+        [$jendelaAwal, $jendelaAkhir] = $svc->jendelaTukarSkip(now());
+        $tanggal = Carbon::parse($request->tanggal);
 
-        if ($sudahAda) {
-            return back()->with('error', 'Kamu sudah punya ajuan jadwal libur pada tanggal tersebut.');
+        if (in_array($request->jenis, ['batal', 'tukar'])) {
+            if ($user->hari_libur_default === null) {
+                return back()->with('error', 'Kamu belum punya jadwal libur default, gak bisa ajukan Skip/Tukar.')->withInput();
+            }
+            if ($tanggal->dayOfWeek !== $user->hari_libur_default) {
+                return back()->with('error', 'Tanggal itu bukan hari libur default kamu.')->withInput();
+            }
+            if ($tanggal->lt($jendelaAwal) || $tanggal->gt($jendelaAkhir)) {
+                return back()->with('error', 'Tanggal harus dalam sisa minggu ini atau minggu depan.')->withInput();
+            }
+        }
+
+        if ($request->jenis === 'tukar') {
+            $tanggalBaru = Carbon::parse($request->tanggal_baru);
+            if ($tanggalBaru->lt($jendelaAwal) || $tanggalBaru->gt($jendelaAkhir)) {
+                return back()->with('error', 'Tanggal pengganti harus dalam sisa minggu ini atau minggu depan.')->withInput();
+            }
+            if ($tanggalBaru->dayOfWeek === $user->hari_libur_default) {
+                return back()->with('error', 'Tanggal pengganti harus hari yang normalnya kamu kerja.')->withInput();
+            }
+        }
+
+        $tanggalBaruInput = $request->jenis === 'tukar' ? $request->tanggal_baru : null;
+
+        $bentrok = JadwalLibur::where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->where(function ($q) use ($request, $tanggalBaruInput) {
+                $q->whereDate('tanggal', $request->tanggal)
+                  ->orWhereDate('tanggal_baru', $request->tanggal);
+                if ($tanggalBaruInput) {
+                    $q->orWhereDate('tanggal', $tanggalBaruInput)
+                      ->orWhereDate('tanggal_baru', $tanggalBaruInput);
+                }
+            })
+            ->exists();
+
+        if ($bentrok) {
+            return back()->with('error', 'Tanggal yang kamu pilih bentrok sama ajuan lain yang masih berjalan.')->withInput();
         }
 
         $jadwal = JadwalLibur::create([
-            'user_id' => $user->id,
-            'tanggal' => $request->tanggal,
-            'jenis'   => $request->jenis,
-            'alasan'  => $request->alasan,
-            'status'  => 'pending',
+            'user_id'      => $user->id,
+            'tanggal'      => $request->tanggal,
+            'tanggal_baru' => $tanggalBaruInput,
+            'jenis'        => $request->jenis,
+            'alasan'       => $request->alasan,
+            'status'       => 'pending',
         ]);
 
         $this->kirimNotifPengajuan($user, $jadwal);
@@ -140,7 +189,7 @@ class JadwalLiburController extends Controller
         foreach ($penerima as $p) {
             $pesan = "🗓️ *AJUAN JADWAL LIBUR*\n"
                    . "Dari: {$user->name} ({$user->jabatan})\n"
-                   . "Tanggal: {$jadwal->tanggal->format('d/m/Y')}\n"
+                   . "Tanggal: {$jadwal->labelTanggal('l, d F Y')}\n"
                    . "Jenis: {$jadwal->jenisLabel()}\n"
                    . ($jadwal->alasan ? "Alasan: {$jadwal->alasan}\n" : '')
                    . "---\n"
@@ -157,7 +206,7 @@ class JadwalLiburController extends Controller
         $label = $hasil === 'approved' ? 'DISETUJUI' : 'DITOLAK';
         $pesan = "{$icon} *JADWAL LIBUR {$label}*\n"
                . "Jenis: {$jadwal->jenisLabel()}\n"
-               . "Tanggal: {$jadwal->tanggal->format('d/m/Y')}\n"
+               . "Tanggal: {$jadwal->labelTanggal('l, d F Y')}\n"
                . "---\n"
                . "Detail di: app.kanopibsd.co.id/jadwal-libur";
         app(TelegramService::class)->kirim($user->telegram_chat_id, $pesan);
