@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\JadwalLibur;
+use App\Models\IzinAbsen;
 use App\Models\User;
 use App\Services\TelegramService;
 use App\Services\LiburService;
@@ -92,6 +93,20 @@ class JadwalLiburController extends Controller
 
         if ($bentrok) {
             return back()->with('error', 'Tanggal yang kamu pilih bentrok sama ajuan lain yang masih berjalan.')->withInput();
+        }
+
+        $bentrokIzin = IzinAbsen::where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->where(function ($q) use ($request, $tanggalBaruInput) {
+                $q->whereDate('tanggal', $request->tanggal);
+                if ($tanggalBaruInput) {
+                    $q->orWhereDate('tanggal', $tanggalBaruInput);
+                }
+            })
+            ->exists();
+
+        if ($bentrokIzin) {
+            return back()->with('error', 'Tanggal ini sudah ada ajuan izin/sakit/cuti yang masih berjalan.')->withInput();
         }
 
         $jadwal = JadwalLibur::create([
