@@ -44,7 +44,7 @@
           {{ $jadwal->jenisLabel() }}
         </div>
         <div style="font-size:12px; color:#64748b; margin-top:2px;">
-          {{ $jadwal->tanggal->translatedFormat('l, d F Y') }}
+          {{ $jadwal->labelTanggal('l, d F Y') }}
         </div>
         @if($jadwal->alasan)
         <div style="font-size:12px; color:#94a3b8; margin-top:6px;">

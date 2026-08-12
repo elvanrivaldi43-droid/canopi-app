@@ -51,7 +51,7 @@
     </div>
 
     <div style="font-size:13px; color:#94a3b8; margin-bottom:4px;">
-      📅 {{ $jadwal->tanggal->translatedFormat('l, d F Y') }}
+      📅 {{ $jadwal->labelTanggal('l, d F Y') }}
     </div>
     @if($jadwal->alasan)
     <div style="font-size:13px; color:#e2e8f0; margin-bottom:12px;">
@@ -87,7 +87,7 @@
       <div>
         <div style="font-size:13px; font-weight:600; color:#f1f5f9;">{{ $jadwal->user->name }}</div>
         <div style="font-size:11px; color:#64748b;">
-          {{ $jadwal->jenisLabel() }} · {{ $jadwal->tanggal->format('d/m/Y') }}
+          {{ $jadwal->jenisLabel() }} · {{ $jadwal->labelTanggal() }}
         </div>
       </div>
       <span class="badge badge-{{ $jadwal->status }}" style="font-size:11px; padding:4px 10px; border-radius:20px;">
