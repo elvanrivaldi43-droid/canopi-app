@@ -106,7 +106,7 @@ class JadwalLiburController extends Controller
             ->exists();
 
         if ($bentrokIzin) {
-            return back()->with('error', 'Tanggal ini sudah ada ajuan izin/sakit/cuti yang masih berjalan.')->withInput();
+            return back()->with('error', 'Tanggal ini sudah ada izin/sakit/cuti/dinas luar yang masih berjalan.')->withInput();
         }
 
         $jadwal = JadwalLibur::create([
@@ -165,6 +165,10 @@ class JadwalLiburController extends Controller
 
     public function approve(Request $request, JadwalLibur $jadwalLibur)
     {
+        if ($jadwalLibur->status !== 'pending') {
+            return back()->with('error', 'Ajuan ini sudah diproses.');
+        }
+
         $jadwalLibur->update([
             'status'        => 'approved',
             'diproses_oleh' => Auth::id(),
@@ -182,6 +186,10 @@ class JadwalLiburController extends Controller
 
     public function reject(Request $request, JadwalLibur $jadwalLibur)
     {
+        if ($jadwalLibur->status !== 'pending') {
+            return back()->with('error', 'Ajuan ini sudah diproses.');
+        }
+
         $jadwalLibur->update([
             'status'        => 'rejected',
             'diproses_oleh' => Auth::id(),

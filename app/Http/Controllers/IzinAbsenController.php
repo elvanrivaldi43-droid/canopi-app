@@ -166,6 +166,10 @@ class IzinAbsenController extends Controller
 
     public function approve(Request $request, IzinAbsen $izin)
     {
+        if ($izin->status !== 'pending') {
+            return back()->with('error', 'Ajuan ini sudah diproses.');
+        }
+
         $request->validate([
             'catatan' => 'nullable|string|max:255',
         ]);
@@ -192,6 +196,10 @@ class IzinAbsenController extends Controller
 
     public function reject(Request $request, IzinAbsen $izin)
     {
+        if ($izin->status !== 'pending') {
+            return back()->with('error', 'Ajuan ini sudah diproses.');
+        }
+
         $request->validate([
             'catatan' => 'required|string|max:255',
         ]);
