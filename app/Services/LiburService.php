@@ -37,6 +37,37 @@ class LiburService
         return $hariKerja;
     }
 
+    public function expandTukar(array $row): array
+    {
+        if ($row['jenis'] === 'tukar') {
+            return [
+                ['tanggal' => $row['tanggal'], 'jenis' => 'batal'],
+                ['tanggal' => $row['tanggal_baru'], 'jenis' => 'tambah'],
+            ];
+        }
+        return [['tanggal' => $row['tanggal'], 'jenis' => $row['jenis']]];
+    }
+
+    public function jendelaTukarSkip(Carbon $sekarang): array
+    {
+        $awal  = $sekarang->copy()->addDay()->startOfDay();
+        $akhir = $sekarang->copy()->startOfWeek(Carbon::MONDAY)->addWeeks(2)->subDay()->endOfDay();
+        return [$awal, $akhir];
+    }
+
+    public function tanggalKandidatLibur(int $hariLiburDefault, Carbon $awal, Carbon $akhir): array
+    {
+        $hasil = [];
+        $cur   = $awal->copy();
+        while ($cur->lte($akhir)) {
+            if ($cur->dayOfWeek === $hariLiburDefault) {
+                $hasil[] = $cur->format('Y-m-d');
+            }
+            $cur->addDay();
+        }
+        return $hasil;
+    }
+
     // Wrapper database — dipakai cron & GajiService.
     public function isLibur(User $user, Carbon $tanggal): bool
     {
@@ -54,12 +85,25 @@ class LiburService
 
     private function ambilOverride(User $user, Carbon $dari, Carbon $sampai): array
     {
-        return JadwalLibur::where('user_id', $user->id)
+        $dariStr   = $dari->format('Y-m-d');
+        $sampaiStr = $sampai->format('Y-m-d');
+
+        $rows = JadwalLibur::where('user_id', $user->id)
             ->where('status', 'approved')
-            ->whereDate('tanggal', '>=', $dari->format('Y-m-d'))
-            ->whereDate('tanggal', '<=', $sampai->format('Y-m-d'))
-            ->get(['tanggal', 'jenis'])
-            ->map(fn($o) => ['tanggal' => $o->tanggal->format('Y-m-d'), 'jenis' => $o->jenis])
-            ->toArray();
+            ->where(function ($q) use ($dariStr, $sampaiStr) {
+                $q->whereBetween('tanggal', [$dariStr, $sampaiStr])
+                  ->orWhereBetween('tanggal_baru', [$dariStr, $sampaiStr]);
+            })
+            ->get(['tanggal', 'tanggal_baru', 'jenis']);
+
+        $overrides = [];
+        foreach ($rows as $o) {
+            $overrides = array_merge($overrides, $this->expandTukar([
+                'tanggal'      => $o->tanggal->format('Y-m-d'),
+                'tanggal_baru' => $o->tanggal_baru?->format('Y-m-d'),
+                'jenis'        => $o->jenis,
+            ]));
+        }
+        return $overrides;
     }
 }
