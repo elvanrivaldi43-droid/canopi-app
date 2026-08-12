@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\IzinAbsen;
 use App\Models\Absensi;
+use App\Models\JadwalLibur;
 use App\Models\User;
 use App\Services\TelegramService;
 
@@ -74,6 +75,19 @@ class IzinAbsenController extends Controller
 
         if ($sudahAda) {
             return back()->with('error', 'Kamu sudah punya izin pada tanggal tersebut.');
+        }
+
+        // Cek bentrok sama ajuan Jadwal Libur (Tukar/Skip/Tambah) yang masih aktif
+        $bentrokLibur = JadwalLibur::where('user_id', $user->id)
+                                   ->whereIn('status', ['pending', 'approved'])
+                                   ->where(function ($q) use ($request) {
+                                       $q->whereDate('tanggal', $request->tanggal)
+                                         ->orWhereDate('tanggal_baru', $request->tanggal);
+                                   })
+                                   ->exists();
+
+        if ($bentrokLibur) {
+            return back()->with('error', 'Tanggal ini sudah ada ajuan jadwal libur (Tukar/Skip/Tambah) yang masih berjalan.');
         }
 
         // Upload foto surat jika ada
