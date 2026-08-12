@@ -420,3 +420,44 @@ Tanpa ini: karyawan yang belum di-backfill tetap pakai default lama dari migrasi
 - Karyawan mode luar kota aktif → absen masuk jam 05:00 lolos (dulu diblokir sampai 06:30).
 - Edit karyawan TANPA ubah field jam → simpan berhasil (ini regresi yang sempat ketemu & sudah di-fix, tapi belum dites nyata di production).
 - Lembur dengan `jam_pulang` custom → mulai dihitung dari jam custom, bukan 17:00.
+
+---
+
+**12 Agustus 2026 — Fitur "Gabungkan Ajuan Jadwal Libur Jadi 1 Form (Tukar/Skip/Tambah)" SELESAI & di-push (subagent-driven-development, 5 task + final whole-branch review + 1 fix round).**
+
+Dipicu Elvan minta 1 form buat tukar/skip/tambah libur (bukan 2 ajuan terpisah kayak sebelumnya). Brainstorm penuh (banyak klarifikasi kasus nyata: tukar maju, tukar mundur lintas minggu, jendela 2-minggu Senin-Minggu). Spec: `docs/superpowers/specs/2026-08-11-tukar-libur-1-form-design.md`. Plan: `docs/superpowers/plans/2026-08-11-tukar-libur-1-form.md`.
+
+**Yang jadi:**
+- 3 jenis ajuan eksplisit di 1 form: **Tukar** (geser 1 hari libur, tanggal lama+baru dalam 1 baris data, approve/tolak otomatis atomik), **Skip** (dulu "Batal", cuma relabel — value DB tetap `batal`), **Tambah** (gak berubah). Tabel `jadwal_libur` dapat kolom `tanggal_baru` (nullable) + enum `jenis` dapat nilai `tukar`.
+- `LiburService::cocokLiburPada()`/`hitungHariKerjaPada()` (logic inti, teruji dari fitur sebelumnya) **TIDAK disentuh sama sekali** — baris `tukar` di-expand jadi 2 entry override sintetis (`batal`+`tambah`) lewat method pure baru `expandTukar()`, jadi 4 titik konsumen (`cron-alpha.php`, `cron-kode-absen.php`, `GajiService`, `ProfilController`) otomatis dapat dukungan Tukar tanpa disentuh.
+- Tanggal Tukar/Skip dibatasi sistem (bukan cek manual Elvan lagi): harus beneran hari libur default karyawan, dalam jendela sisa-minggu-ini+minggu-depan (Senin-Minggu). Tambah tetap bebas (H+1 aja) — karyawan sering ajukan jauh-jauh hari buat acara.
+- Form `create.blade.php` didesain ulang total: 3 kartu jenis, field tanggal berubah dinamis via JS (pola `disabled` toggle biar cuma jenis aktif yang ke-submit).
+- Test standalone `tests/jadwal-libur/test_libur_service.php` bertambah dari 13 jadi 25 assertion (expandTukar, jendelaTukarSkip, tanggalKandidatLibur) — semua hijau.
+
+**Ketemu & dibenerin lewat final whole-branch review (opus), sebelum push:**
+- **Penting:** 2 perbandingan `dayOfWeek !==`/`===` ke `$user->hari_libur_default` (kolom `unsignedTinyInteger` TANPA cast) di `JadwalLiburController::store()` — persis kelas bug yang sama kayak `level` yang dibenerin di sesi jadwal-libur sebelumnya. Satu sisi gagal TERTUTUP (Skip/Tukar selalu ditolak), sisi lain gagal TERBUKA (gerbang "tanggal pengganti harus hari kerja" gak pernah nyala). Di-fix `!=`/`==` (loose), ikutin preseden yang sudah ada di repo ini, BUKAN nambah cast baru.
+- Minor: pesan sukses di `approve()` kelewat pakai `labelTanggal()`, jadi approval Tukar cuma nampilin tanggal lama — di-fix.
+- Reviewer verifikasi manual kasus tricky (dites hitung tangan + jalanin test beneran): swap lintas bulan (Juli→Agustus) gak nyasar/kehilang di query `hitungHariKerjaPada()`, dan jaminan "approve/tolak atomik" di `approve()`/`reject()` beneran gak ada jalur update-sebagian.
+
+**Dicatat, bukan diperbaiki (parkir di ledger, low-impact, disetujui gak masuk scope ini):**
+- `labelTanggal()` bisa null-deref kalau baris `tukar` punya `tanggal_baru` NULL — gak bisa kejadian lewat `store()` (satu-satunya penulis), cuma resiko kalau ada yang edit DB manual.
+- Select tanggal Skip/Tukar belum ada atribut `required` — submit kosong nampilin pesan error bahasa Inggris Laravel, bukan native browser prompt.
+- Kalau Elvan ubah `hari_libur_default` seorang karyawan SETELAH ajuan Tukar/Skip di-approve (dalam jendela 2 minggu yang sama) — karyawan itu bisa "untung" (dapat hari pengganti tanpa beneran kehilangan hari lama). Jarang kejadian (14 karyawan), gak dirugikan siapapun, gak diperbaiki di v1.
+
+**⚠️ SQL WAJIB dijalankan sebelum kode ini aktif** (dikonfirmasi Elvan sudah jalan 12 Agustus, sempat kena error "No database selected" — solusinya klik nama database dulu di sidebar phpMyAdmin sebelum buka tab SQL):
+```sql
+ALTER TABLE jadwal_libur MODIFY COLUMN jenis ENUM('tambah','batal','tukar') NOT NULL;
+ALTER TABLE jadwal_libur ADD COLUMN IF NOT EXISTS tanggal_baru DATE NULL AFTER tanggal;
+```
+Tanpa ini: `tanggal_baru` gak ada di DB → `LiburService::ambilOverride()` query-nya gagal → 500 serentak di `/profil` (semua karyawan), `/absensi/kode-hari-ini`, generate slip gaji, DAN 2 cron pagi (karyawan gak dapat kode absen).
+
+**Status git:** push ke `main` sukses (commit `0e15657`) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit.
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Karyawan tanpa `hari_libur_default` → form cuma nampilin opsi Tambah.
+- Ajukan Tukar → dropdown "Tanggal Lama" cuma nampilin hari libur default beneran dalam 2 minggu; "Tanggal Baru" gak bisa pilih di luar jendela atau di hari libur default.
+- Ajukan Tukar → approve → cek kode absen: tanggal lama DAPAT kode (dianggap kerja), tanggal baru TIDAK dapat kode (dianggap libur).
+- Ajukan Skip → approve → `cron-alpha.php` gak nandain Alpha di tanggal itu meski gak absen (dianggap kerja beneran, harus absen).
+- Riwayat & approval nampilin 2 tanggal ("dari → ke") buat Tukar.
+- Notif Telegram (ajuan masuk & hasil) buat Tukar nampilin 2 tanggal dengan benar.
+- Coba ajukan tanggal yang bentrok sama ajuan lain (pending/approved) → ditolak.
