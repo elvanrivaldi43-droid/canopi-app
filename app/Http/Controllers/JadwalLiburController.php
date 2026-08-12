@@ -58,7 +58,7 @@ class JadwalLiburController extends Controller
             if ($user->hari_libur_default === null) {
                 return back()->with('error', 'Kamu belum punya jadwal libur default, gak bisa ajukan Skip/Tukar.')->withInput();
             }
-            if ($tanggal->dayOfWeek !== $user->hari_libur_default) {
+            if ($tanggal->dayOfWeek != $user->hari_libur_default) {
                 return back()->with('error', 'Tanggal itu bukan hari libur default kamu.')->withInput();
             }
             if ($tanggal->lt($jendelaAwal) || $tanggal->gt($jendelaAkhir)) {
@@ -71,7 +71,7 @@ class JadwalLiburController extends Controller
             if ($tanggalBaru->lt($jendelaAwal) || $tanggalBaru->gt($jendelaAkhir)) {
                 return back()->with('error', 'Tanggal pengganti harus dalam sisa minggu ini atau minggu depan.')->withInput();
             }
-            if ($tanggalBaru->dayOfWeek === $user->hari_libur_default) {
+            if ($tanggalBaru->dayOfWeek == $user->hari_libur_default) {
                 return back()->with('error', 'Tanggal pengganti harus hari yang normalnya kamu kerja.')->withInput();
             }
         }
@@ -158,7 +158,7 @@ class JadwalLiburController extends Controller
 
         $this->kirimNotifHasil($jadwalLibur, 'approved');
 
-        return back()->with('success', "Jadwal libur {$jadwalLibur->user->name} pada {$jadwalLibur->tanggal->format('d/m/Y')} disetujui.");
+        return back()->with('success', "Jadwal libur {$jadwalLibur->user->name} pada {$jadwalLibur->labelTanggal()} disetujui.");
     }
 
     // ═══════════════════════════════════════════════════════════
