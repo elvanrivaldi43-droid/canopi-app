@@ -9,18 +9,20 @@ class JadwalLibur extends Model
     protected $table = 'jadwal_libur';
 
     protected $fillable = [
-        'user_id', 'tanggal', 'jenis', 'alasan',
+        'user_id', 'tanggal', 'tanggal_baru', 'jenis', 'alasan',
         'status', 'diproses_oleh', 'diproses_at',
     ];
 
     protected $casts = [
-        'tanggal'     => 'date',
-        'diproses_at' => 'datetime',
+        'tanggal'      => 'date',
+        'tanggal_baru' => 'date',
+        'diproses_at'  => 'datetime',
     ];
 
     const JENIS = [
         'tambah' => '➕ Tambah Libur',
-        'batal'  => '🚫 Batalkan Libur Default',
+        'batal'  => '🚫 Skip Libur',
+        'tukar'  => '🔄 Tukar Libur',
     ];
 
     const WARNA_STATUS = [
@@ -42,6 +44,14 @@ class JadwalLibur extends Model
     public function jenisLabel(): string
     {
         return self::JENIS[$this->jenis] ?? $this->jenis;
+    }
+
+    public function labelTanggal(string $format = 'd/m/Y'): string
+    {
+        if ($this->jenis === 'tukar') {
+            return $this->tanggal->translatedFormat($format) . ' → ' . $this->tanggal_baru->translatedFormat($format);
+        }
+        return $this->tanggal->translatedFormat($format);
     }
 
     public function statusLabel(): string
