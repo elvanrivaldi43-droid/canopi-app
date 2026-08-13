@@ -181,6 +181,12 @@
 // Data piket per tanggal dikirim dari server (dipakai isi modal tanpa reload)
 const PIKET_DATA = @json($piketBulanIni->map(fn($list) => $list->map(fn($p) => ['id' => $p->id, 'nama' => $p->user->name]))->all());
 
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 let modeTambah = false;
 let tglMulaiPilih = null;
 
@@ -227,7 +233,7 @@ function klikTanggal(el) {
     } else {
         listEl.innerHTML = existing.map(p => `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #334155;">
-                <span style="font-size:13px;color:#f1f5f9;">${p.nama}</span>
+                <span style="font-size:13px;color:#f1f5f9;">${escapeHtml(p.nama)}</span>
                 <form method="POST" action="/libur-nasional/piket/${p.id}" style="display:inline;">
                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="_method" value="DELETE">
