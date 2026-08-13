@@ -120,6 +120,13 @@
                         btn.disabled = false;
                         btn.textContent = '🔄 LANJUT KERJA';
                     }
+                }).catch(() => {
+                    alertBox.style.display = 'block';
+                    alertBox.style.background = 'rgba(239,68,68,0.15)';
+                    alertBox.style.color = '#fca5a5';
+                    alertBox.textContent = 'Gagal mengirim, coba lagi.';
+                    btn.disabled = false;
+                    btn.textContent = '🔄 LANJUT KERJA';
                 });
             }, () => {
                 alertBox.style.display = 'block';
