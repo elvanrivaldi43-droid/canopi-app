@@ -509,3 +509,43 @@ Dipicu Elvan gak nemu fitur koreksi absen lewat menu sidebar (cuma nyempil di ka
 - Modal Koreksi: buka buat karyawan yang lagi kena potongan siang → field "Potongan Telat/Siang" harus udah keisi angka yang bener (bukan 0).
 - Ubah potongan ke 0 → Simpan → cek gaji hari itu di rekap naik balik sesuai gaji harian penuh (buat status hadir/telat).
 - Koreksi status TANPA ubah field potongan → potongan yang lama harus tetap sama (bukan ke-reset ke 0 gak sengaja).
+
+---
+
+**13 Agustus 2026 (sesi kedua) — Fitur "Libur Nasional / Libur Bersama" SELESAI & LIVE (brainstorm→spec→plan→subagent-driven-development, 5 task + final whole-branch review + 2 putaran fix), langsung di `main` (pilihan Elvan), sudah push+deploy.**
+
+Dipicu pertanyaan Elvan soal Lebaran (libur ~2 minggu)/Tahun Baru/17 Agustus — dicek ke kode, sistem cuma punya jadwal libur PER-KARYAWAN (fitur 11 Agustus), nol konsep libur yang berlaku ke SEMUA karyawan sekaligus. Tanpa ini `cron-alpha.php` bakal nandain semua karyawan Alpha pas libur nasional. Spec: `docs/superpowers/specs/2026-08-13-libur-nasional-design.md`. Plan (5 task): `docs/superpowers/plans/2026-08-13-libur-nasional.md`.
+
+**Yang jadi:**
+- Tabel baru `libur_nasional` (nama+rentang tanggal) dan `libur_nasional_piket` (pengecualian per-karyawan per-tanggal, buat driver/teknisi yang tetap piket).
+- `LiburService` (sudah ada dari fitur jadwal-libur individual) diperluas: `expandLiburNasional()` (pure, pola sama `expandTukar()`) + `ambilLiburNasional()` (wrapper DB), di-merge ke `isLibur()`/`hitungHariKerja()` **paling depan** (libur nasional menang lawan jadwal pribadi kalau bentrok, kecuali karyawan itu piket) — `cocokLiburPada()`/`hitungHariKerjaPada()` (logic inti, 25 assertion lama) **TIDAK disentuh sama sekali**, otomatis ke-cover ke 5 titik konsumen (4 yang direncanakan + `AbsensiController::kodeHariIni()` yang ketemu pas final review, bonus gratis).
+- Halaman baru `/libur-nasional` — kalender bulanan visual, Owner klik 2 tanggal buat pilih rentang libur baru + kelola piket per-tanggal; karyawan lain lihat read-only. Link ditambah ke KEDUA sidebar (Owner + karyawan lain), bukan cuma satu — belajar dari gap "Rekap Absen" sesi pagi ini.
+- Notifikasi Telegram: broadcast ke semua karyawan connect pas libur nasional baru ditambah, notif personal ke karyawan yang ditunjuk piket.
+
+**Ketemu & dibenerin lewat proses review berlapis (bukan cuma "jadi lalu di-push"):**
+- **Task-review Task 4:** 2 bug XSS/escaping JS (apostrof di nama libur bikin dialog konfirmasi hapus gagal muncul tanpa pesan error — form submit langsung tanpa pengaman; nama karyawan diakhiri backslash bisa menyuntik `<script>`) — diperbaiki, sempat ketemu 1 lagi SETELAH fix pertama (escape `@json()` yang baru dipasang malah bikin data mentah masuk ke `innerHTML` tanpa HTML-escape) — dirantai perbaikannya sampai bersih.
+- **Final whole-branch review (model paling capable, nemu 3 hal yang gak mungkin ketangkep review per-task):**
+  1. `@json()` Blade ternyata kehilangan flag keamanannya sendiri kalau argumennya mengandung koma (bug internal Laravel Blade compiler, `compileJson()` pakai `explode(',', ...)` naif) — proteksi XSS dari fix task-4 TERNYATA gak aktif, cuma "kebetulan aman" dari default PHP. Diverifikasi ulang oleh reviewer dengan compile Blade beneran, bukan cuma baca kode.
+  2. Piket dicocokkan lewat `libur_nasional_id` — gagal SENYAP kalau 2 libur nasional beda nama tanggal-nya overlap (contoh nyata: "Cuti Bersama" 15-19 Agustus + "HUT RI" 17 Agustus terpisah) — karyawan yang di-piket-in tetap dianggap libur di baris yang gak kebagian data piketnya. Spec sudah eksplisit bilang kolom itu "buat tampilan doang, BUKAN logic inti" tapi implementasi awal malah makai buat logic. Fix: piket dicocokkan per user+tanggal SAJA (bukan per-`libur_nasional_id`), sekalian nutup N+1 query.
+  3. Modal kalender pakai `position:fixed` bersarang di `.page-content` (`overflow-y:auto`+`-webkit-overflow-scrolling:touch`) — jebakan iOS Safari yang PERSIS sama yang udah pernah kejadian nyata di DenahEditor (16 Juli). Ketangkep SEBELUM Elvan lapor dari HP, bukan sesudah — beda dari pola-pola sebelumnya yang nunggu laporan nyata dulu.
+- Semua 3 temuan Important di atas: 1 putaran fix, di-re-review scoped, ADDRESSED semua, 0 breakage baru. Test standalone: `tests/libur-nasional/test_libur_nasional.php` (7 assertion, termasuk kasus 2-libur-overlap) + `tests/jadwal-libur/test_libur_service.php` (25 assertion lama) — 100% lulus dua-duanya di titik commit terakhir.
+
+**Insiden kecil pas deploy (bukan bug kode, dicatat buat sesi depan):** SQL `CREATE TABLE` yang dikasih ke Elvan sempat 2x gagal di phpMyAdmin — ternyata ekstensi pengecek-ejaan browser (kemungkinan Grammarly) diam-diam "membetulkan" garis bawah jadi spasi di kolom yang kebaca sebagai frasa wajar (`dibuat_oleh`→`dibuat oleh`, `user_id`→`user id`, `libur_nasional_id`→`libur nasional id`) sementara `tanggal_mulai`/`created_at` yang gak dikenali sebagai frasa tetap utuh — solusinya matikan ekstensi itu atau pakai jendela Incognito buat halaman phpMyAdmin. **Pelajaran buat sesi depan:** kalau SQL manual gagal parse dengan pola aneh (garis bawah hilang selektif), curigai ekstensi browser dulu sebelum curiga SQL-nya sendiri.
+
+**Status git:** push ke `main` sukses, 10 commit (`d3a943d`..`81fceb9`) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit. **SQL sudah dijalankan Elvan di phpMyAdmin production** (2 tabel baru, dikonfirmasi sukses setelah masalah ekstensi browser teratasi).
+
+**Dicatat, bukan diperbaiki di sesi ini (minor dari final review, low-impact, gak masuk fix wave):**
+- Broadcast Telegram libur nasional baru gak di-scope `status='aktif'` — karyawan resign yang masih punya `telegram_chat_id` bakal tetap kebagian pengumuman.
+- Tambah piket yang sama 2x (klik ulang) gak nge-double-row (`firstOrCreate` sudah benar), TAPI tetap kirim notif Telegram ulang — mirip pola insiden kode-absen-4x (6 Agustus), belum sampai jadi masalah nyata karena piket jarang di-klik ulang.
+- Validasi gagal (misal nama libur >100 karakter) balik ke kalender TANPA pesan error yang kelihatan — form cuma nge-reset diam-diam.
+- `LiburNasional::piket()` (relasi hasMany) gak pernah dipakai — `destroy()` andelin FK cascade langsung, bukan lewat relasi ini.
+- Flash banner sukses/error di halaman ini render 2x (pola lama yang sudah ada di halaman lain kayak `addon/index.blade.php`, bukan bug baru).
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Owner buka `/libur-nasional` (lewat sidebar ATAU dashboard) → kalender kelihatan, klik "+ Tambah Libur Nasional" → klik 2 tanggal → modal muncul terisi otomatis → simpan → tanggal ter-highlight.
+- Broadcast Telegram nyampe ke karyawan yang connect pas libur nasional baru ditambah.
+- Klik tanggal yang sudah libur nasional → modal Kelola Piket → tambah 1 karyawan → badge "📌 1 piket" muncul + karyawan itu dapat notif personal.
+- Karyawan yang di-piket-in TETAP dapat kode absen besok paginya (`cron-kode-absen.php`), karyawan lain di tanggal sama TIDAK dapat kode.
+- `cron-alpha.php` gak nandain Alpha siapapun pas libur nasional (kecuali yang piket).
+- Login sebagai karyawan biasa (bukan Owner) → buka `/libur-nasional` dari sidebar → read-only, gak ada tombol tambah/kelola.
+- Modal Tambah/Kelola Piket kebuka BENER di HP (khususnya iOS Safari) — ini yang diantisipasi lewat fix #3 di atas SEBELUM ada laporan, jadi belum ada bukti nyata dari device asli.
