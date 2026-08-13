@@ -255,36 +255,35 @@ class AbsensiController extends Controller
         return response()->json(['valid'=>$jarak<=$radius,'jarak'=>$this->formatJarak($jarak),'meter'=>round($jarak),'luar_kota'=>false]);
     }
 
-    public function formSiang()
+    public function formLaporProgress()
     {
         $user  = Auth::user();
         $absen = Absensi::where('user_id',$user->id)->whereDate('tanggal',today())->first();
         if (!$absen?->jam_masuk) return redirect()->route('absensi.index')->with('error','Kamu belum absen masuk pagi.');
-        if ($absen?->jam_absen_siang) return redirect()->route('absensi.index')->with('info','Kamu sudah absen siang hari ini.');
+        if ($absen?->jam_lapor_progress) return redirect()->route('absensi.index')->with('info','Kamu sudah lapor progress hari ini.');
 
-        $lokasi          = $this->getLokasiCek($user->level,'siang');
-        $statusPekerjaan = self::STATUS_PEKERJAAN;
-        $jenisKendala    = self::JENIS_KENDALA;
-        $gpsWajib        = in_array($user->level, self::LEVEL_KANTOR);
-        $luarKotaAktif   = LuarKota::getAktif($user->id);
+        $lokasi        = $this->getLokasiCek($user->level,'siang');
+        $gpsWajib      = in_array($user->level, self::LEVEL_KANTOR);
+        $luarKotaAktif = LuarKota::getAktif($user->id);
+        $pertanyaan    = self::pilihPertanyaanProgress($user->id, today());
 
-        return view('absensi.form-siang', compact('user','lokasi','statusPekerjaan','jenisKendala','gpsWajib','luarKotaAktif'));
+        return view('absensi.form-lapor-progress', compact('user','lokasi','gpsWajib','luarKotaAktif','pertanyaan'));
     }
 
-    public function absenSiang(Request $request)
+    public function laporProgress(Request $request)
     {
         $user  = Auth::user();
         $absen = Absensi::where('user_id',$user->id)->whereDate('tanggal',today())->first();
         if (!$absen) return response()->json(['success'=>false,'message'=>'Belum absen masuk pagi.']);
 
         $request->validate([
-            'foto_1'             => 'required|string',
-            'lat'                => 'required|numeric',
-            'lng'                => 'required|numeric',
-            'status_pekerjaan'   => 'required|string',
-            'ada_kendala'        => 'required',
-            'jenis_kendala'      => 'required_if:ada_kendala,1',
-            'deskripsi_kendala'  => 'required_if:ada_kendala,1',
+            'foto'             => 'required|string',
+            'lat'              => 'required|numeric',
+            'lng'              => 'required|numeric',
+            'jawaban_progress' => 'required|string',
+            'ada_kendala'      => 'required',
+            'kendala_apa'      => 'required_if:ada_kendala,1',
+            'kendala_kenapa'   => 'required_if:ada_kendala,1',
         ]);
 
         // ── CEK MODE LUAR KOTA ──────────────────────────────────────────
@@ -300,37 +299,32 @@ class AbsensiController extends Controller
             }
         }
 
-        $jamSekarang   = now()->format('H:i');
-        $menitTelat    = $this->hitungMenitTelat($jamSekarang, self::JAM_MASUK_SIANG, self::TOLERANSI_SIANG);
-        $potonganSiang = $this->hitungPotongan($menitTelat);
-        $folder        = 'absensi/'.$user->id.'/'.today()->format('Ymd');
+        $adaKendala = $request->ada_kendala == 1;
+        $pertanyaan = self::pilihPertanyaanProgress($user->id, today());
+        $folder     = 'absensi/'.$user->id.'/'.today()->format('Ymd');
 
         $absen->update([
-            'foto_siang_1'           => $this->simpanFotoBase64($request->foto_1,$folder),
-            'foto_siang_2'           => $request->foto_2 ? $this->simpanFotoBase64($request->foto_2,$folder) : null,
-            'foto_siang_3'           => $request->foto_3 ? $this->simpanFotoBase64($request->foto_3,$folder) : null,
-            'lat_siang'              => $request->lat,
-            'lng_siang'              => $request->lng,
-            'gps_valid_siang'        => true, // selalu true, GPS tetap dicatat
-            'jam_absen_siang'        => now()->format('H:i:s'),
-            'status_pekerjaan'       => $request->status_pekerjaan,
-            'ada_kendala'            => $request->ada_kendala,
-            'jenis_kendala'          => $request->jenis_kendala,
-            'deskripsi_kendala'      => $request->deskripsi_kendala,
-            'potongan_telat'         => ($absen->potongan_telat??0) + $potonganSiang,
-            'potongan_siang_dicatat' => true,
-            'gaji_hari_ini'          => ($absen->gaji_hari_ini??0) - $potonganSiang,
+            'foto_siang_1'        => $this->simpanFotoBase64($request->foto,$folder),
+            'lat_siang'           => $request->lat,
+            'lng_siang'           => $request->lng,
+            'gps_valid_siang'     => true, // selalu true, GPS tetap dicatat
+            'jam_lapor_progress'  => now()->format('H:i:s'),
+            'pertanyaan_progress' => $pertanyaan,
+            'jawaban_progress'    => $request->jawaban_progress,
+            'ada_kendala'         => $adaKendala,
+            'deskripsi_kendala'   => $adaKendala ? $request->kendala_apa : null,
+            'kendala_kenapa'      => $adaKendala ? $request->kendala_kenapa : null,
         ]);
 
-        if ($request->ada_kendala==1) $this->kirimNotifKendala($user,$absen,$request);
+        if ($adaKendala) $this->kirimNotifKendala($user,$absen);
 
-        $pesan = $menitTelat>0
-            ? "✅ Absen siang berhasil. Telat {$menitTelat} menit — potongan Rp ".number_format($potonganSiang,0,',','.')
-            : "✅ Absen siang berhasil.";
+        $balasan = $adaKendala
+            ? self::BALASAN_ADA_KENDALA[array_rand(self::BALASAN_ADA_KENDALA)]
+            : self::BALASAN_TANPA_KENDALA[array_rand(self::BALASAN_TANPA_KENDALA)];
 
-        if ($sedangLuarKota) $pesan .= "\n✈️ Mode luar kota aktif.";
+        if ($sedangLuarKota) $balasan .= "\n✈️ Mode luar kota aktif.";
 
-        return response()->json(['success'=>true,'message'=>$pesan,'redirect'=>route('absensi.index')]);
+        return response()->json(['success'=>true,'message'=>$balasan,'redirect'=>route('absensi.index')]);
     }
 
     public function formPulang()
@@ -612,12 +606,11 @@ class AbsensiController extends Controller
         return $filename;
     }
 
-    private function kirimNotifKendala(User $user,Absensi $absen,Request $request): void
+    private function kirimNotifKendala(User $user,Absensi $absen): void
     {
         $penerima=User::whereIn('level',[1,3])->whereNotNull('telegram_chat_id')->get();
-        $jenisLabel=self::JENIS_KENDALA[$request->jenis_kendala]??$request->jenis_kendala;
         foreach ($penerima as $p) {
-            app(TelegramService::class)->kirim($p->telegram_chat_id,"⚠️ *LAPORAN KENDALA*\nKaryawan: {$user->name}\nJabatan: {$user->jabatan}\nTanggal: ".today()->format('d/m/Y')."\nKendala: {$jenisLabel}\nKeterangan: {$request->deskripsi_kendala}\n---\nCek detail di app.kanopibsd.co.id");
+            app(TelegramService::class)->kirim($p->telegram_chat_id,"⚠️ *LAPORAN KENDALA*\nKaryawan: {$user->name}\nJabatan: {$user->jabatan}\nTanggal: ".today()->format('d/m/Y')."\nProgress: {$absen->jawaban_progress}\nKendala: {$absen->deskripsi_kendala}\nPenyebab: {$absen->kendala_kenapa}\n---\nCek detail di app.kanopibsd.co.id");
         }
     }
 }
