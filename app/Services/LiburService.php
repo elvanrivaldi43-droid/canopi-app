@@ -4,6 +4,8 @@
 namespace App\Services;
 
 use App\Models\JadwalLibur;
+use App\Models\LiburNasional;
+use App\Models\LiburNasionalPiket;
 use App\Models\User;
 use Carbon\Carbon;
 
@@ -48,6 +50,22 @@ class LiburService
         return [['tanggal' => $row['tanggal'], 'jenis' => $row['jenis']]];
     }
 
+    // $piketTanggal: array string 'Y-m-d' — tanggal dalam rentang ini yang DIKECUALIKAN (karyawan piket).
+    public function expandLiburNasional(string $mulai, string $selesai, array $piketTanggal): array
+    {
+        $hasil = [];
+        $cur   = Carbon::parse($mulai);
+        $akhir = Carbon::parse($selesai);
+        while ($cur->lte($akhir)) {
+            $tglStr = $cur->format('Y-m-d');
+            if (!in_array($tglStr, $piketTanggal, true)) {
+                $hasil[] = ['tanggal' => $tglStr, 'jenis' => 'tambah'];
+            }
+            $cur->addDay();
+        }
+        return $hasil;
+    }
+
     public function jendelaTukarSkip(Carbon $sekarang): array
     {
         $awal  = $sekarang->copy()->addDay()->startOfDay();
@@ -71,7 +89,10 @@ class LiburService
     // Wrapper database — dipakai cron & GajiService.
     public function isLibur(User $user, Carbon $tanggal): bool
     {
-        $overrides = $this->ambilOverride($user, $tanggal, $tanggal);
+        $overrides = array_merge(
+            $this->ambilLiburNasional($user, $tanggal, $tanggal),
+            $this->ambilOverride($user, $tanggal, $tanggal)
+        );
         return $this->cocokLiburPada($user->hari_libur_default, $overrides, $tanggal);
     }
 
@@ -79,7 +100,10 @@ class LiburService
     {
         $awal      = Carbon::createFromDate($tahun, $bulan, 1);
         $akhir     = $sampaiHari ? $awal->copy()->day($sampaiHari) : $awal->copy()->endOfMonth();
-        $overrides = $this->ambilOverride($user, $awal, $akhir);
+        $overrides = array_merge(
+            $this->ambilLiburNasional($user, $awal, $akhir),
+            $this->ambilOverride($user, $awal, $akhir)
+        );
         return $this->hitungHariKerjaPada($user->hari_libur_default, $overrides, $bulan, $tahun, $sampaiHari);
     }
 
@@ -103,6 +127,29 @@ class LiburService
                 'tanggal_baru' => $o->tanggal_baru?->format('Y-m-d'),
                 'jenis'        => $o->jenis,
             ]));
+        }
+        return $overrides;
+    }
+
+    private function ambilLiburNasional(User $user, Carbon $dari, Carbon $sampai): array
+    {
+        $liburs = LiburNasional::where('tanggal_mulai', '<=', $sampai->format('Y-m-d'))
+            ->where('tanggal_selesai', '>=', $dari->format('Y-m-d'))
+            ->get(['id', 'tanggal_mulai', 'tanggal_selesai']);
+
+        $overrides = [];
+        foreach ($liburs as $lb) {
+            $piketTanggal = LiburNasionalPiket::where('libur_nasional_id', $lb->id)
+                ->where('user_id', $user->id)
+                ->get()
+                ->map(fn($p) => $p->tanggal->format('Y-m-d'))
+                ->toArray();
+
+            $overrides = array_merge($overrides, $this->expandLiburNasional(
+                $lb->tanggal_mulai->format('Y-m-d'),
+                $lb->tanggal_selesai->format('Y-m-d'),
+                $piketTanggal
+            ));
         }
         return $overrides;
     }
