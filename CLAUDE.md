@@ -486,3 +486,26 @@ Dipicu pertanyaan Elvan soal beda Izin/Sakit/Cuti vs Tambah Libur — ketauan du
 - Owner catat Dinas Luar di tanggal yang karyawan itu punya ajuan Jadwal Libur aktif → harus TETAP BISA (Dinas Luar dikecualikan dari sisi dia yang nyatet).
 - Karyawan ajuin Jadwal Libur di tanggal yang Owner udah catat Dinas Luar buat dia → harus DITOLAK (arah sebaliknya, baru dikonfirmasi 12 Agustus).
 - Buka 2 tab approval izin/libur, proses salah satu di tab 1, coba approve/tolak lagi di tab 2 (basi) → harus ditolak dengan pesan "Ajuan ini sudah diproses."
+
+---
+
+**13 Agustus 2026 — 2 perbaikan kecil modul Absensi (sidebar Owner + koreksi potongan siang), langsung di `main`, sudah di-push.**
+
+Dipicu Elvan gak nemu fitur koreksi absen lewat menu sidebar (cuma nyempil di kartu shortcut Dashboard), lanjut ke kebutuhan hapus/kurangin potongan absen siang secara manual (kebijakan Owner, bukan bug).
+
+**1. Sidebar Owner dibenerin (commit `8cf6daf`):**
+- Ketemu ada 2 halaman absensi mirip nama yang beda isi: `/absensi/rekap-bulanan` (link sidebar lama "Rekap Bulanan", filter bulan/tahun, **read-only, tanpa tombol koreksi**) vs `/absensi/rekap` (cuma bisa diakses lewat kartu Dashboard, filter tanggal harian + tombol "✏️ Koreksi"). Elvan yang lewat sidebar gak akan pernah nemu fitur koreksinya.
+- Link sidebar Owner "Absensi" (`/absensi`, form+riwayat absen PRIBADI — Owner gak pernah absen masuk, dikonfirmasi 11 Agustus) diganti jadi "Rekap Absen" → `/absensi/rekap` (dicek dulu: nol tempat lain di kode yang gantung ke link sidebar itu, aman diganti).
+
+**2. Koreksi potongan telat/siang manual (commit `da0b405`):**
+- Modal Koreksi di `/absensi/rekap` sekarang punya field baru **"Potongan Telat/Siang (Rp)"** (`resources/views/absensi/rekap.blade.php`), pre-filled dari `potongan_telat` yang lagi tercatat, bisa diubah ke 0 atau angka lain — buat kasus Owner mau maafkan potongan tanpa harus ubah status absen.
+- **Bug laten ikut ketemu & dibenerin sekalian:** `AbsensiController::koreksi()` (baris ~449-487) sebelumnya hitung ulang `gaji_hari_ini` dari nol pas ubah status, TANPA mempertimbangkan `potongan_telat` yang sudah tercatat — jadi tiap kali Owner koreksi status (apapun alasannya), efek potongan siang diam-diam KEHAPUS dari gaji padahal angka `potongan_telat`-nya sendiri gak berubah (2 kolom jadi gak nyambung). Sekarang `gajiHariIni` di controller subtract `potongan_telat` (yang baru atau existing) buat status `hadir`/`telat`/`setengah_hari`.
+- `koreksiManual()` (buat karyawan yang belum absen sama sekali) SENGAJA tidak disentuh — gak relevan, entry baru gak punya potongan siang sebelumnya.
+
+**Status git:** push ke `main` sukses, 2 commit (`8cf6daf`, `da0b405`) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit.
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Sidebar Owner: klik "Rekap Absen" → harus ke halaman dengan filter tanggal + tombol Koreksi (bukan 404/ke halaman lama).
+- Modal Koreksi: buka buat karyawan yang lagi kena potongan siang → field "Potongan Telat/Siang" harus udah keisi angka yang bener (bukan 0).
+- Ubah potongan ke 0 → Simpan → cek gaji hari itu di rekap naik balik sesuai gaji harian penuh (buat status hadir/telat).
+- Koreksi status TANPA ubah field potongan → potongan yang lama harus tetap sama (bukan ke-reset ke 0 gak sengaja).
