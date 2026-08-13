@@ -152,6 +152,10 @@ function refreshGPS() {
         : '<span style="color:#ef4444">Di luar radius!</span>';
       document.getElementById('gpsDetail').textContent = data.jarak + ' dari kantor';
       cekSubmit();
+    }).catch(() => {
+      document.getElementById('gpsIcon').textContent = '❌';
+      document.getElementById('gpsStatus').textContent = 'Gagal cek lokasi, tekan Refresh.';
+      cekSubmit();
     });
   }, () => {
     document.getElementById('gpsStatus').textContent = 'GPS gagal — coba refresh';

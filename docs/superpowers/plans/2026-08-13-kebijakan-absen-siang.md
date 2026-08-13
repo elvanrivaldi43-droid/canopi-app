@@ -145,6 +145,12 @@ ALTER TABLE absensi ADD COLUMN IF NOT EXISTS gps_valid_kembali_kerja TINYINT(1) 
 ```
 Jangan push ke `main` sebelum SQL ini dikonfirmasi jalan di production.
 
+**Catatan waktu deploy (baca sebelum jalankan SQL):** Kolom baru di atas bikin SEMUA baris `absensi` hari itu mulai dengan `jam_lapor_progress = NULL` dan `potongan_progress_dicatat = 0` — kalau deploy dilakukan SETELAH jam 12:30 (lewat dari jendela normal Task ini), sistem bakal nganggep SEMUA karyawan yang udah absen pagi itu "belum lapor progress" dan motong Rp20rb ke SEMUANYA pas mereka buka `/absensi`, padahal checkpoint ini belum ada waktu mereka mulai kerja hari itu. Kalau ini terjadi (deploy telat lewat 12:30), jalankan SATU baris tambahan ini SEBELUM push, supaya hari deploy itu sendiri gak kena denda retroaktif:
+```sql
+UPDATE absensi SET potongan_progress_dicatat = 1 WHERE tanggal = CURDATE();
+```
+Kalau deploy dilakukan SEBELUM jam 11:00 (sesuai target di langkah 4 roadmap deploy), baris ini TIDAK PERLU dijalankan — checkpoint 1 harus berjalan normal hari itu juga.
+
 ---
 
 ### Task 2: Bank pertanyaan, balasan otomatis, & pemilihan pertanyaan (pure, testable)

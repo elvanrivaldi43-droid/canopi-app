@@ -291,6 +291,7 @@ class AbsensiController extends Controller
         $user  = Auth::user();
         $absen = Absensi::where('user_id',$user->id)->whereDate('tanggal',today())->first();
         if (!$absen) return response()->json(['success'=>false,'message'=>'Belum absen masuk pagi.']);
+        if ($absen->jam_lapor_progress) return response()->json(['success'=>false,'message'=>'Kamu sudah lapor progress hari ini.']);
 
         $request->validate([
             'foto'             => 'required|string',
