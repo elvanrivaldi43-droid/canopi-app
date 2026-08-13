@@ -103,7 +103,7 @@
                 <div style="font-size:11px;color:#64748b;">{{ $lb->labelRentang() }}</div>
             </div>
             @if($isOwner)
-            <form method="POST" action="{{ route('libur-nasional.destroy', $lb) }}" onsubmit="return confirm('Hapus libur nasional \'{{ $lb->nama }}\'? Semua data piket di dalamnya ikut terhapus.');">
+            <form method="POST" action="{{ route('libur-nasional.destroy', $lb) }}" data-nama="{{ $lb->nama }}" onsubmit="return confirm('Hapus libur nasional \'' + this.dataset.nama + '\'? Semua data piket di dalamnya ikut terhapus.');">
                 @csrf
                 @method('DELETE')
                 <button type="submit" style="background:transparent;border:1px solid #ef4444;color:#ef4444;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">Hapus</button>
@@ -179,15 +179,7 @@
 
 <script>
 // Data piket per tanggal dikirim dari server (dipakai isi modal tanpa reload)
-const PIKET_DATA = {
-    @foreach($piketBulanIni as $tgl => $list)
-    "{{ $tgl }}": [
-        @foreach($list as $p)
-        {id: {{ $p->id }}, nama: "{{ $p->user->name }}"},
-        @endforeach
-    ],
-    @endforeach
-};
+const PIKET_DATA = @json($piketBulanIni->map(fn($list) => $list->map(fn($p) => ['id' => $p->id, 'nama' => $p->user->name]))->all());
 
 let modeTambah = false;
 let tglMulaiPilih = null;
