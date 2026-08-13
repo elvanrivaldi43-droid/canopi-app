@@ -177,9 +177,23 @@
     </div>
 </div>
 
+@php
+    // Ekspresi ini SENGAJA dipindah ke variable dulu: @json() Blade parse argumennya
+    // dengan explode(','), jadi ekspresi yang mengandung koma (kayak closure array di
+    // bawah ini) bikin flag JSON_HEX_* salah baca. Variable tunggal = argumen tunggal.
+    $piketJs = $piketBulanIni->map(fn($list) => $list->map(fn($p) => ['id' => $p->id, 'nama' => $p->user->name]))->all();
+@endphp
 <script>
+// Modal position:fixed harus di-reparent ke <body>, bukan bersarang di .page-content
+// (.page-content overflow-y:auto + -webkit-overflow-scrolling:touch bikin fixed rusak
+// di iOS Safari — sudah kejadian nyata di DenahEditor, lihat CLAUDE.md).
+['modalTambah', 'modalPiket'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) document.body.appendChild(el);
+});
+
 // Data piket per tanggal dikirim dari server (dipakai isi modal tanpa reload)
-const PIKET_DATA = @json($piketBulanIni->map(fn($list) => $list->map(fn($p) => ['id' => $p->id, 'nama' => $p->user->name]))->all());
+const PIKET_DATA = @json($piketJs);
 
 function escapeHtml(str) {
     const div = document.createElement('div');

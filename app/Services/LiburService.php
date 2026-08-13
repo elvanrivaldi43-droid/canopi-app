@@ -133,18 +133,23 @@ class LiburService
 
     private function ambilLiburNasional(User $user, Carbon $dari, Carbon $sampai): array
     {
-        $liburs = LiburNasional::where('tanggal_mulai', '<=', $sampai->format('Y-m-d'))
-            ->where('tanggal_selesai', '>=', $dari->format('Y-m-d'))
-            ->get(['id', 'tanggal_mulai', 'tanggal_selesai']);
+        $dariStr   = $dari->format('Y-m-d');
+        $sampaiStr = $sampai->format('Y-m-d');
+
+        $liburs = LiburNasional::where('tanggal_mulai', '<=', $sampaiStr)
+            ->where('tanggal_selesai', '>=', $dariStr)
+            ->get(['tanggal_mulai', 'tanggal_selesai']);
+
+        // Piket dicocokkan per user+tanggal, BUKAN per libur_nasional_id — kalau 2 libur
+        // nasional overlap di tanggal sama, 1 baris piket cukup mengecualikan semuanya.
+        $piketTanggal = LiburNasionalPiket::where('user_id', $user->id)
+            ->whereBetween('tanggal', [$dariStr, $sampaiStr])
+            ->get(['tanggal'])
+            ->map(fn($p) => $p->tanggal->format('Y-m-d'))
+            ->toArray();
 
         $overrides = [];
         foreach ($liburs as $lb) {
-            $piketTanggal = LiburNasionalPiket::where('libur_nasional_id', $lb->id)
-                ->where('user_id', $user->id)
-                ->get()
-                ->map(fn($p) => $p->tanggal->format('Y-m-d'))
-                ->toArray();
-
             $overrides = array_merge($overrides, $this->expandLiburNasional(
                 $lb->tanggal_mulai->format('Y-m-d'),
                 $lb->tanggal_selesai->format('Y-m-d'),

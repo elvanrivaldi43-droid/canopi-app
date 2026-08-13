@@ -54,5 +54,13 @@ $karyawanPiket = array_merge(
 $check('karyawan di-piket tanggal itu -> tidak ada override nasional yang di-generate -> fallback ke default (null -> false, kerja normal)',
     $svc->cocokLiburPada(null, $karyawanPiket, Carbon::create(2026, 8, 17)), false);
 
+// ── Kasus 2 libur nasional overlap, piket harus konsisten di keduanya ──
+$liburA = $svc->expandLiburNasional('2026-08-15', '2026-08-19', ['2026-08-17']); // "Cuti Bersama", piket 17 Agustus
+$liburB = $svc->expandLiburNasional('2026-08-17', '2026-08-17', ['2026-08-17']); // "HUT RI", piket tanggal sama
+$gabungan = array_merge($liburA, $liburB);
+$tanggal17 = array_filter($gabungan, fn($o) => $o['tanggal'] === '2026-08-17');
+$check('piket di tanggal yang di-cover 2 libur nasional sekaligus -> tanggal itu TIDAK muncul di override manapun (konsisten dikecualikan di semua)',
+    count($tanggal17), 0);
+
 if ($fail) { echo "\n=== ADA YANG GAGAL ===\n"; exit(1); }
 echo "\n=== SEMUA TES LULUS ===\n";
