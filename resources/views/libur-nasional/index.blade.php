@@ -94,7 +94,7 @@
     </div>
 
     {{-- Daftar semua libur nasional (manajemen, tidak terikat bulan yang ditampilkan) --}}
-    <div class="stat-card" style="padding:16px;">
+    <div class="stat-card" style="padding:16px;margin-bottom:80px;">
         <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">📋 Semua Libur Nasional</div>
         @forelse($liburSemua as $lb)
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1e293b;">
