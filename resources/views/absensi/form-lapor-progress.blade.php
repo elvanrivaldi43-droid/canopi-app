@@ -165,6 +165,10 @@ function bukaKamera() {
     .then(stream => {
       kameraStream = stream;
       document.getElementById('kameraVideo').srcObject = stream;
+    })
+    .catch(err => {
+      showAlert('error', 'Kamera ditolak atau tidak tersedia. Tutup dan coba lagi.');
+      tutupKamera();
     });
 }
 
@@ -249,6 +253,11 @@ function submitLaporan() {
       btn.disabled = false;
       btn.textContent = '📤 Kirim Laporan';
     }
+  })
+  .catch(err => {
+    showAlert('error', 'Gagal mengirim, coba lagi.');
+    btn.disabled = false;
+    btn.textContent = '📤 Kirim Laporan';
   });
 }
 
