@@ -11,7 +11,7 @@
 
 Absen siang yang sekarang (1 checkpoint, jam 13:00-14:00, form dropdown kendala) dipecah jadi **2 checkpoint independen**:
 
-1. **"Lapor Progress"** — jam 11:00-12:00, SEBELUM istirahat. Isinya laporan progress kerja + kendala (kalau ada), digali sampai ke akar masalah. Kalau ada kendala, langsung notif Telegram ke Owner.
+1. **"Lapor Progress"** — jam 11:00-12:30, SEBELUM istirahat. Isinya laporan progress kerja + kendala (kalau ada), digali sampai ke akar masalah. Kalau ada kendala, langsung notif Telegram ke Owner.
 2. **"Kembali Kerja"** — jam 13:00 tepat, PAS istirahat berakhir. Cukup 1 tombol tap, gak ada form — murni buat mastiin karyawan gak molor istirahat. Reuse mekanisme potongan prorata yang sekarang udah jalan & terbukti (cuma dilepas dari form laporan).
 
 Kedua checkpoint independen — gak saling ngeblok (karyawan yang kena denda checkpoint 1 tetap wajib checkpoint 2, dan sebaliknya).
@@ -28,7 +28,7 @@ Kedua checkpoint independen — gak saling ngeblok (karyawan yang kena denda che
 | 4 | Variasi pertanyaan progress | Kumpulan pertanyaan (5-10 variasi, ditulis di kode — LIHAT #9) dipilih **beda per-karyawan per-hari** (2 orang bisa dapat pertanyaan beda di hari yang sama; orang yang sama dapat variasi beda dari hari ke hari). Deterministik dari tanggal+user_id, gak perlu tabel/state tambahan. |
 | 5 | Balasan otomatis | Setelah submit, karyawan langsung dapat balasan otomatis (bukan AI — dari kumpulan kalimat siap pakai juga, beda versi buat "ada kendala" vs "tidak ada kendala"). |
 | 6 | Notif kendala ke Owner | Kalau ada kendala, Owner langsung dapat notif Telegram (progress + kendala + penyebabnya) — reuse jalur notifikasi kendala yang SUDAH ADA sekarang (`kirimNotifKendala()`), cuma dipindah ke checkpoint baru ini. |
-| 7 | Denda checkpoint 1 | Kalau lewat jam 12:00 belum lapor sama sekali → potongan **flat Rp20.000** (reuse `POTONGAN_TELAT`, konsisten sama potongan lain di sistem, bukan angka baru). |
+| 7 | Denda checkpoint 1 | Kalau lewat jam 12:30 belum lapor sama sekali → potongan **flat Rp20.000** (reuse `POTONGAN_TELAT`, konsisten sama potongan lain di sistem, bukan angka baru). |
 | 8 | Checkpoint 2 disederhanakan | Cukup **1 tombol "Lanjut Kerja"** — gak ada foto, gak ada form. **GPS tetap dicek** (diam-diam lewat browser pas tombol ditekan, gak nampilin form/peta ke karyawan — cuma validasi radius kayak sekarang). Toleransi 3 menit dari jam 13:00, potongan **prorata per menit telat** (rumus SAMA PERSIS yang sekarang, gak diubah). Kalau sama sekali gak tap sampai jam 14:00 → potongan flat Rp20.000 (sama kayak sekarang). |
 | 9 | Kelola pertanyaan | Ditulis di kode (PHP const, pola sama `STATUS_PEKERJAAN`/`JENIS_KENDALA` yang sudah ada) — BUKAN halaman admin baru. Kalau Elvan mau nambah/ubah pertanyaan nanti, minta lewat sesi Claude Code, bukan self-service. |
 | 10 | Cakupan karyawan | Berlaku ke populasi yang sama kayak absen siang sekarang (level kantor 2,4,7 + level workshop 3,5,6) — TIDAK diubah dari sekarang, cuma alur & isinya yang berubah. |
@@ -69,12 +69,12 @@ Kedua checkpoint independen — gak saling ngeblok (karyawan yang kena denda che
 
 | # | Bagian | Perubahan |
 |---|---|---|
-| 1 | `AbsensiController::index()` (baris 50-66) | Logic auto-flat sekarang jadi 2 blok terpisah: satu buat checkpoint 1 (cek jam >= 12:00, pakai flag `potongan_progress_dicatat`), satu buat checkpoint 2 (cek jam >= 14:00, pakai flag `potongan_siang_dicatat`, LOGIC-NYA TIDAK BERUBAH dari sekarang). |
+| 1 | `AbsensiController::index()` (baris 50-66) | Logic auto-flat sekarang jadi 2 blok terpisah: satu buat checkpoint 1 (cek jam >= 12:30, pakai flag `potongan_progress_dicatat`), satu buat checkpoint 2 (cek jam >= 14:00, pakai flag `potongan_siang_dicatat`, LOGIC-NYA TIDAK BERUBAH dari sekarang). |
 | 2 | `formSiang()`/`absenSiang()` (baris 228-304) | Diganti/dipecah jadi 2 pasang method baru: `formLaporProgress()`/`laporProgress()` (checkpoint 1, alur pertanyaan-bertahap, foto+GPS) dan `formKembaliKerja()`/`kembaliKerja()` (checkpoint 2, cuma 1 tombol — tapi endpoint-nya tetap terima `lat`/`lng` dari JS geolocation buat validasi radius, reuse logic GPS yang sudah ada di `absenSiang()` sekarang). |
 | 3 | `getFaseAbsen()` (baris 565+) | Perlu kenal 2 fase baru (`perlu_lapor_progress`, `perlu_kembali_kerja`) menggantikan `perlu_absen_siang` yang sekarang, biar halaman `/absensi` nunjukin tombol yang bener sesuai jam & progress hari itu. |
 | 4 | `kirimNotifKendala()` (existing) | Dipanggil dari `laporProgress()` (checkpoint 1) alih-alih dari `absenSiang()` lama — isi pesannya nambah bagian "Kenapa" (dari `kendala_kenapa`), gak cuma "Apa". |
 | 5 | Bank pertanyaan & balasan | Const array baru di `AbsensiController`, pola sama `STATUS_PEKERJAAN`/`JENIS_KENDALA` yang sudah ada — `BANK_PERTANYAAN_PROGRESS`, `BALASAN_TANPA_KENDALA`, `BALASAN_ADA_KENDALA`. Pemilihan pertanyaan: `(Carbon::today()->dayOfYear + $user->id) % count(BANK_PERTANYAAN_PROGRESS)` — deterministik, gak butuh state/tabel baru. |
-| 6 | Constanta jam | `JAM_MASUK_SIANG` dipertahankan buat checkpoint 2 (13:00). Tambah `JAM_LAPOR_PROGRESS='11:00'` (buka form) dan `JAM_BATAS_LAPOR_PROGRESS='12:00'` (deadline, dulu peran ini dipegang campur sama `JAM_SKIP_SIANG`). `JAM_SKIP_SIANG='14:00'` tetap dipakai checkpoint 2 (deadline auto-flat). |
+| 6 | Constanta jam | `JAM_MASUK_SIANG` dipertahankan buat checkpoint 2 (13:00). Tambah `JAM_LAPOR_PROGRESS='11:00'` (buka form) dan `JAM_BATAS_LAPOR_PROGRESS='12:30'` (deadline, dulu peran ini dipegang campur sama `JAM_SKIP_SIANG`). `JAM_SKIP_SIANG='14:00'` tetap dipakai checkpoint 2 (deadline auto-flat). |
 
 ---
 
@@ -93,7 +93,7 @@ Kedua checkpoint independen — gak saling ngeblok (karyawan yang kena denda che
 **Logic murni (standalone, pola sama file test lain di proyek ini):**
 - Pemilihan pertanyaan progress: `(dayOfYear + userId) % jumlah` menghasilkan index yang valid & bervariasi (test beberapa kombinasi tanggal+user beda hasil).
 - Perhitungan potongan checkpoint 2 (prorata) — **tidak berubah**, tapi tetap dites ulang biar kebukti gak ada regresi (reuse `hitungMenitTelat`/`hitungPotongan` yang sudah ada).
-- Auto-flat checkpoint 1 (>= jam 12:00, `potongan_progress_dicatat` belum true) vs checkpoint 2 (>= jam 14:00, `potongan_siang_dicatat` belum true) — dua-duanya independen, dites gak saling ganggu.
+- Auto-flat checkpoint 1 (>= jam 12:30, `potongan_progress_dicatat` belum true) vs checkpoint 2 (>= jam 14:00, `potongan_siang_dicatat` belum true) — dua-duanya independen, dites gak saling ganggu.
 
 **Butuh verifikasi manual di production (gak bisa diuji headless bermakna):**
 - Foto checkpoint 1 beneran gak bisa pilih dari galeri (behavior `capture` attribute beda-beda dikit per HP/browser).
