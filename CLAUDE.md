@@ -553,3 +553,21 @@ Dicoba satu-satu: buka `/libur-nasional` lewat sidebar → kalender muncul ✅ �
 - Karyawan yang di-piket-in TETAP dapat kode absen besok paginya (`cron-kode-absen.php`), karyawan lain di tanggal sama TIDAK dapat kode — butuh nunggu siklus cron pagi asli, belum dites.
 - `cron-alpha.php` gak nandain Alpha siapapun pas libur nasional (kecuali yang piket) — sama, butuh siklus cron asli.
 - Login sebagai karyawan biasa (bukan Owner) → buka `/libur-nasional` dari sidebar → read-only, gak ada tombol tambah/kelola — belum dicoba lewat akun non-Owner.
+
+---
+
+**13 Agustus 2026 (sesi keempat) — Redesain "Absen Siang" jadi 2 checkpoint: SPEC+PLAN SELESAI & DISETUJUI, BELUM DIEKSEKUSI (>>> RESUME POINT kalau context di-clear <<<).**
+
+Dipicu Elvan mau kaji ulang kebijakan absen siang & potongannya. Digali lewat brainstorming (bukan bug, murni redesain kebijakan): absen siang sekarang (jendela 13:00-14:00, 1 checkpoint) nyampur 2 tujuan — deteksi kendala harian & cegah istirahat kelamaan — dan laporan kendala baru masuk jam 1-2 siang, kelewat telat buat Owner ambil keputusan hari itu juga. Istirahat resmi jam 12:00-13:00.
+
+**Spec:** `docs/superpowers/specs/2026-08-13-kebijakan-absen-siang-design.md` (10 keputusan terkunci). **Plan (7 task, kode lengkap per-task):** `docs/superpowers/plans/2026-08-13-kebijakan-absen-siang.md`. Elvan sudah setuju plan-nya, tinggal pilih Subagent-Driven vs Inline Execution buat mulai eksekusi — **BELUM DIPILIH, belum ada kode yang diubah sama sekali buat fitur ini.**
+
+**Ringkasan desain (biar gak perlu baca ulang spec dari nol):**
+- Absen siang lama (1 checkpoint, dropdown kendala) dipecah jadi **2 checkpoint independen** — gak saling ngeblok.
+- **Checkpoint 1 "Lapor Progress"** (jam 11:00-12:30, sebelum istirahat): foto WAJIB langsung dari kamera (gak boleh galeri, reuse pola JS `getUserMedia`+canvas yang UDAH ADA & terbukti jalan di `form-siang.blade.php` lama) → 1 pertanyaan progress yang DIGILIR per-karyawan-per-hari (bank pertanyaan ditulis di kode, dipilih deterministik dari `(dayOfYear + userId) % jumlah`, BUKAN AI) → dijawab bebas → toggle "Ada kendala?" → kalau Ya, 2 pertanyaan wajib gali akar masalah ("Apa kendalanya?" + "Kenapa itu bisa terjadi?") → kalau ada kendala, Owner langsung dapat notif Telegram (reuse `kirimNotifKendala()` yang sudah ada) → karyawan dapat balasan otomatis (bukan AI, dari kumpulan kalimat siap pakai). Kelewat jam 12:30 belum lapor = denda flat Rp20rb (reuse `POTONGAN_TELAT`, angka SAMA kayak yang lain, bukan angka baru).
+- **Checkpoint 2 "Kembali Kerja"** (jam 13:00 tepat): disederhanain jadi cukup **1 tombol tap**, GPS tetap dicek (diam-diam via `navigator.geolocation`, gak ada form/peta kelihatan). Rumus potongan prorata per menit telat **TIDAK diubah sama sekali** — reuse `hitungMenitTelat()`/`hitungPotongan()` yang sudah ada, cuma dipindah dari form lama ke endpoint baru (`kembaliKerja()`, gak perlu halaman form terpisah, tombolnya langsung di halaman utama `/absensi`).
+- Kolom DB lama dipakai ulang (`foto_siang_1`, `lat_siang`/`lng_siang`, `deskripsi_kendala` → sekarang jawaban "apa kendalanya"), kolom baru ditambah (`jam_lapor_progress`, `pertanyaan_progress`, `jawaban_progress`, `kendala_kenapa`, `potongan_progress_dicatat`, `lat_kembali_kerja`/`lng_kembali_kerja`/`gps_valid_kembali_kerja`) — migration ada di Task 1 plan, SQL manual buat production juga ada di situ (belum dijalankan, karena belum push).
+- **PENTING kalau lanjut sesi baru:** halaman `form-siang.blade.php` lama RENCANANYA DIHAPUS TOTAL (Task 6), diganti `form-lapor-progress.blade.php` — dan route `absensi.form-siang`/`absensi.siang` RENCANANYA DIHAPUS, diganti `absensi.form-lapor-progress`/`absensi.lapor-progress` + `absensi.kembali-kerja` baru. Belum kejadian, cuma rencana di plan.
+- Ini FITUR YANG DIPAKAI SEMUA 14 KARYAWAN tiap hari (bukan admin-only) — kalau nanti deploy, WAJIB sosialisasi ke semua karyawan SEBELUM jam 11:00 di hari-H (dicatat di plan bagian "Ringkasan urutan deploy").
+
+**Buat lanjutin:** baca `docs/superpowers/plans/2026-08-13-kebijakan-absen-siang.md`, tanya Elvan mau Subagent-Driven atau Inline Execution, lalu jalankan `superpowers:subagent-driven-development` (atau `executing-plans`) dari situ.
