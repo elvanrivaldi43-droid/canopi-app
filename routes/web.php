@@ -7,6 +7,7 @@ use App\Http\Controllers\AbsensiController;
 use App\Http\Controllers\RegistrasiKaryawanController;
 use App\Http\Controllers\IzinAbsenController;
 use App\Http\Controllers\JadwalLiburController;
+use App\Http\Controllers\LiburNasionalController;
 use App\Http\Controllers\PenggajianController;
 use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\KasbonKaryawanController;
@@ -136,6 +137,15 @@ Route::middleware('auth')->prefix('jadwal-libur')->name('jadwal-libur.')->group(
     Route::get('/approval',                [JadwalLiburController::class, 'approval'])->middleware('level:1,3')->name('approval');
     Route::patch('/{jadwalLibur}/approve', [JadwalLiburController::class, 'approve'])->middleware('level:1,3')->name('approve');
     Route::patch('/{jadwalLibur}/reject',  [JadwalLiburController::class, 'reject'])->middleware('level:1,3')->name('reject');
+});
+
+// ─── LIBUR NASIONAL ─────────────────────────────────────────
+Route::middleware('auth')->prefix('libur-nasional')->name('libur-nasional.')->group(function () {
+    Route::get('/',                     [LiburNasionalController::class, 'index'])->name('index');
+    Route::post('/',                    [LiburNasionalController::class, 'store'])->middleware('level:1')->name('store');
+    Route::delete('/{liburNasional}',   [LiburNasionalController::class, 'destroy'])->middleware('level:1')->name('destroy');
+    Route::post('/{liburNasional}/piket',       [LiburNasionalController::class, 'piketStore'])->middleware('level:1')->name('piket.store');
+    Route::delete('/piket/{liburNasionalPiket}', [LiburNasionalController::class, 'piketDestroy'])->middleware('level:1')->name('piket.destroy');
 });
 
 // ─── PENGGAJIAN ─────────────────────────────────────────────
