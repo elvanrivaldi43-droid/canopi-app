@@ -82,6 +82,22 @@ class AbsensiController extends Controller
         $user         = Auth::user();
         $absenHariIni = Absensi::where('user_id', $user->id)->whereDate('tanggal', today())->first();
 
+        // Checkpoint 1 "Lapor Progress": kalau kelewat jam 12:30 belum lapor sama sekali -> denda flat
+        if ($absenHariIni && $absenHariIni->jam_masuk
+            && !$absenHariIni->jam_lapor_progress
+            && !$absenHariIni->potongan_progress_dicatat
+            && now()->format('H:i') >= self::JAM_BATAS_LAPOR_PROGRESS) {
+            $potongan = self::POTONGAN_TELAT;
+            $absenHariIni->update([
+                'potongan_telat'            => ($absenHariIni->potongan_telat ?? 0) + $potongan,
+                'gaji_hari_ini'             => ($absenHariIni->gaji_hari_ini ?? 0) - $potongan,
+                'potongan_progress_dicatat' => true,
+            ]);
+            $absenHariIni->refresh();
+        }
+
+        // Checkpoint 2 "Kembali Kerja": kalau kelewat jam 14:00 belum lapor sama sekali -> denda flat
+        // (LOGIC TIDAK BERUBAH dari sebelumnya, cuma nama kolom flag disamakan konteksnya)
         if ($absenHariIni && $absenHariIni->jam_masuk
             && !$absenHariIni->jam_absen_siang
             && !$absenHariIni->potongan_siang_dicatat
@@ -636,10 +652,12 @@ class AbsensiController extends Controller
     private function getFaseAbsen(?Absensi $absen): string
     {
         if (!$absen||!$absen->jam_masuk) return 'belum_masuk';
+        $jam = now()->format('H:i');
+        if (!$absen->jam_lapor_progress) {
+            if ($jam >= self::JAM_LAPOR_PROGRESS && $jam < self::JAM_BATAS_LAPOR_PROGRESS) return 'perlu_lapor_progress';
+        }
         if (!$absen->jam_absen_siang) {
-            $jam = now()->format('H:i');
-            if ($jam < self::JAM_MASUK_SIANG) { /* belum waktunya */ }
-            elseif ($jam < self::JAM_SKIP_SIANG) return 'perlu_absen_siang';
+            if ($jam >= self::JAM_MASUK_SIANG && $jam < self::JAM_SKIP_SIANG) return 'perlu_kembali_kerja';
         }
         if (!$absen->jam_pulang) return 'perlu_pulang';
         return 'lengkap';
