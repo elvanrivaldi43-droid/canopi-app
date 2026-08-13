@@ -449,18 +449,20 @@ class AbsensiController extends Controller
     public function koreksi(Request $request, $id)
     {
         $request->validate([
-            'jam_masuk'  => 'nullable|date_format:H:i',
-            'jam_pulang' => 'nullable|date_format:H:i',
-            'status'     => 'required|string',
-            'alasan'     => 'required|string',
+            'jam_masuk'      => 'nullable|date_format:H:i',
+            'jam_pulang'     => 'nullable|date_format:H:i',
+            'status'         => 'required|string',
+            'potongan_telat' => 'nullable|integer|min:0',
+            'alasan'         => 'required|string',
         ]);
 
-        $absen = Absensi::findOrFail($id);
-        $user  = $absen->user;
+        $absen         = Absensi::findOrFail($id);
+        $user          = $absen->user;
+        $potonganTelat = $request->filled('potongan_telat') ? (int) $request->potongan_telat : ($absen->potongan_telat ?? 0);
 
         $gajiHariIni = match($request->status) {
-            'hadir', 'telat'                      => $user->gaji_harian ?? 0,
-            'setengah_hari'                       => ($user->gaji_harian ?? 0) * 0.5,
+            'hadir', 'telat'                      => max(0, ($user->gaji_harian ?? 0) - $potonganTelat),
+            'setengah_hari'                       => max(0, (($user->gaji_harian ?? 0) * 0.5) - $potonganTelat),
             'sakit', 'izin', 'cuti', 'dinas_luar' => 0,
             'alpha'                               => 0,
             default                               => $absen->gaji_hari_ini,
@@ -476,6 +478,7 @@ class AbsensiController extends Controller
             'jam_masuk'           => $request->jam_masuk ? $request->jam_masuk.':00' : $absen->jam_masuk,
             'jam_pulang'          => $request->jam_pulang ? $request->jam_pulang.':00' : $absen->jam_pulang,
             'status'              => $request->status,
+            'potongan_telat'      => $potonganTelat,
             'gaji_hari_ini'       => $gajiHariIni,
             'uang_makan_hari_ini' => $umHariIni,
             'dikoreksi'           => true,

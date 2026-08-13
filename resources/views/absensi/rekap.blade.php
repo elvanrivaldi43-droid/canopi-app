@@ -151,7 +151,7 @@
                             @endif
                         </td>
                         <td style="padding:12px 8px;text-align:center;">
-                            <button onclick="bukaKoreksi({{ $k->id }}, '{{ $k->name }}', '{{ $absen?->id }}', '{{ $absen?->jam_masuk ? substr($absen->jam_masuk,0,5) : '' }}', '{{ $absen?->jam_pulang ? substr($absen->jam_pulang,0,5) : '' }}', '{{ $absen?->status ?? '' }}')"
+                            <button onclick="bukaKoreksi({{ $k->id }}, '{{ $k->name }}', '{{ $absen?->id }}', '{{ $absen?->jam_masuk ? substr($absen->jam_masuk,0,5) : '' }}', '{{ $absen?->jam_pulang ? substr($absen->jam_pulang,0,5) : '' }}', '{{ $absen?->status ?? '' }}', {{ $absen?->potongan_telat ?? 0 }})"
                                 style="font-size:11px;background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;">
                                 ✏️ Koreksi
                             </button>
@@ -202,6 +202,12 @@
                 </select>
             </div>
 
+            <div style="margin-bottom:12px;">
+                <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:6px;">Potongan Telat/Siang (Rp)</label>
+                <input type="number" name="potongan_telat" id="inputPotongan" min="0" step="1000"
+                    style="background:#0f172a;border:1px solid #475569;color:#f1f5f9;border-radius:8px;padding:10px;width:100%;font-size:13px;">
+            </div>
+
             <div style="margin-bottom:16px;">
                 <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:6px;">Alasan Koreksi <span style="color:#ef4444;">*</span></label>
                 <textarea name="alasan" rows="3" required placeholder="Jelaskan alasan koreksi..."
@@ -222,11 +228,12 @@
 </div>
 
 <script>
-function bukaKoreksi(userId, nama, absenId, jamMasuk, jamPulang, status) {
+function bukaKoreksi(userId, nama, absenId, jamMasuk, jamPulang, status, potonganTelat) {
     document.getElementById('namaKoreksi').textContent = nama;
     document.getElementById('inputJamMasuk').value = jamMasuk;
     document.getElementById('inputJamPulang').value = jamPulang;
     document.getElementById('inputStatus').value = status || 'hadir';
+    document.getElementById('inputPotongan').value = potonganTelat || 0;
 
     // Set action — kalau belum ada absen, kirim ke route buat baru
     const action = absenId
