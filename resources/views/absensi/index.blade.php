@@ -72,8 +72,8 @@
             📷 ABSEN MASUK SEKARANG
         </a>
 
-        @elseif($fase === 'perlu_absen_siang')
-        {{-- Sudah masuk pagi, perlu absen siang --}}
+        @elseif($fase === 'perlu_lapor_progress')
+        {{-- Sudah masuk pagi, perlu lapor progress sebelum istirahat --}}
         <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);font-size:13px;color:#10B981;text-align:center;">
                 ✅ Sudah absen masuk pukul {{ substr($absenHariIni->jam_masuk, 0, 5) }}
@@ -83,19 +83,65 @@
                 · <span style="color:#F59E0B;">⚠️ Setengah Hari</span>
                 @endif
             </div>
-            <a href="{{ route('absensi.form-siang') }}"
+            <a href="{{ route('absensi.form-lapor-progress') }}"
                style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:14px;font-size:15px;font-weight:700;text-decoration:none;color:#0F1117;background:linear-gradient(135deg,#F59E0B,#D97706);min-height:54px;">
-                🌤️ ABSEN SIANG SEKARANG
+                📋 LAPOR PROGRESS SEKARANG
             </a>
         </div>
+
+        @elseif($fase === 'perlu_kembali_kerja')
+        {{-- Istirahat sudah selesai, tap buat catat kembali kerja --}}
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <div id="kkAlert" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;text-align:center;"></div>
+            <button type="button" id="btnKembaliKerja" onclick="tapKembaliKerja()"
+               style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:14px;font-size:15px;font-weight:700;border:none;color:#0F1117;background:linear-gradient(135deg,#F59E0B,#D97706);min-height:54px;cursor:pointer;">
+                🔄 LANJUT KERJA
+            </button>
+        </div>
+        <script>
+        function tapKembaliKerja() {
+            const btn = document.getElementById('btnKembaliKerja');
+            const alertBox = document.getElementById('kkAlert');
+            btn.disabled = true;
+            btn.textContent = 'Mendeteksi lokasi...';
+            navigator.geolocation.getCurrentPosition(pos => {
+                fetch('{{ route("absensi.kembali-kerja") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+                    body: JSON.stringify({lat: pos.coords.latitude, lng: pos.coords.longitude})
+                }).then(r => r.json()).then(data => {
+                    alertBox.style.display = 'block';
+                    alertBox.style.background = data.success ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+                    alertBox.style.color = data.success ? '#6ee7b7' : '#fca5a5';
+                    alertBox.textContent = data.message;
+                    if (data.success) {
+                        setTimeout(() => window.location.href = data.redirect, 1500);
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = '🔄 LANJUT KERJA';
+                    }
+                });
+            }, () => {
+                alertBox.style.display = 'block';
+                alertBox.style.background = 'rgba(239,68,68,0.15)';
+                alertBox.style.color = '#fca5a5';
+                alertBox.textContent = 'GPS gagal terdeteksi, coba lagi.';
+                btn.disabled = false;
+                btn.textContent = '🔄 LANJUT KERJA';
+            }, {enableHighAccuracy:true, timeout:10000});
+        }
+        </script>
 
         @elseif($fase === 'perlu_pulang')
         {{-- Sudah masuk & absen siang, perlu pulang --}}
         <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="padding:10px 14px;border-radius:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);font-size:13px;color:#10B981;text-align:center;">
                 ✅ Masuk {{ substr($absenHariIni->jam_masuk, 0, 5) }}
+                @if($absenHariIni->jam_lapor_progress)
+                · Lapor {{ substr($absenHariIni->jam_lapor_progress, 0, 5) }}
+                @endif
                 @if($absenHariIni->jam_absen_siang)
-                · Siang {{ substr($absenHariIni->jam_absen_siang, 0, 5) }}
+                · Kembali {{ substr($absenHariIni->jam_absen_siang, 0, 5) }}
                 @endif
             </div>
             <a href="{{ route('absensi.form-pulang') }}"
