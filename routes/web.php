@@ -107,6 +107,7 @@ Route::middleware('auth')->prefix('absensi')->name('absensi.')->group(function (
     Route::post('/masuk',                   [AbsensiController::class, 'absenMasuk'])->name('masuk');
     Route::get('/lapor-progress',           [AbsensiController::class, 'formLaporProgress'])->name('form-lapor-progress');
     Route::post('/lapor-progress',          [AbsensiController::class, 'laporProgress'])->name('lapor-progress');
+    Route::post('/kembali-kerja',           [AbsensiController::class, 'kembaliKerja'])->name('kembali-kerja');
     Route::get('/pulang',                   [AbsensiController::class, 'formPulang'])->name('form-pulang');
     Route::post('/pulang',                  [AbsensiController::class, 'absenPulang'])->name('pulang');
     Route::post('/cek-gps',                 [AbsensiController::class, 'cekGps'])->name('cek-gps');

@@ -327,6 +327,53 @@ class AbsensiController extends Controller
         return response()->json(['success'=>true,'message'=>$balasan,'redirect'=>route('absensi.index')]);
     }
 
+    public function kembaliKerja(Request $request)
+    {
+        $user  = Auth::user();
+        $absen = Absensi::where('user_id',$user->id)->whereDate('tanggal',today())->first();
+        if (!$absen?->jam_masuk) return response()->json(['success'=>false,'message'=>'Kamu belum absen masuk pagi.']);
+        if ($absen->jam_absen_siang) return response()->json(['success'=>false,'message'=>'Kamu sudah lapor kembali kerja hari ini.']);
+
+        $request->validate([
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+        ]);
+
+        $sedangLuarKota = LuarKota::sedangLuarKota($user->id);
+
+        $gpsValid = true;
+        if (in_array($user->level, self::LEVEL_KANTOR) && !$sedangLuarKota) {
+            $lokasi   = $this->getLokasiCek($user->level,'siang');
+            $jarak    = $this->hitungJarak($request->lat,$request->lng,$lokasi['lat'],$lokasi['lng']);
+            $gpsValid = $jarak <= self::RADIUS_SIANG;
+            if (!$gpsValid) {
+                return response()->json(['success'=>false,'message'=>"📍 Lokasi terlalu jauh ({$this->formatJarak($jarak)})."]);
+            }
+        }
+
+        $jamSekarang = now()->format('H:i');
+        $menitTelat  = $this->hitungMenitTelat($jamSekarang, self::JAM_MASUK_SIANG, self::TOLERANSI_SIANG);
+        $potongan    = $this->hitungPotongan($menitTelat);
+
+        $absen->update([
+            'jam_absen_siang'         => now()->format('H:i:s'),
+            'lat_kembali_kerja'       => $request->lat,
+            'lng_kembali_kerja'       => $request->lng,
+            'gps_valid_kembali_kerja' => true,
+            'potongan_telat'          => ($absen->potongan_telat??0) + $potongan,
+            'potongan_siang_dicatat'  => true,
+            'gaji_hari_ini'           => ($absen->gaji_hari_ini??0) - $potongan,
+        ]);
+
+        $pesan = $menitTelat>0
+            ? "✅ Tercatat, lanjut kerja ya! Telat {$menitTelat} menit — potongan Rp".number_format($potongan,0,',','.')
+            : "✅ Tercatat, lanjut kerja ya!";
+
+        if ($sedangLuarKota) $pesan .= "\n✈️ Mode luar kota aktif.";
+
+        return response()->json(['success'=>true,'message'=>$pesan,'redirect'=>route('absensi.index')]);
+    }
+
     public function formPulang()
     {
         $user  = Auth::user();
