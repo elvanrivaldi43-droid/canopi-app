@@ -19,7 +19,11 @@ class Absensi extends Model
         'lat_siang','lng_siang','gps_valid_siang','jam_absen_siang',
         'status_pekerjaan','ada_kendala','jenis_kendala','deskripsi_kendala',
         'lembur_jam','lembur_approved','lembur_approved_oleh',
-    'potongan_siang_dicatat',  // ← tambahkan ini
+        'potongan_siang_dicatat',
+        // Lapor Progress + Kembali Kerja (13 Agustus)
+        'jam_lapor_progress','pertanyaan_progress','jawaban_progress','kendala_kenapa',
+        'potongan_progress_dicatat',
+        'lat_kembali_kerja','lng_kembali_kerja','gps_valid_kembali_kerja',
     ];
 
     protected $casts = ['tanggal' => 'date'];
