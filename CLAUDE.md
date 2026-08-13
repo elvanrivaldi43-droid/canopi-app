@@ -541,11 +541,15 @@ Dipicu pertanyaan Elvan soal Lebaran (libur ~2 minggu)/Tahun Baru/17 Agustus —
 - `LiburNasional::piket()` (relasi hasMany) gak pernah dipakai — `destroy()` andelin FK cascade langsung, bukan lewat relasi ini.
 - Flash banner sukses/error di halaman ini render 2x (pola lama yang sudah ada di halaman lain kayak `addon/index.blade.php`, bukan bug baru).
 
-**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
-- Owner buka `/libur-nasional` (lewat sidebar ATAU dashboard) → kalender kelihatan, klik "+ Tambah Libur Nasional" → klik 2 tanggal → modal muncul terisi otomatis → simpan → tanggal ter-highlight.
-- Broadcast Telegram nyampe ke karyawan yang connect pas libur nasional baru ditambah.
-- Klik tanggal yang sudah libur nasional → modal Kelola Piket → tambah 1 karyawan → badge "📌 1 piket" muncul + karyawan itu dapat notif personal.
-- Karyawan yang di-piket-in TETAP dapat kode absen besok paginya (`cron-kode-absen.php`), karyawan lain di tanggal sama TIDAK dapat kode.
-- `cron-alpha.php` gak nandain Alpha siapapun pas libur nasional (kecuali yang piket).
-- Login sebagai karyawan biasa (bukan Owner) → buka `/libur-nasional` dari sidebar → read-only, gak ada tombol tambah/kelola.
-- Modal Tambah/Kelola Piket kebuka BENER di HP (khususnya iOS Safari) — ini yang diantisipasi lewat fix #3 di atas SEBELUM ada laporan, jadi belum ada bukti nyata dari device asli.
+**13 Agustus 2026 (sesi ketiga) — VERIFIKASI LANGSUNG oleh Elvan di production (browser desktop + HP), dipandu manual (ekstensi Claude in Chrome gak connect di Edge, jadi bukan otomatis) — SEMUA JALAN, 1 bug kecil ketemu & langsung dibenerin:**
+
+Dicoba satu-satu: buka `/libur-nasional` lewat sidebar → kalender muncul ✅ → "+ Tambah Libur Nasional" → klik 2 tanggal → modal terisi otomatis ✅ → simpan → tanggal ter-highlight + masuk daftar bawah ✅ → klik tanggal libur → modal Kelola Piket → tambah karyawan → badge "📌 1 piket" muncul ✅ → karyawan itu dapat notif Telegram ✅ → dibuka lagi di HP, modal rapi (fix #3 final review soal `position:fixed` TERBUKTI berhasil, gak ada masalah) ✅.
+
+**1 bug ketemu (commit `3d09d0e`):** tombol "Hapus" di baris TERAKHIR daftar "Semua Libur Nasional" ketutup nav bar bawah yang melayang di HP — beda dari halaman lain yang punya masalah sama tapi "gak masalah karena masih bisa discroll" (Elvan konfirmasi eksplisit ini bukan bug baru di layout dasar app, cuma halaman ini kurang jarak scroll ekstra di elemen paling akhir). Fix: `margin-bottom:80px` di kotak daftar itu. **Dicek ulang Elvan setelah deploy — tombol udah gak ketutup.**
+
+**Status: FITUR LIBUR NASIONAL SELESAI PENUH, LIVE, DAN TERVERIFIKASI LANGSUNG DI PRODUCTION (desktop+HP) per 13 Agustus 2026.**
+
+**BELUM diverifikasi (bukan blocker, checklist sesi depan kalau ada laporan aneh):**
+- Karyawan yang di-piket-in TETAP dapat kode absen besok paginya (`cron-kode-absen.php`), karyawan lain di tanggal sama TIDAK dapat kode — butuh nunggu siklus cron pagi asli, belum dites.
+- `cron-alpha.php` gak nandain Alpha siapapun pas libur nasional (kecuali yang piket) — sama, butuh siklus cron asli.
+- Login sebagai karyawan biasa (bukan Owner) → buka `/libur-nasional` dari sidebar → read-only, gak ada tombol tambah/kelola — belum dicoba lewat akun non-Owner.
