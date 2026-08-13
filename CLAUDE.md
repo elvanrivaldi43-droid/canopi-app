@@ -571,3 +571,47 @@ Dipicu Elvan mau kaji ulang kebijakan absen siang & potongannya. Digali lewat br
 - Ini FITUR YANG DIPAKAI SEMUA 14 KARYAWAN tiap hari (bukan admin-only) — kalau nanti deploy, WAJIB sosialisasi ke semua karyawan SEBELUM jam 11:00 di hari-H (dicatat di plan bagian "Ringkasan urutan deploy").
 
 **Buat lanjutin:** baca `docs/superpowers/plans/2026-08-13-kebijakan-absen-siang.md`, tanya Elvan mau Subagent-Driven atau Inline Execution, lalu jalankan `superpowers:subagent-driven-development` (atau `executing-plans`) dari situ.
+
+---
+
+**14 Agustus 2026 — Redesain "Absen Siang" (Lapor Progress + Kembali Kerja) EKSEKUSI SELESAI & LIVE (subagent-driven-development, 7 task + final whole-branch review + 2 fix wave), langsung di `main` (pilihan Elvan, bukan worktree), push+deploy dini hari (±01:00 WIB, aman jauh dari jendela 11:00-12:30).**
+
+Lanjutan langsung dari resume point sesi sebelumnya — spec+plan sudah disetujui, tinggal eksekusi. Elvan pilih Subagent-Driven + langsung di main (konsisten sesi-sesi sebelumnya). 7 task dikerjakan fresh-implementer-per-task + task review tiap task, ditutup 1 final whole-branch review (model paling capable).
+
+**Yang jadi (ringkas, detail lengkap kode ada di plan):**
+- Checkpoint 1 "Lapor Progress" (`AbsensiController::formLaporProgress()`/`laporProgress()`, view `form-lapor-progress.blade.php`) — foto live-kamera wajib, 1 pertanyaan progress digilir per-karyawan-per-hari (`pilihPertanyaanProgress()`, deterministik `(dayOfYear+userId)%bank`, bukan AI), toggle kendala → 2 pertanyaan gali akar masalah → notif Telegram ke Owner/Mandor kalau ada kendala. Lewat jam 12:30 belum lapor = denda flat Rp20rb (`POTONGAN_TELAT`, reuse).
+- Checkpoint 2 "Kembali Kerja" (`AbsensiController::kembaliKerja()`, 1 tombol tap di `absensi/index.blade.php`, TANPA halaman form terpisah) — GPS diam-diam, potongan prorata reuse `hitungMenitTelat()`/`hitungPotongan()` TIDAK DIUBAH, cuma dipindah lokasi.
+- 2 checkpoint INDEPENDEN — diverifikasi end-to-end (final review): gak ada flag/kolom yang dibagi, satu telat gak nunda/gak gugurin yang lain.
+- Kolom baru di `absensi` (`jam_lapor_progress`, `pertanyaan_progress`, `jawaban_progress`, `kendala_kenapa`, `potongan_progress_dicatat`, `lat_kembali_kerja`/`lng_kembali_kerja`/`gps_valid_kembali_kerja`) — migration dibuat, deploy sebenarnya via SQL manual (Elvan sudah jalankan 14 Agustus sebelum push).
+- `formSiang()`/`absenSiang()` + view `form-siang.blade.php` + route `absensi.form-siang`/`absensi.siang` lama **DIHAPUS TOTAL** — diverifikasi grep seluruh repo, nol sisa referensi di luar yang memang direncanakan diganti.
+- Bonus ketemu pas Task 3: fix tak sengaja — form lama gak kirim `tipe:'siang'` ke `/absensi/cek-gps` (frontend gate radius 100m/masuk, backend pakai 200m/siang, gak sinkron) — sekarang sinkron di form baru.
+
+**3 bug ketemu & diperbaiki lewat proses review berlapis (bukan cuma "jadi lalu push"):**
+- **Task 6 fix round 1 (2 celah, Elvan pilih "tambal sekarang"):** `getUserMedia()` di form Lapor Progress gak ada `.catch()` (kamera ditolak izin → modal macet gelap, bisa ke-submit foto kosong); submit `fetch()` gak ada `.catch()` (sesi expired/network gagal → tombol "Mengirim..." macet permanen).
+- **Task 7 fix round 1 (1 celah, kelas bug sama, ruling sama diterapkan tanpa nanya ulang):** `fetch()` tombol "Kembali Kerja" juga gak ada `.catch()`.
+- **Final whole-branch review (model paling capable) nemu 3 hal yang gak kelihatan dari review per-task:**
+  1. **Kritis — celah waktu deploy:** kalau deploy dilakukan SETELAH jam 12:30, semua karyawan yang udah absen pagi bakal dianggap "belum lapor progress" dan kena potongan Rp20rb retroaktif buat checkpoint yang belum ada pas mereka mulai kerja. Ditambal: catatan kondisional di plan (baris SQL `UPDATE absensi SET potongan_progress_dicatat=1 WHERE tanggal=CURDATE()` HANYA kalau deploy lewat 12:30, TIDAK kalau sesuai target sebelum 11:00) — **tidak dipakai sesi ini karena push terjadi dini hari, jauh dari jendela manapun.**
+  2. `refreshGPS()` di form Lapor Progress ternyata JUGA gak ada `.catch()` — fetch ke-3 di file yang sama yang kelewat pas fix round Task 6 (pola bug sama, 2 fetch lain sudah ditambal, yang ini kelewat). Ditambal.
+  3. `laporProgress()` gak ada guard "sudah lapor hari ini" — beda dari kembaran `kembaliKerja()` yang punya. Retry di koneksi lemot bisa kirim laporan dobel → notif Telegram dobel ke Owner (mirip insiden lama kode-absen 4x kirim). Ditambal, guard ditaruh SEBELUM validate/update (diverifikasi re-review, bukan cuma ditambal asal).
+- **1 temuan bukan bug, keputusan produk:** jawaban "Lapor Progress" harian (progress + jawaban bebas) tersimpan ke DB tapi gak ada layar yang nampilin (cuma kepake kalau ada kendala, dikirim Telegram). Ditanya ke Elvan langsung — **keputusan: TETAP disimpan** (bukti/audit trail, murah, berguna buat sengketa/KPI/SWE roadmap nanti), **layar buat nampilin DITUNDA** sampai ada kebutuhan konkret — bukan di-drop sekarang.
+
+**Minor yang dicatat, bukan diperbaiki (parkir di ledger, low-impact, sengaja gak masuk fix wave):**
+- Test `test_pilih_pertanyaan_progress.php` — 1 assertion ("user sama tanggal beda") tautologis (bandingin formula ke dirinya sendiri), plan-mandated persis dari brief, tetap hijau.
+- `$gpsValid = true;` dead variable di `laporProgress()`/`kembaliKerja()` — plan-mandated verbatim, tak berbahaya.
+- Tabel riwayat (bukan blok fase aktif) di `absensi/index.blade.php` masih label "Siang" bukan "Kembali" — kosmetik, di luar scope file yang disentuh Task 7.
+- Potongan flat checkpoint 1&2 diam-diam (gak ada flash message pas kena denda) — sudah gitu dari dulu buat checkpoint 2, sekarang dobel jadi 2 tempat.
+- Denda flat cuma jalan LAZY pas karyawan buka `/absensi` (bukan cron otomatis) — kalau gak buka app hari itu, gak kena denda hari itu. Sama kayak sebelumnya, sekarang berlaku ke checkpoint 1 juga.
+- `$gpsWajib` gak dipakai di view baru (dari dulu juga gak dipakai di form lama) — akibatnya level workshop (3/5/6) tetap kena gate GPS-frontend walau backend sengaja skip radius check buat mereka. Berpotensi masalah nyata buat teknisi di lokasi customer >200m dari workshop — **BELUM ada laporan nyata, tapi disarankan dicek pas verifikasi manual.**
+
+**Status git:** push ke `main` sukses (`c045091..da4761e`, 10 commit) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit. **SQL sudah dijalankan Elvan (14 Agustus) sebelum push.**
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Buka `/absensi` jam 11:00-12:30 tanpa lapor progress → tombol "LAPOR PROGRESS SEKARANG" muncul, submit dengan/tanpa kendala dua-duanya jalan, balasan otomatis muncul.
+- 2 karyawan beda buka jam sama → pertanyaan progress beda (bukti pemilihan per-user jalan).
+- Ada kendala → Owner/Mandor dapat notif Telegram lengkap (progress+kendala+penyebab).
+- Lewat jam 12:30 belum lapor → potongan Rp20rb flat masuk ke rekap gaji hari itu.
+- Jam 13:00, tap "LANJUT KERJA" → tercatat, kalau telat potongan prorata sesuai menit (rumus TIDAK berubah, tapi tetap worth dicek sekali).
+- Lewat jam 14:00 belum tap kembali kerja → potongan Rp20rb flat (mekanisme lama, harus tetap jalan sama persis).
+- **Teknisi/level workshop (3/5/6) submit Lapor Progress dari lokasi customer (jauh dari workshop)** — cek apakah gate GPS-frontend nahan mereka gak sengaja (lihat minor terakhir di atas).
+- Submit Lapor Progress 2x berturut-turut (retry) → submit ke-2 harus ditolak dengan pesan "sudah lapor progress hari ini" (verifikasi guard baru dari final review).
+- Kabari semua 14 karyawan soal perubahan alur ini — **belum dilakukan Elvan per catatan sesi ini, WAJIB sebelum jam 11:00 pertama kali fitur ini aktif dipakai nyata.**
