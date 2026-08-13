@@ -47,6 +47,36 @@ class AbsensiController extends Controller
         'lainnya'   => '📝 Lainnya',
     ];
 
+    const BANK_PERTANYAAN_PROGRESS = [
+        'Progress kerja hari ini sudah sampai mana?',
+        'Bagian apa yang sudah selesai dikerjakan hari ini?',
+        'Target hari ini kira-kira tercapai berapa persen?',
+        'Ada bagian yang lebih cepat/lambat dari rencana?',
+        'Apa yang lagi dikerjakan sekarang?',
+        'Kalau dibandingkan kemarin, progress hari ini gimana?',
+        'Ada bagian yang perlu diperhatikan Owner/Mandor hari ini?',
+    ];
+
+    const BALASAN_TANPA_KENDALA = [
+        '✅ Laporan diterima, semangat lanjut kerja!',
+        '✅ Mantap, tetap semangat ya! 💪',
+        '✅ Oke, terima kasih laporannya. Lanjut kerja!',
+    ];
+
+    const BALASAN_ADA_KENDALA = [
+        '✅ Laporan diterima. Kendala kamu udah diteruskan ke Owner, ditunggu ya.',
+        '✅ Diterima, Owner udah dikabari soal kendalanya. Semangat!',
+    ];
+
+    const JAM_LAPOR_PROGRESS        = '11:00';
+    const JAM_BATAS_LAPOR_PROGRESS  = '12:30';
+
+    public static function pilihPertanyaanProgress(int $userId, \Carbon\Carbon $tanggal): string
+    {
+        $index = ($tanggal->dayOfYear + $userId) % count(self::BANK_PERTANYAAN_PROGRESS);
+        return self::BANK_PERTANYAAN_PROGRESS[$index];
+    }
+
     public function index()
     {
         $user         = Auth::user();
