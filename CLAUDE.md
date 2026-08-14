@@ -615,3 +615,30 @@ Lanjutan langsung dari resume point sesi sebelumnya — spec+plan sudah disetuju
 - **Teknisi/level workshop (3/5/6) submit Lapor Progress dari lokasi customer (jauh dari workshop)** — cek apakah gate GPS-frontend nahan mereka gak sengaja (lihat minor terakhir di atas).
 - Submit Lapor Progress 2x berturut-turut (retry) → submit ke-2 harus ditolak dengan pesan "sudah lapor progress hari ini" (verifikasi guard baru dari final review).
 - Kabari semua 14 karyawan soal perubahan alur ini — **belum dilakukan Elvan per catatan sesi ini, WAJIB sebelum jam 11:00 pertama kali fitur ini aktif dipakai nyata.**
+
+---
+
+**14 Agustus 2026 (sesi kelima) — Migrasi Media ke Cloudflare R2 SELESAI & LIVE (brainstorm→spec→plan→eksekusi inline, 8 task), langsung di `main`, push bertahap per-task.**
+
+Dipicu pertanyaan Elvan soal di mana foto absen/survei disimpan — ketauan tersebar 2 tempat gak seragam (foto absen di disk lokal server, tanpa retensi; foto lokasi survei di Cloudinary). Sekalian jadi kesempatan bikin roadmap lama #4 "Sesi Media R2" (yang tadinya baru judul doang, belum ada rancangan). Spec: `docs/superpowers/specs/2026-08-14-migrasi-media-r2-design.md`. Plan (8 task, kode lengkap): `docs/superpowers/plans/2026-08-14-migrasi-media-r2.md`.
+
+**Yang jadi:**
+- `App\Services\R2Service` — inti upload ke R2, murni `curl_init` + tanda tangan AWS SigV4 manual (**tanpa package Composer baru** — dicek langsung, cPanel Niagahoster gak ada Terminal/Composer). Dua kemampuan: `put()` (upload server-side, dipakai foto absen) dan `presignPutUrl()` (izin upload sementara 15 menit, browser upload LANGSUNG ke R2, dipakai foto & video lokasi). Test standalone `tests/r2/test_r2_service.php` (12 assertion, structural — signature 64-hex, deterministik, sensitif ke secret key, dll — bukan tebak angka AWS dari memori) — **12/12 lulus, dan smoke test nyata ke R2 (upload-baca file sungguhan) juga sukses sebelum dipasang ke fitur asli.**
+- Foto absen (masuk/lapor-progress/kembali-kerja) — `simpanFotoBase64()` (1 titik dipakai 3 tempat) diganti dari `Storage::disk('public')` ke `R2Service::put()`. Alur dari sisi karyawan TIDAK berubah sama sekali. Guard baru ditambah di 3 pemanggil: kalau upload gagal, absen ditolak dengan pesan jelas (bukan diam-diam kesimpen tanpa foto).
+- Foto profil lokasi survei — pindah dari Cloudinary ke R2 (presigned URL, endpoint baru `POST /lokasi/{id}/presign`). Foto lama TIDAK dimigrasi, tetap di Cloudinary (data lama dibiarkan, cuma upload baru yang ke R2).
+- **Fitur baru:** video profil lokasi survei — maks 1 video/lokasi, maks 200MB, direkam pakai kamera native HP (`<input type=file accept=video/* capture>`, BUKAN recorder custom — belajar dari masalah iOS Safari custom-JS yang berulang kali kejadian di project ini). Kolom baru `pipeline_leads.lokasi_video` (JSON array, pola sama `lokasi_foto`).
+- Retensi: foto absen 60 hari lewat **R2 Object Lifecycle Rule** (fitur native dashboard Cloudflare, prefix `absensi/`, zero kode/cron) — foto/video lokasi survei permanen (gak ada rule hapus). Script manual `foto-absen-bersih.php` (dibuat sesi sebelumnya) **belum dihapus** — masih dibutuhkan buat bersihin foto absen LAMA yang masih di disk lokal (gak ikut migrasi).
+
+**2 masalah nyata ketemu pas verifikasi langsung bareng Elvan (bukan asumsi, kebukti dari uji nyata):**
+1. **CORS** — upload foto lokasi dari browser gagal total ("0 foto siap", gak ada error kelihatan karena pesan gagal ke-overwrite pesan sukses tepat sesudahnya). Root cause: bucket R2 belum diizinkan nerima request langsung dari `app.kanopibsd.co.id` (gap di plan — lupa dimasukkan sebagai langkah setup). **Fix: CORS Policy ditambah di Settings bucket** (`AllowedOrigins: app.kanopibsd.co.id`, `AllowedMethods: PUT`). Bukan bug kode.
+2. **Sertifikat "invalid" pas buka link foto/video** — didiagnosa berlapis (cek cert langsung dari VPS pakai `openssl`/`curl`: **valid**, `SSL certificate verify ok`; incognito: masih error; HP+data seluler beda jaringan: masih error juga) → akhirnya ketauan **DNS ISP/provider seluler Elvan yang ganggu domain `r2.dev`** (bukan salah kita, bukan salah Cloudflare). Solusi: pakai app **1.1.1.1** (DNS publik Cloudflare) — langsung normal.
+3. **Risiko belum ditutup (dicatat, bukan dikerjakan sesi ini):** Cloudflare sendiri kasih peringatan `r2.dev` "not recommended for production, rate-limited". Kalau ISP karyawan lain (Owner/Admin/Supervisor yang buka halaman Profil Lokasi) kena gangguan DNS serupa, mereka bisa gak bisa lihat foto/video lokasi — gak realistis suruh semua orang install 1.1.1.1. **Solusi jangka panjang: pindah ke custom domain sendiri** (misal `media.kanopibsd.co.id`) — butuh pindahin DNS domain ke Cloudflare, perubahan lebih besar & berisiko ke domain production yang sudah jalan, SENGAJA ditunda sampai ada laporan nyata dari karyawan lain (bukan dikerjakan spekulatif).
+
+**Status git:** push bertahap per-task ke `main` (bukan 1 kali di akhir) — `2f6a175`(R2Service)..terakhir. SQL `pipeline_leads.lokasi_video` sudah dijalankan Elvan sebelum push Task 6 (belajar dari insiden kolom hilang pagi ini, gak mau ulang).
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Foto absen (masuk/lapor-progress/kembali-kerja) — **belum sempat dites ulang pakai foto sungguhan** setelah swap ke R2 (waktu sesi ini kepotong jendela jam checkpoint). Kemungkinan besar aman (pola upload sama persis kayak smoke test yang sudah sukses), tapi tetap perlu dicoba nyata.
+- Kalau `.env` R2 kosong/salah → absen harus nolak dengan pesan "Gagal menyimpan foto, coba lagi." (bukan 500), belum disimulasikan.
+- Upload foto/video lokasi dari ISP/HP karyawan LAIN (bukan cuma Elvan) — buat lihat apakah masalah DNS `r2.dev` di atas kejadian juga ke orang lain.
+- Lifecycle rule 60 hari — baru bisa kebukti kerja setelah ≥60 hari (gak bisa dites instan).
+- Kapan pindah `foto-absen-bersih.php` jadi gak perlu lagi / dihapus — tunggu sampai semua foto absen lokal lama sudah lewat 60 hari atau dibersihkan manual sekali.
