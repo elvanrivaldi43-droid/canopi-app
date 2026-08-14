@@ -122,7 +122,7 @@
             </div>
         </div>
 
-        {{-- Foto Lokasi (upload ke Cloudinary) --}}
+        {{-- Foto Lokasi (upload ke R2) --}}
         <div class="lk-card">
             <div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px;">Foto Lokasi</div>
             <div style="font-size:11px;color:#64748b;margin-bottom:10px;">Foto otomatis dikompres sebelum upload (hemat kuota). Maks 8 foto. Jangan lupa tekan Simpan setelah upload.</div>
@@ -131,6 +131,18 @@
             <div id="fotoStatus" style="font-size:12px;color:#cbd5e1;margin-top:8px;"></div>
             <div id="fotoGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;"></div>
             <input type="hidden" name="lokasi_foto" id="fotoJson" value="{{ $lead->lokasi_foto ?? '[]' }}">
+        </div>
+
+        {{-- Video Lokasi (baru, ke R2) --}}
+        <div class="lk-card">
+            <div style="font-size:13px;font-weight:700;color:#fbbf24;margin-bottom:6px;">Video Lokasi</div>
+            <div style="font-size:11px;color:#64748b;margin-bottom:10px;">1 video singkat keliling lokasi (maks 200MB). Jangan lupa tekan Simpan setelah upload.</div>
+            <input type="file" id="videoInput" accept="video/*" capture="environment" style="display:none">
+            <button type="button" id="btnVideo" class="btn" style="background:#334155;color:#e2e8f0;">🎥 Tambah Video</button>
+            <div id="videoStatus" style="font-size:12px;color:#cbd5e1;margin-top:8px;"></div>
+            <button type="button" id="btnRetryVideo" onclick="cobaUploadVideo()" class="btn" style="background:#b45309;color:#fff;margin-top:6px;display:none;">🔁 Coba Upload Lagi</button>
+            <div id="videoGrid" style="margin-top:10px;"></div>
+            <input type="hidden" name="lokasi_video" id="videoJson" value="{{ $lead->lokasi_video ?? '[]' }}">
         </div>
 
         <button type="submit" class="btn btn-gold">💾 Simpan Profil Lokasi</button>
@@ -265,6 +277,65 @@ if(btnFoto && fotoInput){
     });
 }
 renderFoto();
+
+// ================= VIDEO -> R2 =================
+var MAKS_VIDEO=1;
+var MAKS_VIDEO_BYTES=200*1024*1024;
+
+var videoList=[];
+try{ videoList=JSON.parse(document.getElementById('videoJson').value||'[]'); }catch(e){ videoList=[]; }
+if(!videoList || typeof videoList.length==='undefined') videoList=[];
+
+function videoStatusMsg(t){ var e=document.getElementById('videoStatus'); if(e) e.textContent=t; }
+function renderVideo(){
+    var g=document.getElementById('videoGrid'); if(!g) return;
+    var html='';
+    for(var i=0;i<videoList.length;i++){
+        html+='<div style="position:relative;margin-bottom:6px;">'+
+            '<video src="'+videoList[i]+'" controls style="width:100%;border-radius:6px;border:1px solid #334155;"></video>'+
+            '<button type="button" onclick="hapusVideo('+i+')" style="position:absolute;top:6px;right:6px;background:#7f1d1d;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;cursor:pointer;line-height:1;">×</button>'+
+            '</div>';
+    }
+    g.innerHTML=html;
+    document.getElementById('videoJson').value=JSON.stringify(videoList);
+}
+function hapusVideo(i){ videoList.splice(i,1); renderVideo(); }
+
+// File yang lagi diproses TETAP disimpan di variabel ini sampai upload SUKSES —
+// kalau gagal (sinyal lemah dsb), tombol retry pakai file yang sama, tidak perlu rekam ulang.
+var pendingVideoFile=null;
+
+function cobaUploadVideo(){
+    if(!pendingVideoFile) return;
+    document.getElementById('btnRetryVideo').style.display='none';
+    videoStatusMsg('Mengupload video...');
+    uploadR2(pendingVideoFile, 'video')
+        .then(function(url){
+            videoList.push(url); renderVideo();
+            videoStatusMsg('Video siap. Tekan Simpan untuk menyimpan.');
+            pendingVideoFile=null;
+        })
+        .catch(function(e){
+            videoStatusMsg('Gagal: '+e.message+' — file tetap tersimpan, coba lagi tanpa rekam ulang.');
+            document.getElementById('btnRetryVideo').style.display='block';
+        });
+}
+
+var btnVideo=document.getElementById('btnVideo');
+var videoInput=document.getElementById('videoInput');
+if(btnVideo && videoInput){
+    btnVideo.addEventListener('click', function(){ videoInput.click(); });
+    videoInput.addEventListener('change', function(){
+        var file=this.files[0];
+        this.value='';
+        if(!file){ return; }
+        if(videoList.length>=MAKS_VIDEO){ videoStatusMsg('Maksimal '+MAKS_VIDEO+' video. Hapus dulu yang lama kalau mau ganti.'); return; }
+        if(file.size>MAKS_VIDEO_BYTES){ videoStatusMsg('Video terlalu besar (maks 200MB).'); return; }
+        pendingVideoFile=file;
+        cobaUploadVideo();
+    });
+}
+renderVideo();
 
 // ===== VALIDASI sebelum Lanjut Buat RAB =====
 var LV_USER = {{ $lv }};

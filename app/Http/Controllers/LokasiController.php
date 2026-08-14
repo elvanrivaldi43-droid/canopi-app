@@ -76,6 +76,7 @@ class LokasiController extends Controller
             'lokasi_akses'          => 'nullable|string|max:50',
             'lokasi_catatan'        => 'nullable|string',
             'lokasi_foto'           => 'nullable|string',
+            'lokasi_video'          => 'nullable|string',
         ]);
 
         $data = [
@@ -89,6 +90,7 @@ class LokasiController extends Controller
             'lokasi_akses'           => $request->lokasi_akses,
             'lokasi_catatan'         => $request->lokasi_catatan,
             'lokasi_foto'            => $request->lokasi_foto,
+            'lokasi_video'           => $request->lokasi_video,
             'lokasi_oleh'            => Auth::id(),
             'lokasi_updated_at'      => now(),
             'last_activity_at'       => now(),
