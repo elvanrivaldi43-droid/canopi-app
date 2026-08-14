@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Absensi;
 use App\Models\User;
 use App\Models\LuarKota;
 use App\Services\TelegramService;
 use App\Services\LiburService;
+use App\Services\R2Service;
 
 class AbsensiController extends Controller
 {
@@ -176,7 +176,10 @@ class AbsensiController extends Controller
             return response()->json(['success'=>false,'message'=>'❌ Kode absen salah! Cek kode di Telegram kamu.']);
         }
 
-        $fotoPath     = $this->simpanFotoBase64($request->foto,'absensi/'.$user->id.'/'.today()->format('Ymd'));
+        $fotoPath = $this->simpanFotoBase64($request->foto,'absensi/'.$user->id.'/'.today()->format('Ymd'));
+        if (!$fotoPath) {
+            return response()->json(['success'=>false,'message'=>'Gagal menyimpan foto, coba lagi.']);
+        }
         $jamSekarang  = now()->format('H:i');
         $setengahHari = $jamSekarang >= self::JAM_SETENGAH;
         $menitTelat   = $this->hitungMenitTelat($jamSekarang, $user->jam_masuk);
@@ -320,8 +323,13 @@ class AbsensiController extends Controller
         $pertanyaan = self::pilihPertanyaanProgress($user->id, today());
         $folder     = 'absensi/'.$user->id.'/'.today()->format('Ymd');
 
+        $fotoPath = $this->simpanFotoBase64($request->foto,$folder);
+        if (!$fotoPath) {
+            return response()->json(['success'=>false,'message'=>'Gagal menyimpan foto, coba lagi.']);
+        }
+
         $absen->update([
-            'foto_siang_1'        => $this->simpanFotoBase64($request->foto,$folder),
+            'foto_siang_1'        => $fotoPath,
             'lat_siang'           => $request->lat,
             'lng_siang'           => $request->lng,
             'gps_valid_siang'     => true, // selalu true, GPS tetap dicatat
@@ -424,7 +432,10 @@ class AbsensiController extends Controller
             return response()->json(['success'=>false,'message'=>"📍 Lokasi terlalu jauh ({$this->formatJarak($jarak)})."]);
         }
 
-        $fotoPath  = $this->simpanFotoBase64($request->foto,'absensi/'.$user->id.'/'.today()->format('Ymd'));
+        $fotoPath = $this->simpanFotoBase64($request->foto,'absensi/'.$user->id.'/'.today()->format('Ymd'));
+        if (!$fotoPath) {
+            return response()->json(['success'=>false,'message'=>'Gagal menyimpan foto, coba lagi.']);
+        }
         $jamPulang = now()->format('H:i:s');
 
         $menitKerja   = $this->hitungMenitKerja($absen->jam_masuk,$jamPulang);
@@ -664,12 +675,11 @@ class AbsensiController extends Controller
         return 'lengkap';
     }
 
-    private function simpanFotoBase64(string $base64,string $folder): string
+    private function simpanFotoBase64(string $base64,string $folder): ?string
     {
         $imageData=preg_replace('/^data:image\/\w+;base64,/','',$base64);
         $filename=$folder.'/'.date('His').'_'.uniqid().'.jpg';
-        Storage::disk('public')->put($filename,base64_decode($imageData));
-        return $filename;
+        return app(R2Service::class)->put($filename, base64_decode($imageData), 'image/jpeg');
     }
 
     private function kirimNotifKendala(User $user,Absensi $absen): void
