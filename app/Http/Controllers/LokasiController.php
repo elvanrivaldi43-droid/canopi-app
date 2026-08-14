@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\R2Service;
 
 class LokasiController extends Controller
 {
@@ -19,6 +20,41 @@ class LokasiController extends Controller
         $lead = DB::table('pipeline_leads')->where('id', $id)->first();
         abort_if(!$lead, 404);
         return view('lokasi.index', compact('lead'));
+    }
+
+    private function extensionDariContentType(string $contentType): string
+    {
+        return match ($contentType) {
+            'image/jpeg', 'image/jpg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            'video/mp4'  => 'mp4',
+            'video/quicktime' => 'mov',
+            'video/webm' => 'webm',
+            default => 'bin',
+        };
+    }
+
+    public function presign(Request $request, $id)
+    {
+        abort_if(!$this->bolehAkses(), 403);
+        $lead = DB::table('pipeline_leads')->where('id', $id)->first();
+        abort_if(!$lead, 404);
+
+        $request->validate([
+            'tipe'         => 'required|in:foto,video',
+            'content_type' => 'required|string',
+        ]);
+
+        $ext = $this->extensionDariContentType($request->content_type);
+        $key = 'lokasi/'.$id.'/'.$request->tipe.'/'.now()->format('Ymd_His').'_'.uniqid().'.'.$ext;
+
+        $hasil = app(R2Service::class)->presignPutUrl($key, $request->content_type, 900);
+        if (!$hasil) {
+            return response()->json(['success'=>false,'message'=>'Gagal menyiapkan upload, coba lagi.'], 500);
+        }
+
+        return response()->json(['success'=>true,'uploadUrl'=>$hasil['uploadUrl'],'publicUrl'=>$hasil['publicUrl']]);
     }
 
     public function simpan(Request $request, $id)

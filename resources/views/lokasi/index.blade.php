@@ -183,11 +183,10 @@ document.getElementById('jarak').addEventListener('input', cekJauh);
 updateMapsLink();
 cekJauh();
 
-// ================= FOTO -> CLOUDINARY =================
-var CLOUD_NAME='rnvp56qs';
-var UPLOAD_PRESET='canopi_lokasi';
+// ================= FOTO -> R2 =================
 var LEAD_ID={{ $lead->id }};
 var MAKS_FOTO=8;
+var PRESIGN_URL='{{ url("/lokasi/".$lead->id."/presign") }}';
 
 var fotoList=[];
 try{ fotoList=JSON.parse(document.getElementById('fotoJson').value||'[]'); }catch(e){ fotoList=[]; }
@@ -229,17 +228,20 @@ function kompresFoto(file){
         reader.readAsDataURL(file);
     });
 }
-function uploadCloudinary(blob){
-    var fd=new FormData();
-    fd.append('file', blob);
-    fd.append('upload_preset', UPLOAD_PRESET);
-    fd.append('folder', 'canopi/lokasi/lead_'+LEAD_ID);
-    return fetch('https://api.cloudinary.com/v1_1/'+CLOUD_NAME+'/image/upload', {method:'POST', body:fd})
-        .then(function(r){ return r.json(); })
-        .then(function(d){
-            if(d && d.secure_url) return d.secure_url;
-            throw new Error((d && d.error && d.error.message) ? d.error.message : 'upload gagal');
-        });
+function uploadR2(blob, tipe){
+    var contentType = blob.type || 'application/octet-stream';
+    return fetch(PRESIGN_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+        body: JSON.stringify({tipe: tipe, content_type: contentType})
+    }).then(function(r){ return r.json(); }).then(function(d){
+        if(!d.success) throw new Error(d.message||'gagal menyiapkan upload');
+        return fetch(d.uploadUrl, {method:'PUT', headers:{'Content-Type':contentType}, body:blob})
+            .then(function(putRes){
+                if(!putRes.ok) throw new Error('upload ke R2 gagal (status '+putRes.status+')');
+                return d.publicUrl;
+            });
+    });
 }
 
 var btnFoto=document.getElementById('btnFoto');
@@ -255,7 +257,7 @@ if(btnFoto && fotoInput){
             if(fotoList.length>=MAKS_FOTO){ fotoStatus('Maksimal '+MAKS_FOTO+' foto.'); self.value=''; return; }
             fotoStatus('Mengupload '+(idx+1)+'/'+files.length+'...');
             kompresFoto(files[idx])
-                .then(uploadCloudinary)
+                .then(function(blob){ return uploadR2(blob, 'foto'); })
                 .then(function(url){ fotoList.push(url); renderFoto(); idx++; next(); })
                 .catch(function(e){ fotoStatus('Gagal: '+e.message); idx++; next(); });
         }

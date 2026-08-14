@@ -428,6 +428,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/rab-opsi/simpan-final', [\App\Http\Controllers\RabOpsiController::class, 'simpanFinal']);
     Route::get('/lokasi/{id}', [\App\Http\Controllers\LokasiController::class, 'index']);
     Route::post('/lokasi/{id}', [\App\Http\Controllers\LokasiController::class, 'simpan']);
+    Route::post('/lokasi/{id}/presign', [\App\Http\Controllers\LokasiController::class, 'presign']);
     Route::get('/rab-setting', [\App\Http\Controllers\SettingRabController::class, 'index']);
     Route::post('/rab-setting', [\App\Http\Controllers\SettingRabController::class, 'simpan']);
     Route::post('/rab-approval', [\App\Http\Controllers\ApprovalController::class, 'store']);
