@@ -32,6 +32,12 @@
       "manual": false
     },
     {
+      "path": "tests/guardrail/test_verify_workflow.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/jadwal-libur/test_libur_service.php",
       "runner": "php",
       "requires_db": false,
