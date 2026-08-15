@@ -226,9 +226,11 @@ Branch/worktree: `feature/deterministic-guardrail` di
 - Replacement Sonnet medium hard-cap 9 turns juga berhenti tanpa edit.
 - Keputusan Bos: **Pilihan A** — Hermes merampingkan `CLAUDE.md` secara mekanis
   setelah membuat arsip identik; belum commit/push.
-- Tahap berikutnya setelah perampingan diverifikasi: buat manifest tes dan
-  `scripts/canopi-check` dalam satu task coding yang lebih kecil. Jangan membuka
-  continuation dari dua run gagal di atas.
+- Perampingan selesai dan dikunci di commit lokal `e719556` (belum push).
+- Manifest tes selesai dibuat Hermes dengan RED→GREEN: 42 tes otomatis
+  (37 PHP + 5 Node) dan 1 helper manual/excluded; belum commit.
+- Tahap berikutnya: bangun `scripts/canopi-check` sebagai task terpisah. Jangan
+  membuka continuation dari run Claude yang gagal di atas.
 - GitHub Actions verification, MariaDB test lokal, preview VPS, dan feature flag
   **belum dikerjakan**; masing-masing butuh scope/gate terpisah.
 
