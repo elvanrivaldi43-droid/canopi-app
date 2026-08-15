@@ -20,6 +20,12 @@
       "manual": false
     },
     {
+      "path": "tests/guardrail/test_canopi_check.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/guardrail/test_manifest.php",
       "runner": "php",
       "requires_db": false,

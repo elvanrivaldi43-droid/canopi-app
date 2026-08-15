@@ -222,15 +222,20 @@ Plan fondasi lokal:
 Branch/worktree: `feature/deterministic-guardrail` di
 `.worktrees/deterministic-guardrail`.
 
-- Run Claude pertama berhenti karena plan berada di luar sandbox; tidak ada edit.
-- Replacement Sonnet medium hard-cap 9 turns juga berhenti tanpa edit.
-- Keputusan Bos: **Pilihan A** — Hermes merampingkan `CLAUDE.md` secara mekanis
-  setelah membuat arsip identik; belum commit/push.
-- Perampingan selesai dan dikunci di commit lokal `e719556` (belum push).
-- Manifest tes selesai dibuat Hermes dengan RED→GREEN: 42 tes otomatis
-  (37 PHP + 5 Node) dan 1 helper manual/excluded; belum commit.
-- Tahap berikutnya: bangun `scripts/canopi-check` sebagai task terpisah. Jangan
-  membuka continuation dari run Claude yang gagal di atas.
+- Dua run Claude berbatas berhenti tanpa edit; tidak ada continuation.
+- Bos memilih fallback Hermes: perampingan mekanis dengan arsip byte-identik,
+  kemudian manifest dan runner dibangun secara deterministik.
+- Manifest tes dan `scripts/canopi-check` selesai dibuat Hermes dengan RED→GREEN.
+  Inventory final: 43 tes otomatis (38 PHP + 5 Node) dan 1 helper
+  manual/excluded.
+- Verifikasi nyata Fondasi Tahap 1: `--list` 43 tes, `--fast` PASS,
+  `--full` PASS (43 tes, 207 file PHP, 226 route, 119 Blade).
+- Worktree baru perlu symlink `vendor` lokal ke repo utama; `tests/bootstrap.php`
+  menimpa classmap `App\\*` ke worktree agar tidak menguji kode branch lain.
+  Runner membuat `storage/framework/views` lokal bila belum ada.
+- Tahap berikutnya setelah gate/rilis Fondasi Tahap 1: MariaDB test lokal dan
+  GitHub Actions verification sebagai scope terpisah. Jangan membuka continuation
+  dari run Claude yang gagal di atas.
 - GitHub Actions verification, MariaDB test lokal, preview VPS, dan feature flag
   **belum dikerjakan**; masing-masing butuh scope/gate terpisah.
 
