@@ -26,6 +26,12 @@
       "manual": false
     },
     {
+      "path": "tests/guardrail/test_deploy_verification_gate.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/guardrail/test_manifest.php",
       "runner": "php",
       "requires_db": false,

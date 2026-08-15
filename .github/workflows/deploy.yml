@@ -5,8 +5,12 @@ on:
     branches:
       - main
 jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+
   deploy:
     name: Deploy via FTP
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - name: Checkout kode

@@ -227,17 +227,19 @@ Pekerjaan memakai satu writer per worktree dan tidak memakai continuation Claude
   (`no_agent`, tanpa token LLM) dan hanya melapor bila workflow `main` baru selesai.
 - Verification workflow dibuat dengan RED→GREEN di `feature/verification-gate`
   (`d7e5432`), tanpa FTP, secret production, DB, migration, atau `.env`.
-- Gate lokal final: 44 tes, 208 file PHP, 226 route, 119 Blade — PASS.
+- Gate lokal final setelah integrasi: 45 tes, 209 file PHP, 226 route,
+  119 Blade — PASS.
 - Bukti GitHub branch terisolasi:
   - GREEN awal: run `31894530711` — success.
   - NEGATIVE manifest drift: run `31894619793` — failure sesuai desain,
     deploy count 0.
   - Probe dihapus dan pulih GREEN: run `31894714432` — success.
 - Final tree probe identik dengan branch GREEN; `origin/main` tetap `20c5f3d`.
-- **Belum dilakukan:** mengubah `deploy.yml`/`needs: verify`, merge/push gate ke
-  `main`, MariaDB test lokal, preview VPS, atau feature flag. Tahap berikutnya
-  adalah sambungkan verification ke deploy di branch, lalu berhenti untuk izin
-  Bos sebelum `main`.
+- Task 5 terpasang **hanya di branch**: `deploy.yml` memanggil reusable `verify`
+  dan job FTP memakai `needs: verify`. Blok runtime FTP/cache lama terkunci
+  byte-identik dengan SHA-256 `a11c7864f04f4bc1e6c3475f211aa051f24bef5f4e9ababa5076e941f55ffde2`.
+- **Belum dilakukan:** merge/push gate ke `main`, MariaDB test lokal, preview VPS,
+  atau feature flag. Wajib berhenti untuk izin Bos sebelum `main`.
 
 ### Utang aktif / resume point
 
