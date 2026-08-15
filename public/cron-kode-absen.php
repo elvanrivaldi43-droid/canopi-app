@@ -51,19 +51,20 @@ foreach ($karyawan as $k) {
             continue;
         }
 
-        $existing = KodeAbsen::whereDate('tanggal', $tanggal)->where('user_id', $k->id)->first();
+        // Satu jalur tulis dengan halaman "Kode Absen Hari Ini" dan tombol "Aktifkan
+        // Masuk Hari Libur": createOrFirst di dalam model, tabrakan ditangkap unique
+        // (tanggal, user_id) di DB. Dua eksekusi barengan tidak lagi bisa menghasilkan
+        // dua kode valid untuk satu karyawan.
+        $baris = KodeAbsen::barisHariIniUntuk($k);
+        $kode  = $baris->kode;
 
-        if ($existing) {
+        // Kodenya sudah ada sebelum eksekusi ini -> berarti sudah pernah dikirim/
+        // ditampilkan hari ini. Jangan kirim ulang (6 Agustus: karyawan menerima
+        // kode 4x dalam satu pagi karena retry cron + trigger manual).
+        if (!$baris->wasRecentlyCreated) {
             $sudahAda++;
             $log[] = "⏭ Skip (kode sudah dikirim hari ini): {$k->name}";
             continue;
-        } else {
-            $kode = strtoupper(substr(str_shuffle('ABCDEFGHJKLMNPQRSTUVWXYZ23456789'), 0, 6));
-            KodeAbsen::create([
-                'kode'    => $kode,
-                'tanggal' => $tanggal,
-                'user_id' => $k->id,
-            ]);
         }
 
         if (!$k->telegram_chat_id) {

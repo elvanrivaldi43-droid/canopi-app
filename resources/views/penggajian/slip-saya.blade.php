@@ -105,6 +105,9 @@
       <span>✅ {{ $slip->hari_hadir }} hadir</span>
       <span>❌ {{ $slip->hari_alpha }} alpha</span>
       <span>⏰ {{ $slip->hari_telat }} telat</span>
+      @if(($slip->hari_kerja_libur ?? 0) > 0)
+      <span>{{ $slip->hari_kerja_libur }} kerja hari libur</span>
+      @endif
       @if($slip->kelas_kpi !== 'none')
       <span>{{ $slip->kelasKpiLabel() }}</span>
       @endif

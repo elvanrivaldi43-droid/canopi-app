@@ -81,8 +81,8 @@
     </div>
     @endif
 
-    {{-- Data Gaji (Owner only) --}}
-    @if(auth()->user()->level == 1)
+    {{-- Data Gaji (Owner only) — pagar dipindah ke policy terpusat. --}}
+    @if(\App\Services\KaryawanAksesService::bolehFinansial(auth()->user()->level))
     <div class="stat-card" style="margin-bottom:16px;">
         <h3 style="font-size:13px;font-weight:700;margin:0 0 16px 0;" :style="darkMode ? 'color:#F1F5F9' : 'color:#1E293B'">💰 Data Gaji</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -118,8 +118,11 @@
     </div>
     @endif
 
-    {{-- Rekening --}}
-    @if($karyawan->no_rekening)
+    {{-- Rekening — OWNER SAJA.
+         Dulu blok ini cuma dipagari "kalau nomornya terisi", jadi Admin Operasional
+         bisa membaca nomor rekening + atas nama seluruh karyawan yang boleh dia buka.
+         Itu tujuan transfer gaji, bukan data operasional. --}}
+    @if(\App\Services\KaryawanAksesService::bolehFinansial(auth()->user()->level) && $karyawan->no_rekening)
     <div class="stat-card" style="margin-bottom:16px;">
         <h3 style="font-size:13px;font-weight:700;margin:0 0 12px 0;" :style="darkMode ? 'color:#F1F5F9' : 'color:#1E293B'">🏦 Rekening Bank</h3>
         <div style="display:flex;align-items:center;gap:12px;">

@@ -35,7 +35,11 @@
                 <option value="{{ $y }}" {{ $tahun==$y?'selected':'' }}>{{ $y }}</option>
                 @endfor
             </select>
-            @if(auth()->user()->level <= 2)
+            {{-- Pemilih karyawan = kontrol LINTAS-USER, jadi Owner saja. Dulu dipagari
+                 `level <= 2`, yang juga membuka Admin Operasional. Pagar yang sama
+                 ditegakkan di server (AbsensiController::rekapBulanan) — ini cuma
+                 supaya tombolnya tidak menipu, bukan pengamanannya. --}}
+            @if(\App\Http\Controllers\AbsensiController::bolehRekapSemua(auth()->user()->level))
             <select name="user_id" style="background:#0f172a;border:1px solid #475569;color:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:13px;">
                 <option value="">-- Semua Karyawan --</option>
                 @foreach($daftarKaryawan as $k)
@@ -53,6 +57,8 @@
         $absensiList = $data['absensi'];
         $stats = $data['stats'];
         $hariDalamBulan = $data['hari_dalam_bulan'];
+        // Peta libur per karyawan dari LiburService (bukan tebakan "Minggu = libur")
+        $petaLibur = $data['peta_libur'] ?? [];
     @endphp
 
     <div class="stat-card" style="padding:0;overflow:hidden;margin-bottom:20px;">
@@ -67,6 +73,9 @@
                 <span style="color:#ef4444;">❌ {{ $stats['alpha'] }}</span>
                 <span style="color:#f59e0b;">⏰ {{ $stats['telat'] }}</span>
                 <span style="color:#06b6d4;">📋 {{ $stats['izin'] }}</span>
+                @if(($stats['kerja_libur'] ?? 0) > 0)
+                <span style="color:#fbbf24;" title="Masuk di hari libur">Kerja Libur {{ $stats['kerja_libur'] }}</span>
+                @endif
             </div>
         </div>
 
@@ -114,8 +123,11 @@
                 @php
                     $date    = \Carbon\Carbon::createFromDate($tahun, $bulan, $tgl);
                     $hari    = $date->format('D');
-                    $isLibur = $hari === 'Sun';
                     $absen   = $absensiList->get($date->format('Y-m-d'));
+                    $kerjaLibur = (bool) ($absen->kerja_hari_libur ?? false);
+                    // Libur menurut jadwal karyawan ini (default + tukar/skip + libur nasional).
+                    // Hari libur yang DIMASUKI tetap ditandai libur, tapi barisnya tidak diredupkan.
+                    $isLibur = ($petaLibur[$date->format('Y-m-d')] ?? ($hari === 'Sun')) && !$kerjaLibur;
                     $sc      = $statusColors[$absen?->status ?? ''] ?? '#475569';
                 @endphp
                 <tr style="border-bottom:1px solid #1e293b;{{ $isLibur ? 'opacity:0.4;background:#0a0f1e;' : '' }}">
@@ -138,6 +150,9 @@
                             <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:{{ $sc }}20;color:{{ $sc }};border:1px solid {{ $sc }}40;">
                                 {{ $statusLabel[$absen->status] ?? $absen->status }}
                             </span>
+                            @if($kerjaLibur)
+                            <span style="font-size:9px;padding:2px 6px;border-radius:20px;background:#fbbf2420;color:#fbbf24;border:1px solid #fbbf2440;">Kerja Hari Libur</span>
+                            @endif
                             @if($absen->dikoreksi ?? false)
                             <span style="font-size:9px;color:#64748b;"> ✏️</span>
                             @endif

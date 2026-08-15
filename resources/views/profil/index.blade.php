@@ -98,6 +98,13 @@
         <div class="kpi-val" style="color:#fbbf24; font-size:14px;">{{ $stats['kelas_kpi'] }}</div>
         <div class="kpi-lbl">KPI</div>
       </div>
+      {{-- Hari libur yang dimasuki atas permintaan Owner/Mandor. Angkanya sudah
+           dihitung controller sejak awal tapi tidak pernah ditampilkan — karyawan
+           jadi tidak punya cara melihat berapa hari liburnya yang terpakai. --}}
+      <div class="kpi-item">
+        <div class="kpi-val" style="color:#a78bfa;">{{ $stats['kerja_libur'] }}</div>
+        <div class="kpi-lbl">Kerja Hari Libur</div>
+      </div>
       <div class="kpi-item" style="grid-column:span 2;">
         <div class="kpi-val" style="color:#06b6d4; font-size:14px;">Rp {{ number_format($stats['total_gaji'],0,',','.') }}</div>
         <div class="kpi-lbl">Estimasi Gaji</div>

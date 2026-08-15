@@ -59,7 +59,14 @@
     <button class="btn-download" id="btnDownload" onclick="downloadPDF()">
       📥 Download PDF
     </button>
-    <a href="{{ route('penggajian.index') }}" class="btn-back">← Kembali</a>
+    {{-- Owner kembali ke dashboard penggajian; karyawan ke daftar slipnya sendiri.
+         Dashboard penggajian sekarang Owner-only, jadi link lama akan 403 buat
+         karyawan yang membuka slipnya sendiri dari /slip-saya. --}}
+    @if(auth()->check() && auth()->user()->level == 1)
+      <a href="{{ route('penggajian.index') }}" class="btn-back">← Kembali</a>
+    @else
+      <a href="{{ route('penggajian.slip-saya') }}" class="btn-back">← Kembali</a>
+    @endif
   </div>
 
   {{-- Konten Slip (yang akan di-PDF) --}}
@@ -100,24 +107,30 @@
         @php
           $totalUM = 0;
           $namaHari = ['Sunday'=>'Minggu','Monday'=>'Senin','Tuesday'=>'Selasa','Wednesday'=>'Rabu','Thursday'=>'Kamis','Friday'=>'Jumat','Saturday'=>'Sabtu'];
-          $namaStatus = ['hadir'=>'Hadir','telat'=>'Telat','setengah_hari'=>'½ Hari','alpha'=>'Alpha','sakit'=>'Sakit','izin'=>'Izin','cuti'=>'Cuti','dinas_luar'=>'Dinas'];
+          $namaStatus = ['hadir'=>'Hadir','telat'=>'Telat','setengah_hari'=>'½ Hari','alpha'=>'Alpha','sakit'=>'Sakit','izin'=>'Izin','cuti'=>'Cuti','dinas_luar'=>'Dinas','libur'=>'Libur'];
           $warnaStatus = ['hadir'=>'#10b981','telat'=>'#f59e0b','setengah_hari'=>'#8b5cf6','alpha'=>'#ef4444','sakit'=>'#06b6d4','izin'=>'#6366f1','cuti'=>'#06b6d4','dinas_luar'=>'#94a3b8'];
+          $svcKerjaLibur = app(\App\Services\KerjaHariLiburService::class);
         @endphp
         @for($tgl = 1; $tgl <= 15; $tgl++)
         @php
           $date    = \Carbon\Carbon::createFromDate($slip->tahun, $slip->bulan, $tgl);
           $dayName = $date->format('l');
-          $isLibur = $dayName === 'Sunday';
           $absen   = $absensiDetail->get($date->format('Y-m-d'));
           $um      = $absen ? $absen->uang_makan_hari_ini : 0;
-          $status  = $absen ? ($absen->status ?? '-') : ($isLibur ? 'libur' : '-');
+          // Libur menurut jadwal karyawan ini; fallback ke Minggu cuma kalau peta belum dikirim.
+          $isLibur = $petaLibur[$date->format('Y-m-d')] ?? ($dayName === 'Sunday');
+          $baris   = $svcKerjaLibur->barisHariSlip($isLibur, $absen->status ?? null, (bool) ($absen->kerja_hari_libur ?? false));
+          $status  = $baris['status'];
           $totalUM += $um;
         @endphp
-        <tr style="{{ $isLibur ? 'opacity:0.4;' : '' }}">
+        <tr style="{{ $baris['redup'] ? 'opacity:0.4;' : '' }}">
           <td style="color:#f1f5f9;">{{ $tgl }} {{ substr($slip->namaBulan(),0,3) }}</td>
           <td style="color:#94a3b8;">{{ $namaHari[$dayName] ?? '' }}</td>
           <td style="color:{{ $warnaStatus[$status] ?? '#64748b' }};">
-            {{ $isLibur ? 'Libur' : ($namaStatus[$status] ?? '-') }}
+            {{ $namaStatus[$status] ?? '-' }}
+            @if($baris['kerja_libur'])
+            <span style="color:#fbbf24;font-size:10px;">(kerja hari libur)</span>
+            @endif
           </td>
           <td style="text-align:right;color:{{ $um > 0 ? '#10b981' : '#475569' }};">
             {{ $um > 0 ? 'Rp '.number_format($um,0,',','.') : '—' }}
@@ -149,6 +162,9 @@
     <div class="info-row"><span class="info-label">Hari Izin/Sakit</span><span class="info-value" style="color:#6366f1;">{{ $slip->hari_izin }} hari</span></div>
     <div class="info-row"><span class="info-label">Hari Telat</span><span class="info-value" style="color:#f59e0b;">{{ $slip->hari_telat }} hari</span></div>
     <div class="info-row"><span class="info-label">Hari Alpha</span><span class="info-value" style="color:#ef4444;">{{ $slip->hari_alpha }} hari</span></div>
+    @if(($slip->hari_kerja_libur ?? 0) > 0)
+    <div class="info-row"><span class="info-label">Kerja Hari Libur</span><span class="info-value" style="color:#fbbf24;">{{ $slip->hari_kerja_libur }} hari</span></div>
+    @endif
     <div class="info-row">
       <span class="info-label">KPI</span>
       <span class="info-value">
@@ -163,6 +179,15 @@
     <div class="section-header">💚 Pendapatan</div>
     @if($slip->gaji_pokok > 0)
     <div class="info-row"><span class="info-label">Gaji Pokok</span><span class="info-value">Rp {{ number_format($slip->gaji_pokok,0,',','.') }}</span></div>
+    @endif
+    @if(($slip->upah_hari_libur ?? 0) > 0)
+      @if($slip->user->tipe_gaji === 'bulanan')
+      {{-- Pegawai bulanan: upah hari libur ditambahkan di luar gaji pokok --}}
+      <div class="info-row"><span class="info-label">Upah Hari Libur ({{ $slip->hari_kerja_libur }} hari)</span><span class="info-value" style="color:#fbbf24;">Rp {{ number_format($slip->upah_hari_libur,0,',','.') }}</span></div>
+      @else
+      {{-- Pegawai harian: upah hari libur SUDAH termasuk di gaji pokok, jangan dijumlah lagi --}}
+      <div class="info-row"><span class="info-label">Upah Hari Libur ({{ $slip->hari_kerja_libur }} hari)</span><span class="info-value" style="color:#64748b;">Rp {{ number_format($slip->upah_hari_libur,0,',','.') }} — sudah termasuk Gaji Pokok</span></div>
+      @endif
     @endif
     @if($slip->total_uang_makan > 0)
     <div class="info-row"><span class="info-label">Uang Makan (16-akhir)</span><span class="info-value">Rp {{ number_format($slip->total_uang_makan,0,',','.') }}</span></div>

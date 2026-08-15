@@ -16,6 +16,12 @@
 @endsection
 
 @section('content')
+@php
+    // Koreksi absen mengubah status + NOMINAL GAJI karyawan lain -> Owner saja.
+    // Route-nya juga sudah dikunci `level:1`; ini biar Mandor tidak melihat tombol
+    // yang ujungnya cuma 403. Pakai == (bukan ===) karena kolom `level` tidak di-cast.
+    $bolehKoreksi = auth()->user()->level == 1;
+@endphp
 <div style="max-width:900px;margin:0 auto;">
 
     @if(session('success'))
@@ -100,7 +106,9 @@
                         <th style="padding:10px 8px;text-align:center;font-size:11px;color:#64748b;">Pulang</th>
                         <th style="padding:10px 8px;text-align:center;font-size:11px;color:#64748b;">Status</th>
                         <th style="padding:10px 8px;text-align:center;font-size:11px;color:#64748b;">GPS</th>
+                        @if($bolehKoreksi)
                         <th style="padding:10px 8px;text-align:center;font-size:11px;color:#64748b;">Aksi</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>
@@ -150,12 +158,14 @@
                                 <span title="GPS tidak valid">⚠️</span>
                             @endif
                         </td>
+                        @if($bolehKoreksi)
                         <td style="padding:12px 8px;text-align:center;">
                             <button onclick="bukaKoreksi({{ $k->id }}, '{{ $k->name }}', '{{ $absen?->id }}', '{{ $absen?->jam_masuk ? substr($absen->jam_masuk,0,5) : '' }}', '{{ $absen?->jam_pulang ? substr($absen->jam_pulang,0,5) : '' }}', '{{ $absen?->status ?? '' }}', {{ $absen?->potongan_telat ?? 0 }})"
                                 style="font-size:11px;background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;">
                                 ✏️ Koreksi
                             </button>
                         </td>
+                        @endif
                     </tr>
                     @endforeach
                 </tbody>
@@ -165,7 +175,8 @@
 
 </div>
 
-{{-- Modal Koreksi Absen --}}
+@if($bolehKoreksi)
+{{-- Modal Koreksi Absen — Owner saja (route `absensi.koreksi*` juga dikunci level:1) --}}
 <div id="modalKoreksi" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:999;align-items:center;justify-content:center;padding:16px;">
     <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;width:100%;max-width:420px;">
         <div style="font-weight:700;color:#fbbf24;font-size:15px;margin-bottom:4px;">✏️ Koreksi Absen</div>
@@ -174,6 +185,12 @@
         <form method="POST" id="formKoreksi">
             @csrf
             @method('POST')
+
+            {{-- Tanggal rekap yang sedang dibuka. WAJIB ikut terkirim: tanpa ini
+                 pencatatan absen manual ditulis ke HARI INI, bukan ke tanggal yang
+                 sedang difilter — tanggal yang mau diperbaiki tetap kosong dan hari
+                 ini malah dapat baris palsu. --}}
+            <input type="hidden" name="tanggal" value="{{ $tanggal }}">
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                 <div>
@@ -197,6 +214,13 @@
                     <option value="setengah_hari">🌗 Setengah Hari</option>
                     <option value="sakit">🏥 Sakit</option>
                     <option value="izin">📋 Izin</option>
+                    {{-- `cuti` sudah lama diterima mesin gaji tapi tidak pernah
+                         ditawarkan di sini — jalur data yang tak terlihat dari layar.
+                         Daftar opsi ini WAJIB sama persis dengan
+                         KerjaHariLiburService::STATUS_KOREKSI (dijaga tes).
+                         Tanpa emoji: aturan project melarang emoji baru di blade
+                         (pernah korup di server). Emoji di opsi lain sudah ada dari dulu. --}}
+                    <option value="cuti">Cuti</option>
                     <option value="dinas_luar">🚗 Dinas Luar</option>
                     <option value="alpha">❌ Alpha</option>
                 </select>
@@ -247,4 +271,5 @@ function tutupModal() {
     document.getElementById('modalKoreksi').style.display = 'none';
 }
 </script>
+@endif
 @endsection

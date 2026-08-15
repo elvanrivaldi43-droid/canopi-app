@@ -9,6 +9,7 @@ use App\Models\SlipGaji;
 use App\Models\Kasbon;
 use App\Models\TabunganKaryawan;
 use App\Services\LiburService;
+use App\Services\KerjaHariLiburService;
 use Carbon\Carbon;
 
 class GajiService
@@ -34,6 +35,35 @@ class GajiService
     const KPI_SILVER_MAX_TELAT    = 2;
     const KPI_SILVER_MAX_ALPHA    = 0;
     const KPI_SILVER_MIN_HADIR    = 80;  // %
+
+    /**
+     * Pembagi jam kerja untuk menghitung tarif lembur per jam.
+     * Dikunci Bos: lembur = (gaji_harian / 9) x 1,2 x jam_lembur.
+     */
+    const LEMBUR_PEMBAGI = 9;
+    const LEMBUR_PENGALI = 1.2;
+
+    /**
+     * Nominal bonus lembur — SATU-SATUNYA tempat rumus ini ditulis.
+     *
+     * Dulu rumusnya ada di dua tempat dengan angka BERBEDA: AbsensiController
+     * memakai /7,5 sementara GajiService memakai /9, jadi nominal di layar absensi
+     * tidak pernah cocok dengan nominal di slip.
+     *
+     * Lebih parah: controller menambahkan nominalnya ke `absensi.gaji_hari_ini` DAN
+     * menyimpan `absensi.lembur_jam`, lalu slip membayar lagi dari `lembur_jam` itu —
+     * untuk pegawai harian (gaji pokoknya diakumulasi dari `gaji_hari_ini`) lemburnya
+     * benar-benar terbayar dua kali. Sekarang yang membayar hanya slip, sekali.
+     *
+     * Murni — bisa diuji tanpa database (tests/kerja-hari-libur/test_lembur.php).
+     */
+    public static function bonusLembur($gajiHarian, $jamLembur): float
+    {
+        $gaji = max(0.0, (float) ($gajiHarian ?? 0));
+        $jam  = max(0.0, (float) ($jamLembur ?? 0));
+
+        return ($gaji / self::LEMBUR_PEMBAGI) * self::LEMBUR_PENGALI * $jam;
+    }
 
     // ═══════════════════════════════════════════════════════
     // GENERATE SLIP UANG MAKAN (periode 1-15)
@@ -103,22 +133,47 @@ class GajiService
                           ->whereYear('tanggal', $tahun)
                           ->get();
 
-        $hariHadir = $absensi->whereIn('status', ['hadir','telat','setengah_hari'])->count();
-        $hariAlpha = $absensi->where('status', 'alpha')->count();
-        $hariTelat = $absensi->where('status', 'telat')->count();
-        $hariIzin  = $absensi->whereIn('status', ['sakit','izin','cuti','dinas_luar'])->count();
+        // Hari yang DIAKTIFKAN masuk kerja ikut dihitung sebagai hari kerja biasa —
+        // keputusan Bos: aktivasi membatalkan libur tanpa pengganti. Tanggal itu
+        // masuk penyebut (hitungHariKerja di bawah, lewat override aktivasi) DAN
+        // pembilang di sini, jadi persentasenya konsisten tanpa membuang record.
+        //
+        // `hari_kerja_libur`/`upah_hari_libur` tetap dipisah untuk upah EKSTRA:
+        // hanya baris yang benar-benar bekerja (hadir/telat/setengah hari) yang
+        // dibayar — diaktifkan lalu mangkir tidak dapat apa-apa.
+        $svcLibur     = app(KerjaHariLiburService::class);
+        $statistik    = $svcLibur->statistikKehadiran($absensi);
+        $absensiLibur = $svcLibur->hanyaKerjaLiburBekerja($absensi);
+
+        $hariHadir      = $statistik['hadir'];
+        $hariAlpha      = $statistik['alpha'];
+        $hariTelat      = $statistik['telat'];
+        $hariIzin       = $statistik['izin'];
+        $hariKerjaLibur = $absensiLibur->count();
+        $upahHariLibur  = (float) $absensiLibur->sum('upah_hari_libur');
 
         // Hari kerja bulan ini (dikurangi jadwal libur karyawan ini)
         $hariKerja = app(LiburService::class)->hitungHariKerja($user, $bulan, $tahun);
-        $persenHadir = $hariKerja > 0 ? ($hariHadir / $hariKerja) * 100 : 0;
+        $persenHadir = $svcLibur->persenHadir($hariHadir, $hariKerja);
+
+        // ── Potongan telat ─────────────────────────────────
+        // Dihitung duluan karena gaji pokok harian butuh angkanya (lihat di bawah).
+        $potonganTelat  = $absensi->sum('potongan_telat');
 
         // ── Gaji pokok ─────────────────────────────────────
         $gajiPokok = 0;
         if ($user->tipe_gaji === 'bulanan') {
             $gajiPokok = $user->gaji_bulanan ?? 0;
         } else {
-            // Harian — akumulasi dari absensi
-            $gajiPokok = $absensi->sum('gaji_hari_ini');
+            // Harian — akumulasi dari absensi. gaji_hari_ini sudah dikurangi potongan
+            // di AbsensiController, sementara potongan yang SAMA dikurangi lagi lewat
+            // totalPotongan di bawah -> kepotong dua kali. Dikembalikan ke KOTOR dulu
+            // biar potongan kepotong tepat sekali dan slip tetap transparan
+            // (gaji pokok kotor + baris potongan sendiri).
+            $gajiPokok = $svcLibur->gajiPokokKotor(
+                (float) $absensi->sum('gaji_hari_ini'),
+                (float) $potonganTelat
+            );
         }
 
         // ── Uang makan 16-akhir bulan ──────────────────────
@@ -137,12 +192,11 @@ class GajiService
         $bonusKpi  = self::BONUS_KPI[$kelasKpi];
 
         // ── Lembur ─────────────────────────────────────────
+        // SATU-SATUNYA tempat lembur dibayar. `absensi.gaji_hari_ini` sengaja
+        // TIDAK lagi mengandung nominal lembur (lihat AbsensiController::absenPulang),
+        // jadi tidak ada pembayaran kedua lewat akumulasi gaji harian.
         $totalLembur    = $absensi->sum('lembur_jam');
-        $gajiPerJam     = ($user->gaji_harian ?? 0) / 9;
-        $bonusLembur    = $totalLembur * $gajiPerJam * 1.2;
-
-        // ── Potongan telat ─────────────────────────────────
-        $potonganTelat  = $absensi->sum('potongan_telat');
+        $bonusLembur    = self::bonusLembur($user->gaji_harian, $totalLembur);
 
         // ── Kasbon ─────────────────────────────────────────
         $potonganKasbon = $this->hitungCicilanKasbon($userId);
@@ -156,7 +210,12 @@ class GajiService
         $tabunganLebaran = $tabungan->tabungan_lebaran_per_bulan ?? 0;
 
         // ── Total ──────────────────────────────────────────
-        $totalPendapatan = $gajiPokok + $umSiang + $totalTunjangan + $bonusKpi + $bonusLembur;
+        // Pegawai HARIAN: upah hari libur sudah masuk gaji_hari_ini (jangan ditambah lagi = 2x bayar).
+        // Pegawai BULANAN: gaji pokoknya tetap, jadi upah hari libur ditambah 1x.
+        // Uang makan masuk sekali lewat $umSiang, tidak ditambah dari snapshot.
+        $totalPendapatan = $svcLibur->totalPendapatan(
+            $user->tipe_gaji, $gajiPokok, $umSiang, $totalTunjangan, $bonusKpi, $bonusLembur, $upahHariLibur
+        );
         $totalPotongan   = $potonganTelat + $potonganKasbon + $potonganInsidental + $tabunganWajib + $tabunganLebaran;
         $gajiBersih      = $totalPendapatan - $totalPotongan;
 
@@ -175,7 +234,9 @@ class GajiService
             'hari_alpha'            => $hariAlpha,
             'hari_telat'            => $hariTelat,
             'hari_izin'             => $hariIzin,
+            'hari_kerja_libur'      => $hariKerjaLibur,
             'gaji_pokok'            => $gajiPokok,
+            'upah_hari_libur'       => $upahHariLibur,
             'total_uang_makan'      => $umSiang,
             'total_tunjangan'       => $totalTunjangan,
             'bonus_kpi'             => $bonusKpi,

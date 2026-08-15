@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use App\Models\Absensi;
 use App\Models\User;
 use App\Services\LiburService;
+use App\Services\KerjaHariLiburService;
 
 class ProfilController extends Controller
 {
@@ -28,11 +29,20 @@ class ProfilController extends Controller
                            ->whereYear('tanggal', now()->year)
                            ->get();
 
-        $hariHadir  = $bulanIni->whereIn('status',['hadir','telat','setengah_hari'])->count();
-        $hariAlpha  = $bulanIni->where('status','alpha')->count();
-        $hariTelat  = $bulanIni->where('status','telat')->count();
+        // Hari libur yang DIAKTIFKAN dihitung sebagai hari kerja biasa: tanggal itu
+        // masuk penyebut (LiburService::hitungHariKerja) DAN pembilang di sini.
+        // Jangan dikembalikan ke rancangan lama yang membuang baris aktivasi dari
+        // statistik — itu bikin karyawan yang diaktifkan lalu MANGKIR hilang dari
+        // laporan (alpha tidak terhitung, KPI tidak turun). Upah ekstra hari libur
+        // tetap dipisah lewat `kerja_libur`/`upah_libur`, bukan lewat statistik ini.
+        $svcLibur   = app(KerjaHariLiburService::class);
+        $statLibur  = $svcLibur->statistikKehadiran($bulanIni);
+
+        $hariHadir  = $statLibur['hadir'];
+        $hariAlpha  = $statLibur['alpha'];
+        $hariTelat  = $statLibur['telat'];
         $hariKerja  = app(LiburService::class)->hitungHariKerja($user, now()->month, now()->year, now()->day);
-        $persenHadir= $hariKerja > 0 ? ($hariHadir/$hariKerja)*100 : 0;
+        $persenHadir= $svcLibur->persenHadir($hariHadir, $hariKerja);
 
         // Hitung kelas KPI
         $kelasKpi = 'Belum';
@@ -45,11 +55,12 @@ class ProfilController extends Controller
         }
 
         $stats = [
-            'hadir'      => $hariHadir,
-            'alpha'      => $hariAlpha,
-            'telat'      => $hariTelat,
-            'kelas_kpi'  => $kelasKpi,
-            'total_gaji' => $bulanIni->sum('gaji_hari_ini'),
+            'hadir'       => $hariHadir,
+            'alpha'       => $hariAlpha,
+            'telat'       => $hariTelat,
+            'kelas_kpi'   => $kelasKpi,
+            'kerja_libur' => $statLibur['kerja_libur'],
+            'total_gaji'  => $bulanIni->sum('gaji_hari_ini'),
         ];
 
         return view('profil.index', compact('user', 'stats', 'botUsername'));

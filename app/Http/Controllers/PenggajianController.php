@@ -113,11 +113,54 @@ class PenggajianController extends Controller
         return back()->with($gagal > 0 ? 'error' : 'success', $pesan);
     }
 
+    /**
+     * Siapa yang boleh membuka DETAIL sebuah slip gaji.
+     *
+     * Route `penggajian.slip` sengaja tidak dikunci `level:1` supaya karyawan bisa
+     * membuka slipnya sendiri dari /slip-saya. Jadi penghalang IDOR-nya ada di sini:
+     * Owner (level 1) boleh semua slip, user lain HANYA slip miliknya sendiri.
+     *
+     * Murni (tanpa DB/Auth) supaya bisa diuji langsung —
+     * lihat tests/keamanan/test_akses_payroll_rekap.php.
+     *
+     * ID dari DB/route sering berupa string ("7"), jadi dibandingkan numerik;
+     * nilai null/non-numerik TIDAK pernah dianggap cocok.
+     */
+    public static function bolehLihatSlip($levelAktor, $idAktor, $idPemilikSlip): bool
+    {
+        if (is_numeric($levelAktor) && (int) $levelAktor === 1) return true;
+
+        if (!is_numeric($idAktor) || !is_numeric($idPemilikSlip)) return false;
+
+        return (int) $idAktor === (int) $idPemilikSlip;
+    }
+
     public function show(SlipGaji $slip)
     {
+        // Guard SEBELUM load()/query detail — data karyawan lain tidak boleh
+        // terlanjur diambil dari DB sebelum ditolak.
+        $aktor = Auth::user();
+        abort_unless(
+            self::bolehLihatSlip($aktor?->level, $aktor?->id, $slip->user_id),
+            403,
+            'Anda hanya bisa membuka slip gaji milik sendiri.'
+        );
+
+        // Slip "yatim": barisnya masih ada tapi user-nya sudah terhapus. Tanpa
+        // penjaga ini, petaLiburBulan($slip->user, ...) di bawah menerima null dan
+        // melempar TypeError -> layar 500 tanpa penjelasan. 404 lebih jujur:
+        // slipnya memang tidak bisa ditampilkan lagi.
+        // Ditaruh SETELAH pemeriksaan hak akses supaya keberadaan slip tidak bocor
+        // ke orang yang memang tidak berhak membukanya.
+        abort_unless($slip->user, 404, 'Data karyawan untuk slip ini sudah tidak ada.');
+
         $slip->load('user.tunjangan');
 
         $absensiDetail = collect();
+        // Peta libur per-karyawan (jadwal default + tukar/skip + libur nasional).
+        // View tidak boleh menebak "Minggu = libur" lagi — jadwal libur sudah
+        // per-karyawan sejak 11 Agustus.
+        $petaLibur = [];
         if ($slip->periode === 'uang_makan') {
             $absensiDetail = \App\Models\Absensi::where('user_id', $slip->user_id)
                 ->whereMonth('tanggal', $slip->bulan)
@@ -125,9 +168,12 @@ class PenggajianController extends Controller
                 ->whereDay('tanggal', '<=', 15)
                 ->get()
                 ->keyBy(fn($a) => $a->tanggal->format('Y-m-d'));
+
+            $petaLibur = app(\App\Services\LiburService::class)
+                ->petaLiburBulan($slip->user, $slip->bulan, $slip->tahun);
         }
 
-        return view('penggajian.slip', compact('slip', 'absensiDetail'));
+        return view('penggajian.slip', compact('slip', 'absensiDetail', 'petaLibur'));
     }
 
     public function konfirmasi(SlipGaji $slip)

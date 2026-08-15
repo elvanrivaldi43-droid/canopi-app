@@ -20,8 +20,10 @@ $kernel->bootstrap();
 use App\Models\User;
 use App\Models\Absensi;
 use App\Models\IzinAbsen;
+use App\Models\KerjaHariLibur;
 use App\Services\TelegramService;
 use App\Services\LiburService;
+use App\Services\KerjaHariLiburService;
 use Carbon\Carbon;
 
 $jam     = now()->format('H:i');
@@ -61,16 +63,22 @@ if ($jam >= '13:00' && $jam <= '13:15') {
         // Cek apakah hari ini jadwal libur karyawan itu
         $sedangLibur = app(LiburService::class)->isLibur($k, $tanggal);
 
-        // Hanya alpha jika: belum masuk sama sekali + tidak ada izin + belum alpha + bukan hari libur
-        if (!$sudahMasuk && !$adaIzin && !$sudahAlpha && !$sedangLibur) {
-            Absensi::create([
+        // Sudah diaktifkan masuk hari libur oleh Owner/Mandor? Kalau ya, dia sudah
+        // dijanjikan kerja + dikirimi kode, jadi tidak lagi kebal alpha.
+        $adaOtorisasi = KerjaHariLibur::where(KerjaHariLibur::kunciUnik($k->id, $tanggal))->exists();
+        $svcLibur     = app(KerjaHariLiburService::class);
+        $lewati       = $svcLibur->lewatiAlphaHariLibur($sedangLibur, $adaOtorisasi);
+
+        // Hanya alpha jika: belum masuk sama sekali + tidak ada izin + belum alpha + tidak dilewati
+        if (!$sudahMasuk && !$adaIzin && !$sudahAlpha && !$lewati) {
+            Absensi::create(array_merge([
                 'user_id'             => $k->id,
                 'tanggal'             => $tanggal,
                 'status'              => 'alpha',
                 'gaji_hari_ini'       => 0,
                 'uang_makan_hari_ini' => 0,
                 'potongan_telat'      => 0,
-            ]);
+            ], $svcLibur->atributAlphaHariLibur($adaOtorisasi)));
 
             app(TelegramService::class)->kirim($k->telegram_chat_id,
                 "⚠️ *INFO ABSENSI*\n" .
@@ -110,6 +118,9 @@ if ($jam >= '20:00' && $jam <= '20:15') {
             'keterangan'          => 'Tidak absen pulang — otomatis alpha jam 20:00',
             'gaji_hari_ini'       => 0,
             'uang_makan_hari_ini' => 0,
+            // Status alpha = 0 upah, termasuk kalau hari itu kerja hari libur —
+            // kalau tidak dinolkan, pegawai bulanan tetap kebayar 1x gaji harian.
+            'upah_hari_libur'     => 0,
         ]);
 
         $k = $absen->user;

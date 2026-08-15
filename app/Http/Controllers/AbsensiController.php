@@ -8,8 +8,12 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Absensi;
 use App\Models\User;
 use App\Models\LuarKota;
+use App\Models\IzinAbsen;
+use App\Models\KerjaHariLibur;
+use App\Models\KodeAbsen;
 use App\Services\TelegramService;
 use App\Services\LiburService;
+use App\Services\KerjaHariLiburService;
 use App\Services\R2Service;
 
 class AbsensiController extends Controller
@@ -116,14 +120,17 @@ class AbsensiController extends Controller
                            ->whereMonth('tanggal', now()->month)
                            ->whereYear('tanggal', now()->year)->get();
 
-        $stats = [
-            'hadir'          => $bulanIni->whereIn('status',['hadir','telat','setengah_hari'])->count(),
-            'alpha'          => $bulanIni->where('status','alpha')->count(),
-            'telat'          => $bulanIni->where('status','telat')->count(),
-            'total_um'       => $bulanIni->sum('uang_makan_hari_ini'),
-            'total_potongan' => $bulanIni->sum('potongan_telat'),
-            'total_gaji'     => $bulanIni->sum('gaji_hari_ini'),
-        ];
+        // Hari yang diaktifkan masuk kerja IKUT dihitung sebagai hari kerja biasa
+        // (aktivasi membatalkan libur). `kerja_libur` dipisah hanya untuk menandai
+        // upah ekstranya, bukan untuk mengeluarkannya dari statistik.
+        $stats = array_merge(
+            app(KerjaHariLiburService::class)->statistikKehadiran($bulanIni),
+            [
+                'total_um'       => $bulanIni->sum('uang_makan_hari_ini'),
+                'total_potongan' => $bulanIni->sum('potongan_telat'),
+                'total_gaji'     => $bulanIni->sum('gaji_hari_ini'),
+            ]
+        );
 
         $fase          = $this->getFaseAbsen($absenHariIni);
         $luarKotaAktif = LuarKota::getAktif($user->id);
@@ -137,6 +144,16 @@ class AbsensiController extends Controller
         $absen = Absensi::where('user_id',$user->id)->whereDate('tanggal',today())->first();
 
         if ($absen?->jam_masuk) return redirect()->route('absensi.index')->with('info','Kamu sudah absen masuk hari ini.');
+
+        // Izin/sakit/cuti/dinas luar yang tercatat SETELAH kode absen dibuat pagi.
+        // Kodenya sudah terlanjur di tangan karyawan dan tidak ikut dibatalkan, jadi
+        // tanpa pagar ini layar isi kode tetap terbuka dan absennya benar-benar masuk.
+        // Definisinya satu: adaIzinHariIni() — alpha sengaja TIDAK termasuk, yang
+        // terlanjur ditandai alpha tetap boleh absen.
+        if ($this->adaIzinHariIni($user->id, today())) {
+            return redirect()->route('absensi.index')->with('error','Hari ini kamu tercatat izin/sakit/cuti/dinas luar, jadi tidak perlu absen masuk. Kalau ini keliru, hubungi Owner atau Mandor.');
+        }
+
         if (now()->format('H:i') < self::JAM_BUKA_ABSEN && !LuarKota::sedangLuarKota($user->id)) return redirect()->route('absensi.index')->with('error','Absen masuk baru bisa mulai jam 06:30');
 
         $lokasi        = $this->getLokasiUser($user->level);
@@ -155,6 +172,21 @@ class AbsensiController extends Controller
             'lng'  => 'required|numeric',
             'kode' => 'required|string',
         ]);
+
+        // ── IZIN HARI INI: pintu ditutup, kode lama tidak berlaku lagi ──
+        //
+        // Kode absen dibuat cron jam 06:30. Kalau siangnya karyawan ini dicatat
+        // sakit/izin/cuti/dinas luar (atau ajuannya masih berjalan), kode paginya tetap
+        // ada dan tetap cocok — lalu updateOrCreate di bawah MENIMPA baris izin itu jadi
+        // 'hadir' berikut gaji + uang makan sehari penuh. Bukti izin yang sudah dicatat
+        // Owner hilang tanpa jejak, tanpa error apa pun.
+        //
+        // Diperiksa paling awal: sebelum GPS dihitung dan sebelum foto diunggah ke R2,
+        // biar penolakan ini tidak memakai kuota unggah sama sekali. Alpha TIDAK ikut
+        // terjaring (bukan bagian daftar status izin) — yang terlanjur alpha tetap boleh absen.
+        if ($this->adaIzinHariIni($user->id, today())) {
+            return response()->json(['success'=>false,'message'=>'🚫 Hari ini kamu tercatat izin/sakit/cuti/dinas luar, jadi absen masuk ditutup. Kalau ini keliru, hubungi Owner atau Mandor.']);
+        }
 
         // ── CEK MODE LUAR KOTA ──────────────────────────────────────────
         $sedangLuarKota = LuarKota::sedangLuarKota($user->id);
@@ -176,6 +208,18 @@ class AbsensiController extends Controller
             return response()->json(['success'=>false,'message'=>'❌ Kode absen salah! Cek kode di Telegram kamu.']);
         }
 
+        // ── HARI LIBUR: cuma boleh absen kalau sudah diaktifkan Owner/Mandor ──
+        //
+        // Otorisasi dicari DULUAN, tanpa syarat isLibur(). Sejak aktivasi membatalkan
+        // libur (LiburService::expandAktivasi), isLibur() justru bernilai FALSE untuk
+        // orang yang sudah diaktifkan — kalau urutannya dibalik, penanda kerja hari
+        // libur dan upah ekstranya tidak pernah tersimpan.
+        $otorisasiLibur = KerjaHariLibur::where(KerjaHariLibur::kunciUnik($user->id, today()))->first();
+
+        if (!$otorisasiLibur && app(LiburService::class)->isLibur($user, today())) {
+            return response()->json(['success'=>false,'message'=>'🗓️ Hari ini jadwal libur kamu. Kalau memang diminta masuk, Owner/Mandor perlu mengaktifkannya dulu.']);
+        }
+
         $fotoPath = $this->simpanFotoBase64($request->foto,'absensi/'.$user->id.'/'.today()->format('Ymd'));
         if (!$fotoPath) {
             return response()->json(['success'=>false,'message'=>'Gagal menyimpan foto, coba lagi.']);
@@ -184,17 +228,28 @@ class AbsensiController extends Controller
         $setengahHari = $jamSekarang >= self::JAM_SETENGAH;
         $menitTelat   = $this->hitungMenitTelat($jamSekarang, $user->jam_masuk);
 
+        // Kalau kerja hari libur, tarif diambil dari snapshot saat otorisasi dibuat
+        // (perubahan tarif belakangan tidak mengubah histori hari itu).
+        $tarifHarian = $otorisasiLibur ? (float)$otorisasiLibur->gaji_harian_snapshot : ($user->gaji_harian??0);
+        $tarifUM     = $otorisasiLibur ? (float)$otorisasiLibur->uang_makan_snapshot  : ($user->uang_makan??0);
+
         if ($setengahHari) {
             $potongan    = 0;
             $status      = 'setengah_hari';
-            $gajiHariIni = ($user->gaji_harian??0)*0.5;
-            $uangMakan   = ($user->uang_makan??0)*0.5;
+            $gajiHariIni = $tarifHarian*0.5;
+            $uangMakan   = $tarifUM*0.5;
         } else {
             $potongan    = $this->hitungPotongan($menitTelat);
             $status      = $menitTelat>0?'telat':'hadir';
-            $gajiHariIni = ($user->gaji_harian??0)-$potongan;
-            $uangMakan   = $user->uang_makan??0;
+            $gajiHariIni = $tarifHarian-$potongan;
+            $uangMakan   = $tarifUM;
         }
+
+        // Upah hari libur disimpan KOTOR — potongan tetap lewat kolom potongan_telat,
+        // biar tidak kepotong dua kali (lihat tests/kerja-hari-libur/test_payroll_kerja_hari_libur.php).
+        $upahHariLibur = $otorisasiLibur
+            ? app(KerjaHariLiburService::class)->upahHariLibur($otorisasiLibur->gaji_harian_snapshot, $status)
+            : 0;
 
         Absensi::updateOrCreate(
             ['user_id'=>$user->id,'tanggal'=>today()],
@@ -208,6 +263,8 @@ class AbsensiController extends Controller
                 'potongan_telat'  => $potongan,
                 'gaji_hari_ini'   => $gajiHariIni,
                 'uang_makan_hari_ini' => $uangMakan,
+                'kerja_hari_libur'    => (bool) $otorisasiLibur,
+                'upah_hari_libur'     => $upahHariLibur,
             ]
         );
 
@@ -216,6 +273,10 @@ class AbsensiController extends Controller
             'telat'         => "✅ Absen masuk berhasil. Telat {$menitTelat} menit — potongan Rp ".number_format($potongan,0,',','.'),
             default         => "✅ Absen masuk berhasil jam ".now()->format('H:i'),
         };
+
+        if ($otorisasiLibur) {
+            $pesan .= "\n🗓️ Tercatat sebagai KERJA HARI LIBUR. Hari ini dihitung hari kerja biasa dan dibayar 1x gaji harian + uang makan.";
+        }
 
         if ($sedangLuarKota) {
             $pesan .= "\n✈️ Mode luar kota aktif — GPS tidak divalidasi.";
@@ -227,6 +288,15 @@ class AbsensiController extends Controller
     public function validasiKode(Request $request)
     {
         $user  = Auth::user();
+
+        // Kode yang sudah dikirim pagi tidak ikut terhapus saat izin dicatat siangnya.
+        // Endpoint ini yang dipakai layar isi kode untuk bilang "kode benar", jadi tanpa
+        // pagar yang SAMA dengan absenMasuk() dia akan menghijaukan kode yang sebenarnya
+        // sudah tidak berlaku — karyawan merasa aman, lalu ditolak di langkah terakhir.
+        if ($this->adaIzinHariIni($user->id, today())) {
+            return response()->json(['valid' => false]);
+        }
+
         $kode  = strtoupper(trim($request->kode ?? ''));
         $valid = \App\Models\KodeAbsen::whereDate('tanggal', today())
                                       ->where('user_id', $user->id)
@@ -243,19 +313,229 @@ class AbsensiController extends Controller
                         ->orderBy('name')
                         ->get();
 
-        $liburService = app(\App\Services\LiburService::class);
+        $liburService = app(LiburService::class);
 
-        $data = $karyawan->map(function ($k) use ($tanggal, $liburService) {
+        $otorisasi = KerjaHariLibur::whereDate('tanggal', $tanggal)
+                                   ->with('pengaktif')
+                                   ->get()
+                                   ->keyBy('user_id');
+
+        // Izin hari ini diambil SEKALI untuk semua karyawan (bukan query per baris):
+        // baris absensi yang sudah tercatat + ajuan izin yang masih berjalan.
+        // Sumber yang sama dipakai adaIzinHariIni() saat tombolnya benar-benar ditekan.
+        $statusIzin = Absensi::whereDate('tanggal', $tanggal)
+                             ->whereIn('status', KerjaHariLiburService::STATUS_IZIN)
+                             ->pluck('status', 'user_id');
+        $ajuanIzin  = IzinAbsen::whereDate('tanggal', $tanggal)
+                               ->whereIn('status', ['pending', 'approved'])
+                               ->pluck('status', 'user_id');
+
+        // Tombol "Aktifkan" hanya untuk target yang memang boleh diaktifkan aktor ini
+        // (Owner: 2-7, Mandor: 3-7, dan tidak boleh dirinya sendiri). Pagar aslinya
+        // tetap di alasanTolakAktivasi() — ini cuma supaya tombol yang PASTI ditolak
+        // tidak dirender jadi jebakan klik.
+        $aktor    = Auth::user();
+        $svcKerja = app(KerjaHariLiburService::class);
+
+        $data = $karyawan->map(function ($k) use ($tanggal, $liburService, $otorisasi, $statusIzin, $ajuanIzin, $aktor, $svcKerja) {
+            $libur       = $liburService->isLibur($k, $tanggal);
+            $kerjaLibur  = $otorisasi->get($k->id);
+
             return [
+                'id'        => $k->id,
                 'nama'      => $k->name,
                 'jabatan'   => $k->jabatan,
-                'kode'      => \App\Models\KodeAbsen::kodeHariIniUntuk($k),
+                // HALAMAN INI BACA SAJA — tidak pernah membuat kode, untuk siapa pun.
+                //
+                // Dulu di sini dipanggil KodeAbsen::kodeHariIniUntuk(), yang MEMBUAT
+                // baris kode kalau belum ada. Kalau halaman ini dibuka sebelum cron
+                // 06:30, seluruh baris kode terlanjur dibuat lewat GET, dan cron
+                // kemudian melewati SEMUA karyawan tanpa mengirim Telegram sama sekali
+                // (dia menilai "sudah pernah dikirim" dari wasRecentlyCreated).
+                //
+                // Yang belum punya kode ditampilkan kosong + tombol "Buat & Kirim Kode".
+                'kode'      => KodeAbsen::kodeHariIniUntukJikaAda($k),
                 'connected' => (bool) $k->telegram_chat_id,
-                'libur'     => $liburService->isLibur($k, $tanggal),
+                'libur'     => $libur,
+                // Sakit/izin/cuti/dinas luar: tidak ada tombol apa pun yang masuk akal
+                // hari ini. Ditampilkan supaya jelas ini keadaan yang benar, bukan
+                // kode yang gagal terkirim — dan supaya tidak ada tombol jebakan.
+                'izin'      => KerjaHariLiburService::labelStatusIzin(
+                                    $statusIzin->get($k->id),
+                                    $ajuanIzin->has($k->id)
+                               ),
+                'boleh_aktivasi'  => $svcKerja->bolehTargetAktivasi($aktor->level, $k->level)
+                                     && !$svcKerja->aktivasiDiriSendiri($aktor->id, $k->id),
+                'kerja_libur'     => (bool) $kerjaLibur,
+                'diaktifkan_oleh' => $kerjaLibur?->pengaktif?->name,
             ];
         });
 
         return view('absensi.kode-hari-ini', ['tanggal' => $tanggal, 'data' => $data]);
+    }
+
+    // Satu-satunya definisi "karyawan ini sudah tidak masuk hari ini, dan itu sah":
+    // baris absensi berstatus sakit/izin/cuti/dinas luar, ATAU ajuan izin yang masih
+    // pending/approved. Dipakai KEDUA pintu yang bisa membuat & mengirim kode absen
+    // (aktivasi kerja hari libur dan tombol "Buat & Kirim Kode") supaya aturannya
+    // tidak bisa diperbaiki sebelah — sebelumnya hanya jalur aktivasi yang menjaganya,
+    // jadi karyawan yang sakit tetap bisa dibuatkan kode lewat tombol satunya.
+    private function adaIzinHariIni($userId, $tanggal): bool
+    {
+        return Absensi::where('user_id', $userId)
+                      ->whereDate('tanggal', $tanggal)
+                      ->whereIn('status', KerjaHariLiburService::STATUS_IZIN)
+                      ->exists()
+            || IzinAbsen::where('user_id', $userId)
+                        ->whereDate('tanggal', $tanggal)
+                        ->whereIn('status', ['pending', 'approved'])
+                        ->exists();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // AKTIFKAN "MASUK HARI LIBUR" (Owner/Mandor)
+    // Aktivasi MEMBATALKAN libur di tanggal itu: hari itu jadi hari kerja biasa
+    // (jatah libur terpakai, tanpa pengganti) + kode absen pribadi dikirim.
+    // ═══════════════════════════════════════════════════════════
+    public function aktifkanKerjaHariLibur($userId)
+    {
+        $aktor    = Auth::user();
+        $karyawan = User::findOrFail($userId);
+        $tanggal  = today();
+        $svc      = app(KerjaHariLiburService::class);
+
+        // Bentrok izin: yang sudah tercatat di absensi hari ini ATAU ajuan izin yang
+        // masih berjalan. Definisinya di adaIzinHariIni() — dipakai bersama tombol
+        // "Buat & Kirim Kode" biar dua pintu ini tidak pernah beda aturan.
+        $adaIzin = $this->adaIzinHariIni($karyawan->id, $tanggal);
+
+        $alasanTolak = $svc->alasanTolakAktivasi(
+            $aktor->level,
+            $karyawan->status,
+            $karyawan->level,
+            app(LiburService::class)->isLibur($karyawan, $tanggal),
+            $adaIzin,
+            $karyawan->gaji_harian,
+            // ID diambil dari sesi & route, BUKAN dari body request — kalau tidak,
+            // Mandor bisa memalsukan "aktor" lain dan menerobos larangan
+            // mengaktifkan diri sendiri.
+            $aktor->id,
+            $karyawan->id
+        );
+
+        if ($alasanTolak) {
+            return back()->with('error', $alasanTolak);
+        }
+
+        $otorisasi = KerjaHariLibur::firstOrCreate(
+            KerjaHariLibur::kunciUnik($karyawan->id, $tanggal),
+            array_merge(
+                $svc->snapshot($karyawan->gaji_harian, $karyawan->uang_makan),
+                ['diaktifkan_oleh' => $aktor->id]
+            )
+        );
+
+        $kode = KodeAbsen::kodeHariIniUntuk($karyawan);
+
+        // Klik ulang: tidak bikin baris kedua DAN tidak kirim notifikasi kedua.
+        // (Pakai flash 'success' karena layout cuma merender success & error.)
+        if (!$otorisasi->wasRecentlyCreated) {
+            return back()->with('success', "{$karyawan->name} sudah diaktifkan sebelumnya (tidak dikirim ulang). Kode absennya: {$kode}");
+        }
+
+        $terkirim = false;
+        if ($karyawan->telegram_chat_id) {
+            $terkirim = app(TelegramService::class)->kirim($karyawan->telegram_chat_id,
+                  "🏠 *PUSAT KANOPI BSD*\n"
+                . "━━━━━━━━━━━━━━━━━━\n"
+                . "📅 " . $tanggal->translatedFormat('l, d F Y') . "\n\n"
+                . "Hari ini sebenarnya jadwal libur kamu, tapi diminta masuk.\n"
+                . "Hari ini dihitung sebagai HARI KERJA BIASA — jatah libur hari ini terpakai (tidak ada hari pengganti), "
+                . "dan kamu dibayar 1x gaji harian + uang makan.\n\n"
+                . "🔑 *KODE ABSEN KAMU HARI INI:*\n"
+                . "┌─────────────┐\n"
+                . "│   *{$kode}*   │\n"
+                . "└─────────────┘\n\n"
+                . "Aturan absen tetap normal: lapor progress, lanjut kerja, dan absen pulang.\n"
+                . "_CanopiBSD System_");
+        }
+
+        $pesan = $terkirim
+            ? "{$karyawan->name} diaktifkan masuk hari ini. Kode absen sudah dikirim ke Telegram-nya."
+            : "{$karyawan->name} diaktifkan masuk hari ini. Belum terhubung Telegram — kasih tahu kodenya manual: {$kode}";
+
+        return back()->with('success', $pesan);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // BUAT & KIRIM KODE ABSEN MANUAL (Owner/Mandor)
+    //
+    // Jaring pengaman untuk karyawan aktif yang belum punya kode setelah cron pagi:
+    // karyawan baru/diaktifkan kembali setelah 06:30, atau cron yang gagal jalan
+    // (pernah kejadian: endpoint cron dibalas 403 di jam bulat, 6 Agustus).
+    //
+    // Halaman kode absen sendiri sekarang BACA SAJA, jadi pembuatan kode harus
+    // lewat tindakan yang disengaja seperti ini — bukan efek samping membuka halaman.
+    // ═══════════════════════════════════════════════════════════
+    public function kirimKodeAbsen($userId)
+    {
+        $karyawan = User::findOrFail($userId);
+
+        // Owner tidak pernah absen masuk (dikonfirmasi 11 Agustus), dan karyawan
+        // nonaktif tidak boleh dapat kode yang bisa dipakai absen.
+        if ($karyawan->status !== 'aktif') {
+            return back()->with('error', "{$karyawan->name} statusnya tidak aktif, jadi tidak dibuatkan kode.");
+        }
+        if ($karyawan->level == 1) {
+            return back()->with('error', 'Owner tidak ikut absen masuk.');
+        }
+
+        // Sakit/izin/cuti/dinas luar (atau ajuan izin yang masih berjalan): tidak
+        // dibuatkan kode sama sekali. Aturan yang SAMA sudah dijaga di jalur aktivasi
+        // dan di cron pagi sejak 6 Agustus; pintu manual ini dulu satu-satunya yang
+        // melewatinya, jadi karyawan yang sudah tercatat sakit tetap bisa dikirimi
+        // pesan "kode absen kamu hari ini" — mengundang absen di hari yang sudah izin.
+        // Diperiksa SEBELUM kode dibuat maupun dikirim.
+        if ($this->adaIzinHariIni($karyawan->id, today())) {
+            return back()->with('error', "{$karyawan->name} hari ini tercatat izin/sakit/cuti/dinas luar, jadi tidak dibuatkan kode absen.");
+        }
+
+        // Hari libur yang BELUM diaktifkan tidak boleh dapat kode lewat pintu ini —
+        // kalau boleh, tombol ini jadi jalan memutar yang melewati seluruh
+        // pemeriksaan aktivasi (izin bentrok, tarif kosong, larangan self-activation)
+        // dan menghasilkan kode berupah tanpa jejak siapa yang mengaktifkan.
+        if (app(LiburService::class)->isLibur($karyawan, today())) {
+            return back()->with('error', "{$karyawan->name} hari ini libur. Pakai tombol \"Aktifkan Masuk Hari Ini\" kalau memang diminta masuk.");
+        }
+
+        // Jalur atomik yang SAMA dengan cron pagi — dua permintaan barengan tidak
+        // bisa menghasilkan dua kode valid untuk satu karyawan di satu hari.
+        $baris = KodeAbsen::barisHariIniUntuk($karyawan);
+        $kode  = $baris->kode;
+
+        // Kodenya sudah ada sebelum permintaan ini -> sudah pernah dibuat/dikirim
+        // hari ini. Jangan kirim ulang (insiden 6 Agustus: kode terkirim 4x sepagi).
+        if (!$baris->wasRecentlyCreated) {
+            return back()->with('success', "{$karyawan->name} sudah punya kode hari ini (tidak dikirim ulang). Kodenya: {$kode}");
+        }
+
+        $terkirim = false;
+        if ($karyawan->telegram_chat_id) {
+            $terkirim = app(TelegramService::class)->kirim($karyawan->telegram_chat_id,
+                  "🏠 *PUSAT KANOPI BSD*\n"
+                . "━━━━━━━━━━━━━━━━━━\n"
+                . "📅 " . today()->translatedFormat('l, d F Y') . "\n\n"
+                . "🔑 *KODE ABSEN KAMU HARI INI:*\n"
+                . "┌─────────────┐\n"
+                . "│   *{$kode}*   │\n"
+                . "└─────────────┘\n\n"
+                . "Pakai kode ini untuk absen masuk.\n"
+                . "_CanopiBSD System_");
+        }
+
+        return back()->with('success', $terkirim
+            ? "Kode absen {$karyawan->name} dibuat dan sudah dikirim ke Telegram-nya."
+            : "Kode absen {$karyawan->name} dibuat. Belum terhubung Telegram — kasih tahu kodenya manual: {$kode}");
     }
 
     public function cekGps(Request $request)
@@ -441,17 +721,41 @@ class AbsensiController extends Controller
         $menitKerja   = $this->hitungMenitKerja($absen->jam_masuk,$jamPulang);
         $setengahHari = $absen->status!=='setengah_hari' && $menitKerja<225;
 
-        $lemburJam=$gajiLembur=0;
+        // Jam lembur DICATAT di sini, tapi NOMINALNYA tidak dibayar di sini.
+        // Dulu nominalnya ikut dijumlahkan ke `gaji_hari_ini` DAN `lembur_jam` juga
+        // disimpan, lalu GajiService membayar lagi dari `lembur_jam` -> pegawai harian
+        // (gaji pokoknya diakumulasi dari `gaji_hari_ini`) dibayar DUA KALI.
+        // Pembaginya pun beda: di sini dulu /7,5 sementara slip memakai /9.
+        // Sekarang satu rumus, satu pembayar: GajiService::bonusLembur() di slip.
+        $lemburJam = 0;
         if ($absen->lembur_approved && now()->format('H:i')>=substr($user->jam_pulang,0,5)) {
-            $lemburJam  = min(round($this->hitungMenitTelat(now()->format('H:i'),substr($user->jam_pulang,0,5))/60,2),self::LEMBUR_MAX_JAM);
-            $gajiLembur = $lemburJam*(($user->gaji_harian??0)/7.5)*1.2;
+            $lemburJam = min(round($this->hitungMenitTelat(now()->format('H:i'),substr($user->jam_pulang,0,5))/60,2),self::LEMBUR_MAX_JAM);
         }
+        // Nominalnya sengaja TIDAK dihitung di sini sama sekali — supaya tidak ada
+        // angka lembur kedua yang bisa menyimpang dari slip. Pesan ke karyawan cukup
+        // menyebut JAM-nya; rupiahnya muncul di slip lewat GajiService::bonusLembur().
 
         $statusBaru = $setengahHari?'setengah_hari':$absen->status;
-        $umHariIni  = $statusBaru==='setengah_hari'?($user->uang_makan??0)*0.5:($user->uang_makan??0);
+
+        // Kerja hari libur: kalau status berubah jadi setengah hari, upah hari liburnya
+        // ikut menyesuaikan (0.5x) — kalau tidak, pegawai bulanan kebayar 1x penuh.
+        $tarifHarian   = $user->gaji_harian??0;
+        $tarifUM       = $user->uang_makan??0;
+        $upahHariLibur = $absen->upah_hari_libur ?? 0;
+        if ($absen->kerja_hari_libur) {
+            $otorisasiLibur = KerjaHariLibur::where(KerjaHariLibur::kunciUnik($absen->user_id, $absen->tanggal))->first();
+            if ($otorisasiLibur) {
+                $tarifHarian = (float) $otorisasiLibur->gaji_harian_snapshot;
+                $tarifUM     = (float) $otorisasiLibur->uang_makan_snapshot;
+            }
+            $upahHariLibur = app(KerjaHariLiburService::class)->upahHariLibur($tarifHarian, $statusBaru);
+        }
+
+        $umHariIni  = $statusBaru==='setengah_hari'?$tarifUM*0.5:$tarifUM;
+        // TANPA nominal lembur — lembur dibayar sekali saja, di slip.
         $gajiBersih = $statusBaru==='setengah_hari'
-            ?($user->gaji_harian??0)*0.5-($absen->potongan_telat??0)+$gajiLembur
-            :($absen->gaji_hari_ini??0)+$gajiLembur;
+            ?$tarifHarian*0.5-($absen->potongan_telat??0)
+            :($absen->gaji_hari_ini??0);
 
         $absen->update([
             'jam_pulang'          => $jamPulang,
@@ -462,6 +766,7 @@ class AbsensiController extends Controller
             'status'              => $statusBaru,
             'uang_makan_hari_ini' => $umHariIni,
             'gaji_hari_ini'       => $gajiBersih,
+            'upah_hari_libur'     => $upahHariLibur,
             'lembur_jam'          => $lemburJam,
         ]);
 
@@ -499,18 +804,26 @@ class AbsensiController extends Controller
         $userId = $request->user_id;
         $user   = Auth::user();
 
-        if ($user->level > 2) $userId = $user->id;
+        // Halaman ini menampilkan absensi + NOMINAL GAJI. Hanya Owner yang boleh
+        // lintas-karyawan; SEMUA level lain dipaksa melihat dirinya sendiri saja.
+        //
+        // Ambang lama `level > 2` membiarkan Admin Operasional (level 2) melihat
+        // seluruh karyawan. Tapi halaman ini juga dipakai karyawan biasa untuk rekap
+        // absensinya sendiri, jadi menguncinya lewat middleware `level:1` justru
+        // memutus akses 13 orang — pagarnya harus di sini, bukan di route.
+        $bolehSemua = self::bolehRekapSemua($user->level);
+        if (!$bolehSemua) $userId = $user->id;
 
         $hariDalamBulan = \Carbon\Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
 
         $daftarKaryawan = collect();
-        if ($user->level <= 2) {
+        if ($bolehSemua) {
             $daftarKaryawan = User::where('level','!=',1)->where('status','aktif')->orderBy('name')->get();
         }
 
         if ($userId) {
             $karyawanList = User::where('id', $userId)->get();
-        } elseif ($user->level <= 2) {
+        } elseif ($bolehSemua) {
             $karyawanList = User::where('level','!=',1)->where('status','aktif')->orderBy('level')->orderBy('name')->get();
         } else {
             $karyawanList = User::where('id', $user->id)->get();
@@ -524,21 +837,24 @@ class AbsensiController extends Controller
                                  ->get()
                                  ->keyBy(fn($a) => \Carbon\Carbon::parse($a->tanggal)->format('Y-m-d'));
 
-            $stats = [
-                'hadir'          => $absensiRaw->whereIn('status',['hadir','telat','setengah_hari'])->count(),
-                'alpha'          => $absensiRaw->where('status','alpha')->count(),
-                'telat'          => $absensiRaw->where('status','telat')->count(),
-                'izin'           => $absensiRaw->whereIn('status',['sakit','izin','cuti','dinas_luar'])->count(),
-                'total_potongan' => $absensiRaw->sum('potongan_telat'),
-                'total_gaji'     => $absensiRaw->sum('gaji_hari_ini'),
-                'total_um'       => $absensiRaw->sum('uang_makan_hari_ini'),
-            ];
+            // Hari yang diaktifkan masuk kerja IKUT dihitung (aktivasi membatalkan
+            // libur). `kerja_libur` dipisah hanya untuk menandai upah ekstranya.
+            $stats = array_merge(
+                app(KerjaHariLiburService::class)->statistikKehadiran($absensiRaw),
+                [
+                    'total_potongan' => $absensiRaw->sum('potongan_telat'),
+                    'total_gaji'     => $absensiRaw->sum('gaji_hari_ini'),
+                    'total_um'       => $absensiRaw->sum('uang_makan_hari_ini'),
+                ]
+            );
 
             $rekapData[] = [
                 'karyawan'         => $k,
                 'absensi'          => $absensiRaw,
                 'stats'            => $stats,
                 'hari_dalam_bulan' => $hariDalamBulan,
+                // Peta libur per karyawan — view tidak boleh nebak "Minggu = libur" lagi.
+                'peta_libur'       => app(LiburService::class)->petaLiburBulan($k, $bulan, $tahun),
             ];
         }
 
@@ -550,7 +866,11 @@ class AbsensiController extends Controller
         $request->validate([
             'jam_masuk'      => 'nullable|date_format:H:i',
             'jam_pulang'     => 'nullable|date_format:H:i',
-            'status'         => 'required|string',
+            // Dibatasi daftar status yang dikenal mesin gaji. Dengan `required|string`
+            // polos, status salah ketik tersimpan apa adanya sementara nominalKoreksi()
+            // mengembalikan null — nominal lama tertinggal di baris berstatus baru, dan
+            // barisnya hilang dari semua statistik/KPI tanpa error apa pun.
+            'status'         => KerjaHariLiburService::aturanStatusKoreksi(),
             'potongan_telat' => 'nullable|integer|min:0',
             'alasan'         => 'required|string',
         ]);
@@ -558,20 +878,34 @@ class AbsensiController extends Controller
         $absen         = Absensi::findOrFail($id);
         $user          = $absen->user;
         $potonganTelat = $request->filled('potongan_telat') ? (int) $request->potongan_telat : ($absen->potongan_telat ?? 0);
+        $svcLibur      = app(KerjaHariLiburService::class);
 
-        $gajiHariIni = match($request->status) {
-            'hadir', 'telat'                      => max(0, ($user->gaji_harian ?? 0) - $potonganTelat),
-            'setengah_hari'                       => max(0, (($user->gaji_harian ?? 0) * 0.5) - $potonganTelat),
-            'sakit', 'izin', 'cuti', 'dinas_luar' => 0,
-            'alpha'                               => 0,
-            default                               => $absen->gaji_hari_ini,
-        };
-        $umHariIni = match($request->status) {
-            'hadir', 'telat', 'sakit', 'izin', 'cuti', 'dinas_luar' => $user->uang_makan ?? 0,
-            'setengah_hari' => ($user->uang_makan ?? 0) * 0.5,
-            'alpha'         => 0,
-            default         => $absen->uang_makan_hari_ini,
-        };
+        // Baris kerja hari libur dikoreksi memakai SNAPSHOT tarif saat diaktifkan —
+        // gaji harian, uang makan, dan upah hari liburnya. Kalau pakai tarif karyawan
+        // sekarang, kenaikan gaji belakangan akan mengubah histori bulan yang sudah lewat.
+        $snapshot = $absen->kerja_hari_libur
+            ? KerjaHariLibur::where(KerjaHariLibur::kunciUnik($absen->user_id, $absen->tanggal))->first()
+            : null;
+
+        $tarif = $svcLibur->tarifKoreksi(
+            (bool) $absen->kerja_hari_libur,
+            $snapshot?->gaji_harian_snapshot,
+            $snapshot?->uang_makan_snapshot,
+            $user->gaji_harian ?? 0,
+            $user->uang_makan ?? 0
+        );
+
+        // Formula gaji/UM/potongan tidak berubah — cuma sumber tarifnya (lihat KerjaHariLiburService).
+        $nominal     = $svcLibur->nominalKoreksi($request->status, $tarif['gaji_harian'], $tarif['uang_makan'], (float) $potonganTelat);
+        $gajiHariIni = $nominal['gaji_hari_ini']       ?? $absen->gaji_hari_ini;
+        $umHariIni   = $nominal['uang_makan_hari_ini'] ?? $absen->uang_makan_hari_ini;
+
+        // Penanda kerja hari libur TIDAK dihapus koreksi — cuma nominal upahnya
+        // yang ikut menyesuaikan status baru (tetap kotor, potongan lewat potongan_telat).
+        $upahHariLibur = $absen->upah_hari_libur ?? 0;
+        if ($absen->kerja_hari_libur) {
+            $upahHariLibur = $nominal['upah_hari_libur'] ?? $upahHariLibur;
+        }
 
         $absen->update([
             'jam_masuk'           => $request->jam_masuk ? $request->jam_masuk.':00' : $absen->jam_masuk,
@@ -580,6 +914,7 @@ class AbsensiController extends Controller
             'potongan_telat'      => $potonganTelat,
             'gaji_hari_ini'       => $gajiHariIni,
             'uang_makan_hari_ini' => $umHariIni,
+            'upah_hari_libur'     => $upahHariLibur,
             'dikoreksi'           => true,
             'alasan_koreksi'      => $request->alasan,
             'dikoreksi_oleh'      => Auth::id(),
@@ -593,32 +928,115 @@ class AbsensiController extends Controller
         $request->validate([
             'jam_masuk'  => 'nullable|date_format:H:i',
             'jam_pulang' => 'nullable|date_format:H:i',
-            'status'     => 'required|string',
+            // Daftar status yang sama dengan koreksi() — lihat alasannya di sana.
+            // Di jalur ini taruhannya lebih besar: status juga menentukan apakah baris
+            // otorisasi kerja hari libur berupah ikut dibuat (STATUS_BEKERJA).
+            'status'     => KerjaHariLiburService::aturanStatusKoreksi(),
             'alasan'     => 'required|string',
         ]);
 
-        $user    = User::findOrFail($userId);
-        $tanggal = $request->tanggal ?? today();
+        $aktor = Auth::user();
+        $user  = User::findOrFail($userId);
+
+        // Tanggal WAJIB datang dari filter rekap yang sedang dibuka — tidak boleh
+        // diam-diam jatuh ke hari ini. Dicek PALING AWAL, sebelum baris absensi
+        // maupun baris otorisasi kerja hari libur ditulis.
+        if ($alasanTanggal = self::alasanTolakTanggalKoreksi($request->tanggal)) {
+            return back()->with('error', $alasanTanggal);
+        }
+        $tanggal = $request->tanggal;
+
+        // Catat manual di tanggal yang memang libur karyawan ini -> ditandai kerja hari
+        // libur HANYA kalau ada audit otorisasi yang sah, supaya upah hari libur tidak
+        // bisa diberikan tanpa jejak siapa yang mengaktifkan.
+        $tanggalCarbon = $tanggal instanceof \Carbon\Carbon ? $tanggal : \Carbon\Carbon::parse($tanggal);
+
+        // Jalur manual HANYA untuk tanggal yang belum punya baris absensi. Kalau
+        // barisnya sudah ada, dia harus lewat tombol Koreksi — kalau ditimpa di sini,
+        // jam masuk/pulang, GPS, foto, dan penanda kerja hari libur yang sudah tercatat
+        // hilang tanpa jejak. Dicek SEBELUM audit otorisasi dibuat, biar permintaan yang
+        // ditolak tidak meninggalkan baris kerja_hari_libur nyasar.
+        $sudahAdaBaris = Absensi::where('user_id', $user->id)
+                                ->whereDate('tanggal', $tanggalCarbon)
+                                ->exists();
+
+        if ($alasanTolak = self::alasanTolakKoreksiManual($sudahAdaBaris)) {
+            return back()->with('error', $alasanTolak);
+        }
+
+        $svcLibur      = app(KerjaHariLiburService::class);
+        $isLibur       = app(LiburService::class)->isLibur($user, $tanggalCarbon);
+
+        // Dicari tanpa syarat isLibur: kalau jadwal libur karyawan diubah setelah
+        // hari itu lewat, baris otorisasinya tetap jadi bukti hari itu kerja hari libur.
+        $otorisasi = KerjaHariLibur::where(KerjaHariLibur::kunciUnik($user->id, $tanggalCarbon))->first();
+
+        // Pintu KEDUA yang bisa melahirkan baris kerja hari libur berupah (yang pertama
+        // tombol Aktivasi). Jalur ini tidak lewat alasanTolakAktivasi(), jadi aturan
+        // tarifnya dipanggil terpisah dari helper yang SAMA — kalau tidak, karyawan
+        // bergaji harian kosong bisa tercatat masuk di hari liburnya dan dibayar Rp 0
+        // lewat jalur manual. Dicek sebelum otorisasi/absensi ditulis, biar permintaan
+        // yang ditolak tidak meninggalkan baris nyasar.
+        // Hanya untuk tanggal libur + status yang benar-benar bekerja: hari kerja biasa
+        // dan status alpha/izin tidak membayar upah hari libur, jadi tidak ikut diblokir.
+        if ($isLibur && in_array($request->status, KerjaHariLiburService::STATUS_BEKERJA, true)) {
+            // Tarif efektifnya: snapshot otorisasi kalau barisnya sudah ada, kalau belum
+            // ya tarif karyawan sekarang (itu yang akan dibekukan jadi snapshot di bawah).
+            $tarifDasar = $otorisasi?->gaji_harian_snapshot ?? ($user->gaji_harian ?? 0);
+            if ($alasanTarif = $svcLibur->alasanTolakTarif($tarifDasar)) {
+                return back()->with('error', $alasanTarif);
+            }
+        }
+
+        // Audit baru cuma dibuat kalau aktornya Owner/Mandor dan statusnya benar-benar
+        // bekerja (hadir/telat/setengah hari) — alpha/izin tidak pernah bikin otorisasi.
+        if ($svcLibur->buatAuditManual($aktor->level, $isLibur, $request->status, (bool) $otorisasi)) {
+            $otorisasi = KerjaHariLibur::firstOrCreate(
+                KerjaHariLibur::kunciUnik($user->id, $tanggalCarbon),
+                array_merge(
+                    $svcLibur->snapshot($user->gaji_harian, $user->uang_makan),
+                    ['diaktifkan_oleh' => $aktor->id]
+                )
+            );
+        }
+
+        $kerjaHariLibur = $svcLibur->tandaiKerjaLiburManual($aktor->level, $isLibur, $request->status, (bool) $otorisasi);
+
+        // Tarif dari snapshot otorisasi (kalau ada), bukan tarif karyawan saat ini.
+        $tarif = $svcLibur->tarifKoreksi(
+            $kerjaHariLibur,
+            $otorisasi?->gaji_harian_snapshot,
+            $otorisasi?->uang_makan_snapshot,
+            $user->gaji_harian ?? 0,
+            $user->uang_makan ?? 0
+        );
+
+        $upahHariLibur = $kerjaHariLibur
+            ? $svcLibur->upahHariLibur($tarif['gaji_harian'], $request->status)
+            : 0;
 
         $gajiHariIni = match($request->status) {
-            'hadir', 'telat' => $user->gaji_harian ?? 0,
-            'setengah_hari'  => ($user->gaji_harian ?? 0) * 0.5,
+            'hadir', 'telat' => $tarif['gaji_harian'],
+            'setengah_hari'  => $tarif['gaji_harian'] * 0.5,
             default          => 0,
         };
         $umHariIni = match($request->status) {
-            'hadir', 'telat', 'sakit', 'izin', 'cuti', 'dinas_luar' => $user->uang_makan ?? 0,
-            'setengah_hari' => ($user->uang_makan ?? 0) * 0.5,
+            'hadir', 'telat', 'sakit', 'izin', 'cuti', 'dinas_luar' => $tarif['uang_makan'],
+            'setengah_hari' => $tarif['uang_makan'] * 0.5,
             default         => 0,
         };
 
-        Absensi::updateOrCreate(
-            ['user_id' => $userId, 'tanggal' => $tanggal],
+        Absensi::create(
             [
+                'user_id'             => $user->id,
+                'tanggal'             => $tanggal,
                 'jam_masuk'           => $request->jam_masuk ? $request->jam_masuk.':00' : null,
                 'jam_pulang'          => $request->jam_pulang ? $request->jam_pulang.':00' : null,
                 'status'              => $request->status,
                 'gaji_hari_ini'       => $gajiHariIni,
                 'uang_makan_hari_ini' => $umHariIni,
+                'kerja_hari_libur'    => $kerjaHariLibur,
+                'upah_hari_libur'     => $upahHariLibur,
                 'dikoreksi'           => true,
                 'alasan_koreksi'      => $request->alasan,
                 'dikoreksi_oleh'      => Auth::id(),
@@ -626,6 +1044,82 @@ class AbsensiController extends Controller
         );
 
         return back()->with('success', 'Absen manual berhasil dicatat untuk '.$user->name);
+    }
+
+    /**
+     * Siapa yang boleh melihat rekap LINTAS-KARYAWAN (dan nominal gajinya): Owner saja.
+     *
+     * Semua level lain dipaksa self-only. Dipakai controller DAN view rekap bulanan
+     * supaya keduanya tidak pernah menyimpang (tombol yang tampil harus persis sama
+     * dengan yang diizinkan server).
+     *
+     * Perbandingan pakai == (loose): kolom `level` tidak punya cast di model User,
+     * jadi dari DB bisa datang sebagai string "1". Nilai kosong/non-numerik gagal
+     * TERTUTUP (dianggap bukan Owner).
+     *
+     * Murni — diuji di tests/keamanan/test_regresi_minor.php.
+     */
+    public static function bolehRekapSemua($levelAktor): bool
+    {
+        if ($levelAktor === null || $levelAktor === '' || !is_numeric($levelAktor)) return false;
+        return $levelAktor == 1;
+    }
+
+    /**
+     * Penjaga tanggal untuk pencatatan absen MANUAL.
+     * Balikan null = boleh; string = alasan tolak (langsung dipakai sebagai pesan).
+     *
+     * Kenapa ketat: halaman rekap punya filter tanggal, tapi form Koreksi di dalamnya
+     * dulu TIDAK mengirim tanggal sama sekali, jadi controller jatuh ke `today()`.
+     * Owner yang memfilter ke 10 Agustus lalu mencatat absen manual akan menulis
+     * barisnya ke HARI INI — tanggal yang mau diperbaiki tetap kosong, hari ini malah
+     * dapat baris palsu, dan pemeriksaan "kerja hari libur" (termasuk pembuatan baris
+     * otorisasi berupah) dilakukan atas tanggal yang keliru.
+     *
+     * Format WAJIB `Y-m-d` persis: kata relatif seperti "today"/"yesterday" ditolak
+     * supaya tanggal tidak pernah ditentukan oleh teks bebas dari browser.
+     *
+     * Murni, tanpa database — diuji di tests/kerja-hari-libur/test_koreksi_tanggal.php.
+     */
+    public static function alasanTolakTanggalKoreksi($tanggal, ?\Carbon\Carbon $hariIni = null): ?string
+    {
+        $teks = is_string($tanggal) ? trim($tanggal) : '';
+        if ($teks === '') {
+            return 'Tanggal koreksi tidak terbaca. Muat ulang halaman rekap lalu coba lagi.';
+        }
+
+        // createFromFormat + cek balik: menolak tanggal yang formatnya benar tapi
+        // isinya tidak ada di kalender (mis. 2026-02-31, yang kalau tidak dicek
+        // akan digeser diam-diam jadi 3 Maret). Input yang benar-benar ngawur
+        // membuat Carbon melempar exception — ditangkap di sini, bukan dibiarkan
+        // jadi 500 di layar Owner.
+        try {
+            $tgl = \Carbon\Carbon::createFromFormat('Y-m-d', $teks);
+        } catch (\Throwable $e) {
+            return 'Format tanggal koreksi tidak sah. Harus YYYY-MM-DD.';
+        }
+        if (!$tgl || $tgl->format('Y-m-d') !== $teks) {
+            return 'Format tanggal koreksi tidak sah. Harus YYYY-MM-DD.';
+        }
+
+        $acuan = ($hariIni ?? \Carbon\Carbon::today())->copy()->startOfDay();
+        if ($tgl->startOfDay()->greaterThan($acuan)) {
+            return 'Tanggal koreksi tidak boleh di masa depan.';
+        }
+
+        return null;
+    }
+
+    // Kapan pencatatan absen MANUAL boleh dilakukan. Balikan null = boleh;
+    // string = alasan tolak (langsung dipakai sebagai pesan ke layar).
+    // Murni, tanpa database — diuji di tests/kerja-hari-libur/test_koreksi_kerja_hari_libur.php.
+    public static function alasanTolakKoreksiManual(bool $sudahAdaBaris): ?string
+    {
+        if ($sudahAdaBaris) {
+            return 'Karyawan ini sudah punya data absen di tanggal tersebut. '
+                 . 'Pakai tombol Koreksi pada barisnya supaya jam, GPS, dan catatan lama tidak hilang.';
+        }
+        return null;
     }
 
     private function getLokasiUser(int $level): array

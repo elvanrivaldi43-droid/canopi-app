@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\KpiKinerja;
 use App\Models\SpKaryawan;
 use App\Models\RaporKaryawan;
+use App\Services\KerjaHariLiburService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -71,8 +72,19 @@ class KpiService
             ->whereBetween('tanggal', [$awalBulan->toDateString(), $akhirBulan->toDateString()])
             ->get();
 
+        // Hari yang diaktifkan masuk kerja IKUT dinilai KPI — keputusan Bos: aktivasi
+        // membatalkan libur, tanggalnya jadi hari kerja biasa. Baris itu menambah
+        // penyebut ($hariKerja) DAN pembilang ($jumlahHadir) sekaligus, jadi hasilnya
+        // tidak pernah lebih dari 100% secara matematis.
+        //
+        // Baris aktivasi TIDAK boleh dibuang di sini: kalau dibuang, karyawan yang
+        // diaktifkan lalu mangkir tidak kelihatan alpha-nya dan KPI-nya tidak turun.
         $hariKerja  = $absensi->count();
-        $jumlahHadir = $absensi->whereIn('status', ['hadir', 'telat', 'setengah'])->count();
+        // Nilai status di kolom absensi.status adalah `setengah_hari` — dulu ditulis
+        // `setengah` di sini, nilai yang tidak pernah ada, jadi karyawan yang pulang
+        // setengah hari tidak terhitung hadir di KPI. Pakai daftar bersama biar tidak
+        // menyimpang lagi dari sisa sistem.
+        $jumlahHadir = $absensi->whereIn('status', KerjaHariLiburService::STATUS_BEKERJA)->count();
         $jumlahAlpha = $absensi->where('status', 'alpha')->count();
         $jumlahTelat = $absensi->where('status', 'telat')->count();
         $jumlahIzin  = $absensi->whereIn('status', ['izin', 'sakit', 'cuti'])->count();

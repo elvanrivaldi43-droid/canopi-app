@@ -66,6 +66,31 @@ class LiburService
         return $hasil;
     }
 
+    /**
+     * Tanggal yang sudah DIAKTIFKAN "masuk kerja di hari libur" jadi override `batal`.
+     *
+     * Keputusan Bos: aktivasi membatalkan libur tanpa pengganti — tanggalnya menjadi
+     * hari kerja biasa. Jadi hari itu masuk penyebut hari kerja DAN pembilang
+     * kehadiran, persis seperti hari kerja lain.
+     *
+     * Rancangan awal fitur ini menahan tanggalnya tetap "libur" lalu mengeluarkan
+     * barisnya dari statistik supaya persentase tidak tembus 100%. Akibatnya karyawan
+     * yang sudah diaktifkan lalu TIDAK MASUK hilang dari laporan: alpha-nya tidak
+     * terhitung dan KPI-nya tidak turun. Sekarang hitungannya konsisten tanpa
+     * membuang record apa pun.
+     *
+     * Upah ekstra 1x gaji harian TIDAK hilang — dihitung terpisah lewat
+     * `absensi.upah_hari_libur` (kompensasi jatah libur yang hangus).
+     */
+    public function expandAktivasi(array $tanggalAktivasi): array
+    {
+        $hasil = [];
+        foreach ($tanggalAktivasi as $tgl) {
+            $hasil[] = ['tanggal' => $tgl, 'jenis' => 'batal'];
+        }
+        return $hasil;
+    }
+
     public function jendelaTukarSkip(Carbon $sekarang): array
     {
         $awal  = $sekarang->copy()->addDay()->startOfDay();
@@ -87,9 +112,15 @@ class LiburService
     }
 
     // Wrapper database — dipakai cron & GajiService.
+    //
+    // URUTAN MERGE = URUTAN PRIORITAS. cocokLiburPada() berhenti di override
+    // PERTAMA yang tanggalnya cocok, jadi aktivasi kerja hari libur harus berada
+    // paling depan: dia mengalahkan libur nasional, override jadwal, dan jadwal
+    // libur default sekaligus.
     public function isLibur(User $user, Carbon $tanggal): bool
     {
         $overrides = array_merge(
+            $this->ambilAktivasiKerjaLibur($user, $tanggal, $tanggal),
             $this->ambilLiburNasional($user, $tanggal, $tanggal),
             $this->ambilOverride($user, $tanggal, $tanggal)
         );
@@ -100,11 +131,54 @@ class LiburService
     {
         $awal      = Carbon::createFromDate($tahun, $bulan, 1);
         $akhir     = $sampaiHari ? $awal->copy()->day($sampaiHari) : $awal->copy()->endOfMonth();
+        // Aktivasi paling depan = prioritas tertinggi (lihat isLibur).
         $overrides = array_merge(
+            $this->ambilAktivasiKerjaLibur($user, $awal, $akhir),
             $this->ambilLiburNasional($user, $awal, $akhir),
             $this->ambilOverride($user, $awal, $akhir)
         );
         return $this->hitungHariKerjaPada($user->hari_libur_default, $overrides, $bulan, $tahun, $sampaiHari);
+    }
+
+    // Peta libur 1 bulan penuh untuk 1 karyawan: ['Y-m-d' => bool].
+    // Override diambil SEKALI (bukan per tanggal) biar tidak N+1 query di halaman rekap.
+    public function petaLiburBulan(User $user, int $bulan, int $tahun): array
+    {
+        $awal      = Carbon::createFromDate($tahun, $bulan, 1);
+        $akhir     = $awal->copy()->endOfMonth();
+        // Aktivasi paling depan = prioritas tertinggi (lihat isLibur).
+        $overrides = array_merge(
+            $this->ambilAktivasiKerjaLibur($user, $awal, $akhir),
+            $this->ambilLiburNasional($user, $awal, $akhir),
+            $this->ambilOverride($user, $awal, $akhir)
+        );
+
+        $peta = [];
+        for ($cur = $awal->copy(); $cur->lte($akhir); $cur->addDay()) {
+            $peta[$cur->format('Y-m-d')] = $this->cocokLiburPada($user->hari_libur_default, $overrides, $cur);
+        }
+        return $peta;
+    }
+
+    /**
+     * Tanggal aktivasi "masuk kerja di hari libur" milik user ini dalam rentang tsb.
+     *
+     * Dibaca dari tabel otorisasi (`kerja_hari_libur`) — satu-satunya sumber fakta
+     * "hari itu memang diminta masuk". Sengaja TIDAK memeriksa apakah orangnya
+     * akhirnya masuk: kalau sudah diaktifkan lalu mangkir, hari itu tetap hari kerja
+     * dan alpha-nya memang harus terhitung.
+     */
+    private function ambilAktivasiKerjaLibur(User $user, Carbon $dari, Carbon $sampai): array
+    {
+        $tanggal = \App\Models\KerjaHariLibur::where('user_id', $user->id)
+            ->whereBetween('tanggal', [$dari->format('Y-m-d'), $sampai->format('Y-m-d')])
+            ->get(['tanggal'])
+            ->map(fn($a) => $a->tanggal instanceof Carbon
+                ? $a->tanggal->format('Y-m-d')
+                : Carbon::parse($a->tanggal)->format('Y-m-d'))
+            ->all();
+
+        return $this->expandAktivasi($tanggal);
     }
 
     private function ambilOverride(User $user, Carbon $dari, Carbon $sampai): array

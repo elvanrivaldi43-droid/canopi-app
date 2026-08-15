@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Kasbon;
 use App\Models\User;
 use App\Services\TelegramService;
+use App\Services\MasaKerjaService;
 
 class KasbonKaryawanController extends Controller
 {
@@ -31,11 +32,13 @@ class KasbonKaryawanController extends Controller
                              ->orderBy('created_at', 'desc')
                              ->get();
 
-        // Hitung masa kerja
-        $tanggalBergabung = $user->tanggal_bergabung
-            ? \Carbon\Carbon::parse($user->tanggal_bergabung)
-            : \Carbon\Carbon::parse($user->created_at);
-        $masaKerjaBulan = (int)$tanggalBergabung->diffInMonths(now());
+        // Hitung masa kerja — SATU sumber rumus dengan store() di bawah.
+        // Urutan sumber: tanggal_bergabung -> tgl_masuk_kerja -> created_at.
+        // `tgl_masuk_kerja` WAJIB dicoba sebelum created_at: created_at itu tanggal
+        // baris dibuat di sistem, bukan tanggal orangnya mulai bekerja.
+        $masaKerjaBulan = MasaKerjaService::masaKerjaBulan(
+            $user->tanggal_bergabung, $user->tgl_masuk_kerja, $user->created_at
+        );
 
         // Gaji bulanan estimasi
         $gajiBulanan       = ($user->gaji_harian ?? 0) * 26;
@@ -78,11 +81,11 @@ class KasbonKaryawanController extends Controller
             'ttd_digital.required' => 'Tanda tangan wajib diisi.',
         ]);
 
-        // Validasi syarat
-        $tanggalBergabung = $user->tanggal_bergabung
-            ? \Carbon\Carbon::parse($user->tanggal_bergabung)
-            : \Carbon\Carbon::parse($user->created_at);
-        $masaKerjaBulan = (int)$tanggalBergabung->diffInMonths(now());
+        // Validasi syarat — helper yang SAMA dengan index(), bukan salinan rumus.
+        // Kalau dua tempat ini menyimpang, layar bisa bilang "boleh" tapi submit ditolak.
+        $masaKerjaBulan = MasaKerjaService::masaKerjaBulan(
+            $user->tanggal_bergabung, $user->tgl_masuk_kerja, $user->created_at
+        );
 
         if ($masaKerjaBulan < 12) {
             return back()->with('error', "Masa kerja belum 1 tahun ({$masaKerjaBulan} bulan).");

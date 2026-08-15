@@ -76,8 +76,14 @@
                         style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;cursor:pointer;"
                         :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
                     <option value="">Pilih level</option>
-                    @foreach([2=>'Admin Operasional',3=>'Supervisor Lapangan',4=>'Marketing',5=>'Teknisi',6=>'Driver',7=>'Admin Toko Besi'] as $l => $n)
-                    <option value="{{ $l }}" {{ old('level') == $l ? 'selected' : '' }}>{{ $n }}</option>
+                    {{-- Pilihan level DIBATASI per aktor: Admin Operasional hanya boleh
+                         membuat level 3-7. Daftarnya diambil dari policy terpusat, dan
+                         nilainya divalidasi ulang di server (KaryawanController::store).
+                         Khusus form TAMBAH, Owner pun tidak ditawari level 1 — sekali
+                         salah pilih, undangan Owner kedua terkirim ke email yang baru
+                         diketik. Ganti level baris yang sudah ada tetap 1-7 lewat Edit. --}}
+                    @foreach(\App\Services\KaryawanAksesService::levelTargetCreate(auth()->user()->level) as $l)
+                    <option value="{{ $l }}" {{ old('level') == $l ? 'selected' : '' }}>Level {{ $l }} — {{ $levels[$l] ?? '' }}</option>
                     @endforeach
                 </select>
                 @error('level')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
@@ -132,7 +138,12 @@
             </div>
         </div>
 
-        {{-- DATA GAJI --}}
+        {{-- DATA GAJI — OWNER SAJA.
+             Admin Operasional tidak melihat blok ini, dan kalaupun dia menyusun POST
+             sendiri, nominalnya tetap dibuang di server (KaryawanAksesService::payloadCreate)
+             lalu diganti default aman: tipe harian, semua nominal 0. --}}
+        @if(\App\Services\KaryawanAksesService::bolehFinansial(auth()->user()->level))
+        {{-- OWNER-ONLY:MULAI --}}
         <div class="stat-card" style="margin-bottom:16px;">
             <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);"
                 :style="darkMode ? 'color:#F1F5F9' : 'color:#1E293B'">
@@ -207,6 +218,17 @@
             </div>
             @endif
         </div>
+        {{-- OWNER-ONLY:SELESAI --}}
+        @else
+        {{-- Admin Operasional: karyawan baru dibuat dengan gaji Rp 0 dan harus
+             dilengkapi Owner. Ditulis terang-terangan supaya tidak dikira lupa diisi. --}}
+        <div class="stat-card" style="margin-bottom:16px;">
+            <div style="font-size:12px;line-height:1.6;color:#94A3B8;">
+                <strong style="color:#C9A84C;">Data gaji diisi Owner.</strong><br>
+                Karyawan ini dibuat dengan gaji Rp 0 sampai Owner melengkapi nominalnya.
+            </div>
+        </div>
+        @endif
 
         {{-- Submit --}}
         <div style="display:flex;gap:10px;">

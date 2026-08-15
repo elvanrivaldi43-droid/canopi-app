@@ -1,7 +1,7 @@
 <?php
 // FILE: tests/libur-nasional/test_libur_nasional.php
 // Jalankan: php tests/libur-nasional/test_libur_nasional.php
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../bootstrap.php';
 
 use App\Services\LiburService;
 use Carbon\Carbon;

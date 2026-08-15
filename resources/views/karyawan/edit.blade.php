@@ -88,8 +88,12 @@
                         style="width:100%;padding:11px 14px;border-radius:10px;font-size:13px;outline:none;border:1.5px solid;background:transparent;cursor:pointer;"
                         :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
                     <option value="">Pilih level</option>
-                    @foreach([1=>'Owner',2=>'Admin Operasional',3=>'Supervisor Lapangan',4=>'Marketing',5=>'Teknisi',6=>'Driver',7=>'Admin Toko Besi'] as $l => $n)
-                    <option value="{{ $l }}" {{ old('level', $karyawan->level) == $l ? 'selected' : '' }}>Level {{ $l }} — {{ $n }}</option>
+                    {{-- Pilihan level DIBATASI per aktor. Sebelum perbaikan ini daftarnya
+                         selalu 1-7, jadi Admin Operasional bisa mengangkat siapa pun
+                         (termasuk dirinya) jadi Owner lewat satu dropdown. Nilainya
+                         divalidasi ulang di server (KaryawanController::update). --}}
+                    @foreach(\App\Services\KaryawanAksesService::levelTargetDiizinkan(auth()->user()->level) as $l)
+                    <option value="{{ $l }}" {{ old('level', $karyawan->level) == $l ? 'selected' : '' }}>Level {{ $l }} — {{ $levels[$l] ?? '' }}</option>
                     @endforeach
                 </select>
                 @error('level')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
@@ -127,7 +131,11 @@
                        :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
             </div>
 
-            {{-- Tanggal Bergabung (dasar hitung syarat 1 tahun untuk Kasbon) --}}
+            {{-- Tanggal Bergabung (dasar hitung syarat 1 tahun untuk Kasbon) — OWNER SAJA.
+                 Kalau Admin bisa memundurkan tanggal ini, dia bisa meloloskan pengajuan
+                 kasbon siapa pun. Server ikut membuangnya dari payload non-Owner. --}}
+            @if(\App\Services\KaryawanAksesService::bolehFinansial(auth()->user()->level))
+            {{-- OWNER-ONLY:MULAI --}}
             <div style="margin-bottom:16px;">
                 <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Tanggal Bergabung <span style="font-size:11px;font-weight:400;color:#64748B;">(dasar syarat kasbon min. 1 tahun)</span></label>
                 <input type="date" name="tanggal_bergabung" value="{{ old('tanggal_bergabung', $karyawan->tanggal_bergabung?->format('Y-m-d')) }}"
@@ -135,6 +143,8 @@
                        :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
                 @error('tanggal_bergabung')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
             </div>
+            {{-- OWNER-ONLY:SELESAI --}}
+            @endif
 
             {{-- Jam Kerja --}}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
@@ -153,8 +163,10 @@
             </div>
         </div>
 
-        {{-- DATA GAJI (Owner only) --}}
-        @if(auth()->user()->level == 1)
+        {{-- DATA GAJI (Owner only) — pagar dipindah ke policy terpusat supaya
+             layar dan server memakai aturan yang sama persis. --}}
+        @if(\App\Services\KaryawanAksesService::bolehFinansial(auth()->user()->level))
+        {{-- OWNER-ONLY:MULAI --}}
         <div class="stat-card" style="margin-bottom:16px;">
             <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid;"
                 :style="darkMode ? 'color:#F1F5F9;border-color:rgba(255,255,255,0.06)' : 'color:#1E293B;border-color:#F1F5F9'">
@@ -223,9 +235,15 @@
             </div>
             @endif
         </div>
+        {{-- OWNER-ONLY:SELESAI --}}
         @endif
 
-        {{-- DATA REKENING --}}
+        {{-- DATA REKENING — OWNER SAJA.
+             Nomor rekening adalah tujuan transfer gaji: kalau Admin bisa
+             mengubahnya, gaji karyawan bisa dialihkan tanpa menyentuh nominal
+             apa pun. Server ikut membuang field ini dari payload non-Owner. --}}
+        @if(\App\Services\KaryawanAksesService::bolehFinansial(auth()->user()->level))
+        {{-- OWNER-ONLY:MULAI --}}
         <div class="stat-card" style="margin-bottom:16px;">
             <h3 style="font-size:14px;font-weight:700;margin:0 0 20px 0;padding-bottom:12px;border-bottom:1px solid;"
                 :style="darkMode ? 'color:#F1F5F9;border-color:rgba(255,255,255,0.06)' : 'color:#1E293B;border-color:#F1F5F9'">
@@ -259,6 +277,8 @@
                        :style="darkMode ? 'border-color:rgba(255,255,255,0.1);color:#E2E8F0;' : 'border-color:#E2E8F0;color:#1E293B;'">
             </div>
         </div>
+        {{-- OWNER-ONLY:SELESAI --}}
+        @endif
 
         {{-- Submit --}}
         <div style="display:flex;gap:10px;">

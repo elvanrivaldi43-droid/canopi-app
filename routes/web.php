@@ -111,12 +111,27 @@ Route::middleware('auth')->prefix('absensi')->name('absensi.')->group(function (
     Route::get('/pulang',                   [AbsensiController::class, 'formPulang'])->name('form-pulang');
     Route::post('/pulang',                  [AbsensiController::class, 'absenPulang'])->name('pulang');
     Route::post('/cek-gps',                 [AbsensiController::class, 'cekGps'])->name('cek-gps');
-    Route::get('/rekap',                    [AbsensiController::class, 'rekap'])->name('rekap');
-    Route::post('/{id}/koreksi',            [AbsensiController::class, 'koreksi'])->name('koreksi');
-    Route::post('/koreksi-baru/{userId}',   [AbsensiController::class, 'koreksiManual'])->name('koreksi-manual');
+    // Rekap memuat absensi + NOMINAL GAJI seluruh karyawan -> Owner (level 1) SAJA.
+    // Mandor (level 3) sengaja tidak diberi rekap penuh; dia tetap punya halaman
+    // kode absen & aktivasi masuk hari libur di bawah (keputusan Bos, 15 Agustus).
+    Route::get('/rekap',                    [AbsensiController::class, 'rekap'])->middleware('level:1')->name('rekap');
+    // Koreksi mengubah status + NOMINAL GAJI karyawan lain -> Owner (level 1) SAJA.
+    // Mandor (level 3) tetap boleh lihat kode & aktifkan masuk hari libur, tapi tidak
+    // boleh mengubah angka gaji siapa pun (keputusan Bos, 15 Agustus).
+    Route::post('/{id}/koreksi',            [AbsensiController::class, 'koreksi'])->middleware('level:1')->name('koreksi');
+    Route::post('/koreksi-baru/{userId}',   [AbsensiController::class, 'koreksiManual'])->middleware('level:1')->name('koreksi-manual');
     Route::post('/validasi-kode',           [AbsensiController::class, 'validasiKode'])->name('validasi-kode');
+    // Rekap BULANAN juga dipakai karyawan biasa untuk melihat rekap ABSENSINYA
+    // SENDIRI, jadi tidak boleh dikunci level:1 (itu memutus akses 13 orang).
+    // Pagarnya di controller: semua level kecuali Owner dipaksa self-only —
+    // lihat AbsensiController::bolehRekapSemua().
     Route::get('/rekap-bulanan',            [AbsensiController::class, 'rekapBulanan'])->name('rekap-bulanan');
     Route::get('/kode-hari-ini',            [AbsensiController::class, 'kodeHariIni'])->middleware('level:1,3')->name('kode-hari-ini');
+    Route::post('/kerja-hari-libur/{userId}', [AbsensiController::class, 'aktifkanKerjaHariLibur'])->middleware('level:1,3')->name('kerja-hari-libur');
+    // Buat & kirim kode absen manual untuk 1 karyawan (jaring pengaman kalau cron
+    // pagi gagal / karyawan baru aktif setelah 06:30). Halaman kode absen sendiri
+    // BACA SAJA — pembuatan kode harus lewat tindakan yang disengaja seperti ini.
+    Route::post('/kirim-kode/{userId}',       [AbsensiController::class, 'kirimKodeAbsen'])->middleware('level:1,3')->name('kirim-kode');
 });
 
 // ─── IZIN KARYAWAN ─────────────────────────────────────────
@@ -150,22 +165,31 @@ Route::middleware('auth')->prefix('libur-nasional')->name('libur-nasional.')->gr
 });
 
 // ─── PENGGAJIAN ─────────────────────────────────────────────
+// URL & nama route TIDAK berubah — yang berubah hanya pembungkus middleware-nya.
 Route::middleware('auth')->prefix('penggajian')->name('penggajian.')->group(function () {
-    Route::get('/',                             [PenggajianController::class, 'index'])->name('index');
-    Route::post('/generate',                    [PenggajianController::class, 'generate'])->name('generate');
-    Route::post('/generate-semua',              [PenggajianController::class, 'generateSemua'])->name('generate-semua');
-    Route::get('/slip/{slip}',                  [PenggajianController::class, 'show'])->name('slip');
-    Route::post('/slip/{slip}/konfirmasi',      [PenggajianController::class, 'konfirmasi'])->name('konfirmasi');
-    Route::post('/slip/{slip}/bayar',           [PenggajianController::class, 'bayar'])->name('bayar');
-    Route::post('/bayar-semua',                 [PenggajianController::class, 'bayarSemua'])->name('bayar-semua');
+
+    // Operasi administratif: menampilkan/mengubah UANG karyawan lain -> Owner SAJA.
+    Route::middleware('level:1')->group(function () {
+        Route::get('/',                             [PenggajianController::class, 'index'])->name('index');
+        Route::post('/generate',                    [PenggajianController::class, 'generate'])->name('generate');
+        Route::post('/generate-semua',              [PenggajianController::class, 'generateSemua'])->name('generate-semua');
+        Route::post('/slip/{slip}/konfirmasi',      [PenggajianController::class, 'konfirmasi'])->name('konfirmasi');
+        Route::post('/slip/{slip}/bayar',           [PenggajianController::class, 'bayar'])->name('bayar');
+        Route::post('/bayar-semua',                 [PenggajianController::class, 'bayarSemua'])->name('bayar-semua');
+        Route::get('/kasbon',                       [PenggajianController::class, 'kasbon'])->name('kasbon');
+        Route::post('/kasbon',                      [PenggajianController::class, 'kasbonStore'])->name('kasbon.store');
+        Route::post('/kasbon/{kasbon}/tunda',       [PenggajianController::class, 'kasbonTunda'])->name('kasbon.tunda');
+        Route::post('/insidental',                  [PenggajianController::class, 'insidentalStore'])->name('insidental.store');
+        Route::post('/tabungan-lebaran',            [PenggajianController::class, 'setTabunganLebaran'])->name('tabungan-lebaran');
+        Route::post('/kasbon/{kasbon}/approve',     [PenggajianController::class, 'kasbonApprove'])->name('kasbon.approve');
+        Route::post('/kasbon/{kasbon}/tolak',       [PenggajianController::class, 'kasbonTolak'])->name('kasbon.tolak');
+    });
+
+    // Self-service: slip milik sendiri tetap bisa dibuka semua user login.
+    // Detail slip dijaga per-objek di controller (Owner ATAU pemilik slip),
+    // bukan lewat level — lihat PenggajianController::bolehLihatSlip().
     Route::get('/slip-saya',                    [PenggajianController::class, 'slipSaya'])->name('slip-saya');
-    Route::get('/kasbon',                       [PenggajianController::class, 'kasbon'])->name('kasbon');
-    Route::post('/kasbon',                      [PenggajianController::class, 'kasbonStore'])->name('kasbon.store');
-    Route::post('/kasbon/{kasbon}/tunda',       [PenggajianController::class, 'kasbonTunda'])->name('kasbon.tunda');
-    Route::post('/insidental',                  [PenggajianController::class, 'insidentalStore'])->name('insidental.store');
-    Route::post('/tabungan-lebaran',            [PenggajianController::class, 'setTabunganLebaran'])->name('tabungan-lebaran');
-    Route::post('/kasbon/{kasbon}/approve',     [PenggajianController::class, 'kasbonApprove'])->name('kasbon.approve');
-    Route::post('/kasbon/{kasbon}/tolak',       [PenggajianController::class, 'kasbonTolak'])->name('kasbon.tolak');
+    Route::get('/slip/{slip}',                  [PenggajianController::class, 'show'])->name('slip');
 });
 
 // ─── PIPELINE SURVEY (Level 1,2,3,4) ─────────────────────────

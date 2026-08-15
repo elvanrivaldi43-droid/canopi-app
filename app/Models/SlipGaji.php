@@ -12,8 +12,8 @@ class SlipGaji extends Model
     protected $fillable = [
         'user_id', 'periode', 'bulan', 'tahun',
         'tanggal_generate', 'tanggal_bayar', 'status',
-        'hari_hadir', 'hari_alpha', 'hari_telat', 'hari_izin',
-        'gaji_pokok', 'total_uang_makan', 'total_tunjangan',
+        'hari_hadir', 'hari_alpha', 'hari_telat', 'hari_izin', 'hari_kerja_libur',
+        'gaji_pokok', 'upah_hari_libur', 'total_uang_makan', 'total_tunjangan',
         'bonus_kpi', 'kelas_kpi', 'bonus_lembur', 'jam_lembur',
         'potongan_telat', 'potongan_kasbon', 'potongan_insidental',
         'tabungan_wajib', 'tabungan_lebaran',

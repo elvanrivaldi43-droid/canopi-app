@@ -24,9 +24,14 @@ class Absensi extends Model
         'jam_lapor_progress','pertanyaan_progress','jawaban_progress','kendala_kenapa',
         'potongan_progress_dicatat',
         'lat_kembali_kerja','lng_kembali_kerja','gps_valid_kembali_kerja',
+        // Kerja hari libur (15 Agustus)
+        'kerja_hari_libur','upah_hari_libur',
     ];
 
-    protected $casts = ['tanggal' => 'date'];
+    protected $casts = [
+        'tanggal'          => 'date',
+        'kerja_hari_libur' => 'boolean',
+    ];
 
     public function user() { return $this->belongsTo(User::class); }
     public function dikoreksiOleh() { return $this->belongsTo(User::class, 'dikoreksi_oleh'); }

@@ -1,7 +1,7 @@
 <?php
 // FILE: tests/absensi/test_pilih_pertanyaan_progress.php
 // Jalankan: php tests/absensi/test_pilih_pertanyaan_progress.php
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../bootstrap.php';
 
 use App\Http\Controllers\AbsensiController;
 use Carbon\Carbon;
