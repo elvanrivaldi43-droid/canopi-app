@@ -1,0 +1,706 @@
+# CLAUDE.md — CanopiBSD v2
+
+> Dokumen ini adalah "otak" project untuk Claude Code. Dibaca otomatis tiap sesi baru.
+> **WAJIB:** update bagian "Status Terkini" di akhir tiap sesi kerja.
+
+---
+
+## 🎯 IDENTITAS PROYEK
+
+| Item | Detail |
+|---|---|
+| Sistem | CanopiBSD v2 — sistem manajemen bisnis Pusat Kanopi BSD & Pusat Besi (~14 karyawan) |
+| Framework | Laravel 13 (13.12.0), PHP 8.3 |
+| Owner | Elvan — **non-teknis**, selalu jelaskan pakai bahasa awam dulu sebelum istilah teknis |
+| URL live | https://app.kanopibsd.co.id |
+| Repo | https://github.com/elvanrivaldi43-droid/canopi-app |
+| Hosting web | Niagahoster shared hosting (cPanel, srv170) — **BUKAN** VPS, tidak ada SSH ke sini |
+| VPS terpisah | Hostinger KVM 1 (1vCPU/4GB), IP 187.77.143.121, awalnya untuk n8n/Ferrovabot — sekarang juga jadi tempat Claude Code jalan (`/root/projects/canopi-app`) |
+| DB | u8221523_canopi_new (production), MySQL via phpMyAdmin |
+
+---
+
+## ⚙️ PREFERENSI KERJA (WAJIB DIIKUTI)
+
+**Gaya komunikasi (dikunci, jangan diubah):**
+- Penasihat, bukan asisten sekadar nurut — akurasi lebih penting dari persetujuan
+- Kalau ada masalah/risiko, sebut di baris pertama, jangan ditunda ke paragraf ketiga
+- Label keyakinan: `[Pasti]` / `[Kemungkinan Besar]` / `[Menebak]` untuk klaim penting
+- Tanpa pujian basa-basi ("pertanyaan bagus", dll)
+- Bahasa awam dulu, istilah teknis belakangan — Elvan non-teknis
+- Tahan posisi kecuali ada fakta baru, jangan berubah pendapat cuma karena didesak
+- Bahasa Indonesia informal, langsung ke inti
+
+**Cara kerja teknis:**
+1. **Mode manual/ask-before-edit** — jangan auto-accept edit tanpa konfirmasi, kecuali diminta khusus
+2. **Fitur baru/perubahan besar** → susun rencana dulu (`/plan`), diskusikan tujuan bisnisnya, baru eksekusi setelah disetujui
+3. **Bug fix** → JANGAN asumsi bug itu ada. Buktikan dulu dengan reproduksi/eksekusi kode nyata sebelum ubah apapun (lihat contoh kasus hollow 5x10 di bawah — dugaan awal ternyata salah, dan itu ketahuan justru karena diverifikasi jalan beneran, bukan cuma dibaca)
+4. Build dipecah langkah kecil, ditest satu per satu — jangan sekaligus banyak perubahan tak berhubungan dalam 1 commit
+5. SQL harus idempotent (`IF NOT EXISTS`, aman kalau error #1060 dilewati)
+6. Tiap akhir sesi/modul selesai, tampilkan ringkasan progres tanpa diminta
+
+---
+
+## 🚨 DEPLOY WORKFLOW
+
+```
+Edit kode → git commit → git push ke GitHub
+→ GitHub Actions (deploy.yml) OTOMATIS jalan
+→ FTP ke server Niagahoster (protocol: ftp, BUKAN ftps — Niagahoster block ftps dari IP GitHub)
+→ Cache Laravel auto-clear
+→ Selesai ±1-2 menit
+```
+
+**Insiden 9-11 Juli 2026 (SUDAH SELESAI diperbaiki):** Repo GitHub sempat berisi source code lama, push pertama menimpa banyak file dengan versi lama → web down total. Sudah diperbaiki tuntas 11 Juli — repo sekarang = cerminan persis server production. Auto-deploy aman dipakai normal. **Tetap disiplin:** `git pull` dulu sebelum mulai kerja di sesi/device manapun.
+
+File diagnostik di server (boleh dipakai, jangan hapus): `bersih-bersih.php`, `lihat-log.php`.
+
+**Pelajaran deploy mahal (jangan terulang):**
+- Controller jangan ke-upload ke folder views (dan sebaliknya)
+- Hapus semua `.php` di `storage/framework/views/` tiap ganti file blade
+- Cek spasi siluman di nama folder cPanel (rename untuk lihat nama asli)
+- Typo nama file sering jadi biang "view not found"
+- Baris kembar/duplikat di tabel DB → error 1062 → hard reset browser setelah bersihkan DB
+- `laravel.log` menumpuk lama→baru, yang relevan di paling bawah — kosongkan dulu, baru picu error, biar baca yang baru
+- Emoji di blade file bisa korup di server → pakai SVG icon, jangan pernah emoji
+- File tes (`teswa.php`, `testelegram.php`, dll) di `public/` **HARUS dihapus** setelah selesai dipakai (risiko keamanan)
+
+---
+
+## 🏗️ ARSITEKTUR RAB — PRINSIP INTI (jangan dilanggar)
+
+- **Satu mesin block-mode** (`hitungSatuBlok` tanpa margin → margin ditambah di level Opsi), BUKAN dua wizard terpisah
+- Struktur: `OPSI[] → BLOK[] → komponen`. Blok di-**on/off**, tidak dihapus. Opsi diduplikat lalu diubah (bukan bikin dari nol tiap kali)
+- Estimasi admin vs harga final surveyor **disimpan terpisah** (untuk bukti + belajar admin mana yang sering meleset)
+- Produktivitas RAB (dipakai untuk harga) vs tabel tahap SWE (dipakai untuk manajemen produksi) = **DUA TABEL TERPISAH**, jangan pernah digabung
+- **Margin = untung dari harga jual**: `pokok ÷ (1 − margin)`. BUKAN markup (`modal × (1 + markup)`) — beda rumus, jangan tertukar
+
+**Model Biaya v2 — komponen lengkap (semua sudah jalan & terbukti):**
+- V2-1: fab/inst terpisah (produktivitas_inst sendiri, `hariFab + hariInst`)
+- V2-2: consumable rangka+atap per m² (per jenis atap, kolom `rab_atap.consumable`)
+- V2-3a: add-on berat durasi (kecepatan satuan/hari, `upah = (qty/dFab + qty/dInst) × upahHariTim`); halaman kelola di `/addon` (`AddonController`, owner-only)
+- V2-4: insentif per kondisi kerja (`kena = 'inst'/'fabinst'`, dipisah `pengaliInst×hariInst + pengaliFab×hariFab`)
+- V2-5a: finishing standar (per m² rangka, melekat otomatis)
+- V2-5b: powder coating (pilihan per-opsi via `pane.dataset.finishing` + `select .opsi-finishing`, default Standar)
+- V2-6: nginap dihitung dari hari INSTALASI, operasional per-opsi (transport/genset/nginap/makan terpisah di rincian)
+- Tim fab vs inst dipisah (`rab_jenis_kerja` + kolom `jml_tukang_inst`/`jml_kenek_inst`, fallback ke tim fab kalau kosong)
+- Centang "atap pasang di rangka lama/reparasi" → upah pasang atap HANYA muncul kalau dicentang
+- Besi tambahan manual per blok (tombol "+ Besi Tambahan", dropdown `BESI_SEMUA`)
+
+---
+
+## 📐 ATURAN BISNIS PENTING (logika, bukan sekadar preferensi)
+
+- **GPS** = bukti kehadiran fisik. Hanya Owner (level 1) dan Surveyor (level 3) boleh "Ambil GPS" di profil lokasi
+- **Jarak workshop→lokasi**: input MANUAL, bukan auto-haversine — keputusan sengaja Elvan untuk akurasi harga
+- **Nginap diputus OTOMATIS oleh sistem** (bukan surveyor nebak): km≥15 & durasi 3-5 hari → hotel; >5 hari → kontrakan; <3 hari → PP harian
+- **Makan** hanya berlaku kalau km≥15 (makan luar kota)
+- **Tim yang berangkat ke lokasi**: tukang+kenek SEMUA orang ikut, bukan cuma tim inst
+
+**Sistem 7 level user:**
+| Level | Peran | Akses |
+|---|---|---|
+| 1 | Owner (Elvan) | Penuh, termasuk modal/margin |
+| 2 | Admin Operasional | Lihat harga jual, TIDAK lihat modal/tarif |
+| 3 | Supervisor/Mandor | Lihat harga jual, TIDAK lihat modal/tarif; akses pipeline+RAB |
+| 4 | Marketing | Hanya lead milik sendiri |
+| 5 | Teknisi | Terbatas — absen, tugas, gaji sendiri |
+| 6 | Driver | Terbatas — absen, log bensin, tugas, gaji sendiri |
+| 7 | Toko | Minimal |
+
+---
+
+## ✅ MODUL SELESAI & TERBUKTI JALAN
+
+Fondasi Laravel 13 (Auth Breeze, 7 level + `CheckLevel` middleware, dark/light mode) · Karyawan (CRUD, `tanggal_bergabung` + `tgl_masuk_kerja`, tunjangan default 0) · Registrasi mandiri via token · Absensi (GPS+kode) · Izin+approval · Profil · Penggajian (slip UM 1-15 & gaji 16-akhir) · Kasbon (`status` VARCHAR, syarat masa kerja≥1thn dari `tanggal_bergabung`, gaji bersih dari `gaji_harian×26`, tombol Approve/Tolak Owner) · Log Bensin · Luar Kota · Pipeline (kanban drag-drop SortableJS, kartu `<div>` bukan `<a>`, `bubbleScroll` untuk auto-scroll) · Alur admin↔surveyor (estimasi vs final terpisah, warning >15% selisih) · Profil Lokasi (foto Cloudinary, GPS owner+surveyor saja) · Wizard RAB 3 step · Nego+approval via Telegram (`rab_approval`, `ApprovalController`) · Validasi+autosave RAB · Penawaran cetak (printable, TTD digital base64, rekening BCA Syariah 0420017279 a.n Mohammad Elvan Rivaldi M) · **Model Biaya v2 lengkap (V2-1 s/d V2-6)** · KPI/Rapor/Ujian online · Sidebar per-level (sempat salah tampil sama semua level, sudah di-fix 24 file)
+
+**CuttingService — sudah DIVERIFIKASI dengan eksekusi PHP nyata (11 Juli):** TIDAK ada bug dobel-hitung frame/support (504 skenario diuji, 0 overlap, guard `$midV/$midH` bekerja benar).
+
+---
+
+## 🔄 SEDANG BERJALAN — KALIBRASI (Juli 2026)
+
+**⚠️ STATUS: DATA MASIH TES — belum boleh dipakai ke customer asli sebelum kalibrasi tuntas.**
+
+Proyek referensi: alderon 51m², harga jual Rp 41 juta.
+
+**Temuan terkunci:** margin 30% (bukan 45%) · consumable rangka ~Rp30.000/m² · consumable atap alderon ~Rp40.000/m² · finishing ~Rp50.000/m² · produktivitas instalasi 8,5 m²/hari · upah sudah mendekati akurat
+
+**Prinsip kalibrasi:**
+- Isi MODAL, bukan harga jual (margin ditambah otomatis oleh mesin)
+- Produktivitas = kecepatan m²/hari, BUKAN lama hari
+- Pakai hari kerja BERSIH (fokus penuh, tanpa tunggu barang/disambi project lain)
+- Ambil dari 3-5 project, rata-ratakan, kurangi 10-15% dari kecepatan maksimal
+- Panduan lengkap ada di `PANDUAN_KALIBRASI.md`, harga besi di tabel `master_material`
+
+**Belum terpecahkan:**
+- WF melintang/gawang belum dimodelkan benar (workaround sementara: set jumlah tiang=4)
+- Hollow count discrepancy di Material Support — **RESOLVED 14 Juli** lewat validasi ke cutting list asli project PA-DUTA (Cutting Optimization Pro). Dugaan "Besi Tambahan dobel" GUGUR — fitur itu benar (dipakai nambah profil 4x6/3x3 yang beda material). Akar masalah sebenarnya 3, lihat "Temuan validasi PA-DUTA" di bawah.
+
+---
+
+## 📋 ROADMAP (urutan prioritas terkunci, jangan dibalik urutannya)
+
+1. **Selesaikan kalibrasi** (sedang jalan)
+2. Consumable fixed+variabel (kalau sering ada project kecil)
+3. Tahap Perlindungan Lapangan — pemicu rantai tiang WF→scaffolding+takel, checklist wajib (talang→air rumah?/pohon?→cover jaring/bersih rutin)
+4. Sesi Media R2 (Cloudflare R2: setup + retensi foto absen ~60 hari + 1 cara upload seragam semua modul + migrasi dari Cloudinary) — **WAJIB sebelum** modul volume-besar (absensi v2/portal customer) live
+5. Portal Customer (PUNCAK) — link acak `/lihat/{kode}` tanpa login, PDF-ke-WA + link portal opsional, TTD online, tracking produksi, booking jadwal, bayar termin — butuh modul pembayaran + SWE dulu
+6. SWE (Smart Work Engine) — PALING AKHIR. Tabel tahap produksi terpisah dari tabel produktivitas RAB, rekomendasi PIC per tahap, tracking hari kerja asli, auto-koreksi produktivitas dari data nyata
+7. Multi-produk (pagar/tralis) — setelah kanopi matang+kalibrasi tuntas
+
+**Ditunda/belum diputuskan:**
+- C2b video link (Drive/YouTube) — ditunda ke Sesi Media R2
+- Besi Bagian B denah interaktif — ditunda
+- Pindah kondisi lokasi dari blok ke Profil Lokasi (luar kota/malam/beban berat) — perlu hati-hati, terpisah
+- WhatsApp Business API resmi untuk notifikasi karyawan (14 orang) — Telegram jangan dipaksakan ke karyawan/customer, itu khusus Owner
+
+---
+
+## 🔧 CATATAN TEKNIS (jangan diulang kesalahannya)
+
+- Laravel `Http::` facade **tidak jalan** di shared hosting Niagahoster → pakai `curl_init`
+- `getenv()` lebih andal dari `env()` untuk baca token di shared hosting
+- Kolom user: `status` (bukan `is_active`), `gaji_bulanan` (bukan `gaji`)
+- Field `tanggal_bergabung` **HARUS** di-cast `'date'` di `User.php` model
+- DB pakai `DB::table` (bukan Eloquent) di endpoint kritis untuk hindari masalah fillable
+- **Notifikasi:** Owner (1 orang) via Telegram (curl langsung, token di kode bukan `.env`). Karyawan (14 orang): rencana pindah ke WhatsApp Business API resmi — jangan paksa mereka pakai Telegram
+- **Storage foto:** Cloudflare R2 arah jangka panjang (bandwidth gratis, tak bisa suspend, murah). Cloudinary free tidak cukup untuk volume absensi+portal. Bangun infrastruktur media SEKALI dengan pola sama untuk semua modul, jangan tambal-sulam per modul
+- **`LOG_LEVEL=error` di production** → `Log::info()`/`Log::debug()` kefilter, tak nyampe `laravel.log`. Debug log sementara pakai `Log::error()` biar pasti kebaca, hapus lagi setelah dipakai
+
+---
+
+## ❓ MODUL YANG BELUM ADA RANCANGAN SAMA SEKALI
+
+**Jangan asumsi ini sudah selesai atau sudah ada rencana — kalau disinggung, ini butuh sesi diskusi khusus dulu (`/plan`), bukan langsung coding.**
+
+- **Modul Keuangan / Laporan Profit** — menu-nya SUDAH ada di sidebar & dashboard, tapi isinya cuma placeholder ("Data dari modul Keuangan — belum tersedia", terkonfirmasi dari tampilan live 11 Juli). Belum ada rancangan struktur DB, belum ada keputusan apa saja yang dihitung (pemasukan dari mana, pengeluaran apa saja, bagaimana relasinya ke RAB/Project/Payroll). **Ini gap besar** — banyak modul lain (RAB, Project, Penggajian) sudah jalan tapi belum ada 1 tempat yang merangkum semuanya jadi laporan profit real.
+- **SP Karyawan (Surat Peringatan otomatis)** — statusnya TIDAK JELAS, kemungkinan besar belum selesai dibangun meski KPI/Rapor sudah jalan. Perlu dicek langsung ke Elvan sebelum diasumsikan ada atau tidak.
+- **Manufacture Tracking** — kemungkinan besar konsepnya sudah diserap ke rencana SWE (lihat Roadmap #6), tapi ini BELUM DIKONFIRMASI resmi oleh Elvan. Jangan asumsi keduanya sama sebelum ditanya langsung.
+
+---
+
+## 📌 STATUS TERKINI (update tiap akhir sesi kerja)
+
+**11 Juli 2026:** Setup Claude Code selesai di VPS Hostinger (`/root/projects/canopi-app`). Investigasi bug hollow 5x10 selesai — terbukti BUKAN bug di CuttingService (diverifikasi eksekusi PHP nyata, 504 skenario). Kemungkinan sumbernya di fitur Besi Tambahan Manual, menunggu contoh kasus nyata dari Elvan. Repo GitHub sudah disinkronkan penuh dengan server production, insiden deploy 9-11 Juli sudah tuntas diperbaiki.
+
+**14 Juli 2026 — Validasi cutting engine ke project nyata PA-DUTA (Kanopi Alderon, ~40 m²):**
+
+Divalidasi lawan cutting list asli (Cutting Optimization Pro). Angka resmi (Statistics → Utilized bars): **hg 5x10 = 10 batang, hg 4x8 = 9, hg 3x3 = 4, hg 4x6 = 4** (stok 600cm).
+
+*Temuan validasi PA-DUTA (4 hal):*
+1. **Bug potong >600cm KONFIRMASI & sudah dibikin fix** (belum dipasang ke production). `CuttingService::potong()` menaruh potongan >600cm ke 1 batang → sisa NEGATIF, 0 sambungan → material kehitung KURANG. Fix: pecah jadi batang penuh + sambungan. Sudah diuji standalone, kasus ≤600cm identik (tidak merusak verifikasi 11 Juli). **TODO: pasang ke `app/Services/CuttingService.php`.**
+2. **Stok potong harus PER-MATERIAL, bukan hardcode 600.** Hollow = 600cm. WF-150 dari vendor khusus = sampai 1200cm & bisa custom <7m → palang 7m TANPA sambungan. `const STOCK = 600` harus jadi parameter per-material.
+3. **Profil (4x6 & 3x3) itu MENERUS keliling luar, bukan per-blok.** Cutting list: profil = 3 sisi (depan 700 + kiri 730 + kanan 528), belakang dibuang = 4 batang. Model per-blok salah (keluar 5).
+4. **Model support 4x8 TERLALU RAPAT.** Model auto grid-83 dua-arah + anggap semua garis dalam = support → keluar 14, asli 9. Realita (dari gambar bertanda hitam=5x10/pink=4x8): garis dalam VERTIKAL = 5x10 spine (3 balok tengah @492) + ada balok tengah horizontal; support 4x8 pink lebih jarang. **TODO: kalibrasi ulang aturan support** biar output = 9.
+
+*Yang sudah BENAR:* frame 5x10 (10=10 persis, termasuk dedup sisi berbagi antar blok + 3 balok tengah), luas atap dihitung dari bentuk asli berlekuk (~40 m², BUKAN bounding-box 51 m² — **ini bisa geser kalibrasi consumable/finishing per-m² yang tadinya dasar 51**).
+
+*Infra baru 14 Juli:* Node.js v22 + uv + graphify terpasang. Upload-inbox untuk Elvan kirim foto/PDF ke Claude: service systemd `claude-upload` (port 8891, auto-nyala, file masuk `/root/inbox/`). Skill Claude Code: superpowers, ponytail, find-skills, frontend-design, graphify.
+
+**14 Juli 2026 (lanjutan) — Perancang Rangka Fase 1 SELESAI di branch (belum merge/deploy):**
+
+Fix potong >600cm sudah LIVE di produksi (commit di main, terverifikasi lewat cutting-test 700×730). Lalu didesain fitur besar **Perancang Rangka** (editable member-list): satu kanopi = daftar batang yang bisa diedit, tiap batang punya besi sendiri — melebur blok/profil/besi-tambahan. Spec: `docs/superpowers/specs/2026-07-14-perancang-rangka-design.md`. Plan Fase 1: `docs/superpowers/plans/2026-07-14-perancang-rangka-fase1.md`.
+
+>>> RESUME POINT (mulai di sini kalau lanjut) <<<
+**ARAH BARU (14 Juli, disetujui Elvan) — Denah Interaktif di RAB Opsi, v2.** Menggantikan pendekatan halaman terpisah `/rangka-desain`. Denah interaktif editable per blok, **dilebur ke RAB opsi** (bukan menu/halaman sendiri). `/rangka-desain` (halaman/rute/controller/menu owner) **dibuang** setelah jalur baru terbukti. Konsep member-list + mesin (`RangkaDesignService`/`CuttingService`) tetap dipakai ulang.
+- **Spec desain final:** `docs/superpowers/specs/2026-07-14-denah-interaktif-rab-design.md` (18 keputusan terkunci — poligon editable, ukur sisi cm, arah support 3 pilihan, kotak saran simetris, besi per-bagian + warna/legenda, stok potong per-material, dsb).
+- **Plan Tahap 1A (mesin/backend):** `docs/superpowers/plans/2026-07-14-denah-rab-tahap1a-engine.md` — stok per-material + jalur `tipe:'denah'` di `CuttingController::hitungSatuBlok` + reproduksi PA-DUTA lewat tes standalone.
+
+**Prototype UX SUDAH DIVALIDASI Elvan (cocok).** File `tests/rangka/denah_prototype.html` (di-commit sbg referensi bangun DenahEditor asli). Standalone, disajikan lewat harness `tests/rangka/preview_server.php` (untracked, gitignore) di `http://187.77.143.121:8892/denah`. Fitur teruji: seret sudut mulus (rAF, tanpa render ulang saat drag, snap saat lepas), +/− sudut, panel "Ukur sisi" ketik cm presisi (koma diterima, tak di-snap), Undo 40-langkah, arah support + kotak saran, support manual dengan titik geser, tiang, besi per-bagian + warna/legenda. Konverter denah→members client-side → POST `/rangka-desain/hitung` (engine asli) → biaya real-time.
+
+**TAHAP 1A (backend) SELESAI — 5 task, semua tes standalone hijau** (`php tests/rangka/test_{hitung,stok,stok_material,denah_blok,paduta}.php`). Nol risiko deploy (murni PHP, tak sentuh production):
+- T1 `CuttingService::potong($pieces, $stock=null)` — stok potong per-panggilan (default 600).
+- T2 `RangkaDesignService::hitung(..., array $stok=[])` — stok per-material (WF s/d 1200).
+- T3 `CuttingController::stokMap()` — baca kolom `panjang_batang_cm` master_material (try/catch → `[]` bila kolom absen, aman).
+- T4 cabang `tipe:'denah'` di `hitungSatuBlok` (members → RangkaDesignService, luas dari denah); jalur `kanopi`/`manual` TIDAK berubah.
+- T5 reproduksi PA-DUTA: **5x10=10, 3x3=4, 4x6=4 REPRODUKSI PERSIS** dari cutting list asli (foto `/root/inbox`).
+
+**2 utang 1A (butuh Elvan):**
+1. **SQL belum dijalankan** (VPS ini tak ada DB) — jalankan di phpMyAdmin production: `ALTER TABLE master_material ADD COLUMN IF NOT EXISTS panjang_batang_cm INT NOT NULL DEFAULT 600;` lalu isi WF = 1200. Selama belum → stokMap() balik `[]`, semua default 600 (tak crash).
+2. **PA-DUTA 4x8=9 belum ter-reproduksi** — bar #12 cutting list tak terekam di 2 screenshot (`inbox/*cutting list*kalibarasi*`). Potongan terlihat baru 8 batang. Butuh foto bar #12 buat menutup. (Catatan: temuan lama "support 14 vs 9" itu soal MODEL auto-layout = 1D, bukan engine cutting.)
+
+**TAHAP 1B (DenahEditor + integrasi UI) SELESAI — merged ke `main`** (subagent-driven, review akhir opus = READY TO MERGE). Plan: `docs/superpowers/plans/2026-07-15-denah-rab-tahap1b-editor.md`; ledger: `.superpowers/sdd/progress.md`.
+- `public/js/denah-editor.js` — modul classic-script (IIFE, `globalThis`, TANPA ESM export krn package `type:module`): `DenahConv` (geometri murni denah→members, tes `node tests/rangka/test_konverter.mjs`) + kelas `DenahEditor` (SVG editor per-blok, port dari prototype).
+- `resources/views/rab-opsi/index.blade.php` — tipe blok baru **`denah`** (tombol `+ Blok Denah`), aditif; **kanopi/manual TAK berubah**. `bacaBlok` kirim `members`+`luas_m2`+`harga`+`denah`(model); `isiBlok`/`tambahBlok` rehidrasi dari `rab_snapshot`; `hapusBlok`/`hapusOpsi` panggil `DenahEditor.destroy()`.
+- Biaya denah muncul saat klik **"Hitung Harga"** (via `bacaBlok`→`/rab-blok/hitung`→jalur `tipe:denah` 1A), bukan live — sama pola kanopi.
+
+**BLOCKER 1C — SUDAH DIPERBAIKI (15 Juli, lokal):** `buildPenawaran()` kini punya cabang `tipe==='denah'` (ukuran=luas denah + frame/support/tiang default + atap, bentuk sama kanopi → dirender `penawaran/show.blade.php`). Sisa: verifikasi visual PDF saat deploy 1C.
+
+Urutan besar sesudahnya: **1C = fix `buildPenawaran()` denah + jadikan denah default (opsional) + hapus `/rangka-desain` + VALIDASI di browser/DB nyata (drag UI, autosave→reload, "Hitung Harga" e2e, reproduksi PA-DUTA lewat UI) → deploy → 1D kalibrasi ulang support (target 9) + retune consumable/finishing pakai luas ~40 m²**.
+
+**Status git:** `main` **SUDAH di-push & deploy (15 Juli)** — 1A+1B+fix buildPenawaran live ke production. (Sebelumnya ahead ~38 commit) 1A+1B semua sudah di production. Utang 1A: (1) **SELESAI PENUH (15 Juli)** — kolom `master_material.panjang_batang_cm` dibuat + baris WF di-set **1200** (dikonfirmasi Elvan). Stok per-material WF-1200 kini aktif di production DB. (2) foto bar #12 untuk tutup PA-DUTA 4x8=9 — **masih kurang** (satu-satunya sisa utang 1A).
+
+**Catatan bug laten (di luar scope, buat nanti):** `CuttingService::potong` case-2 mint jid baru → sambungan bisa kurang di kasus ekstrem; `hitungRangka` auto-layout lama pakai intdiv/2 (boleh dipensiunkan setelah DenahEditor menggantikan penuh).
+
+**16 Juli 2026 — Bug #8 (WF 12m) CLOSED, ternyata bukan bug:** Diverifikasi lewat log debug sementara (dihapus lagi setelah dipakai) — `stok_wf:1200` terbaca benar dari DB (`WF 200 12m` sudah pas namanya, dugaan lama "nama tak cocok" gugur). "2 batang" yang sempat dikira bug itu minimal matematis (support 700cm + 2 tiang 300cm = 1300cm > 1 batang 1200cm). Pelajaran baru: `LOG_LEVEL=error` di production nge-filter `Log::info()`, pakai `Log::error()` buat debug sementara.
+
+**16 Juli 2026 — Fitur #9 Gabungan Kotak SELESAI dibangun (subagent-driven), di-push ke production:** Cara baru bikin bentuk campur di DenahEditor — "+ Tambah Kotak" nempel keluar (nambah) atau ke dalam (lekukan), arah otomatis dari posisi drag, 1 algoritma (`DenahConv.combineBox`). Brainstorm→spec→plan→implementasi lengkap: `docs/superpowers/specs/2026-07-16-gabungan-kotak-design.md`, `docs/superpowers/plans/2026-07-16-gabungan-kotak-implementation.md`. Final review opus (2 pass, READY TO MERGE) menangkap & memperbaiki 2 bug penting: fokus input hilang tiap ketik di panel span/menjorok (full `render()` menghancurkan `<input>`), dan divergensi validasi offset antara preview vs saat "Terapkan" (box yang keliatan pas malah ditolak). Sisi miring tetap manual (tak diubah). **Belum ada verifikasi drag/tap nyata di browser production** — checklist ada di plan Task 3.
+
+**Gabungan Kotak DIKONFIRMASI ELVAN (16 Juli) — jalan normal di production** (tambah/lekukan/Terapkan/Undo/blok lain tak terganggu). #9 CLOSED.
+
+**16-17 Juli 2026 — #10 Kelompok A (zoom+ukuran+ortho-support+ribbon+fullscreen) SELESAI & DIKONFIRMASI ELVAN, 10 iterasi deploy dalam 1 hari:**
+
+6 permintaan update UI DenahEditor (16 Juli) dipecah 3 kelompok: **A** = zoom+ukuran+ortho-support (dikerjakan), **B** = drag-pindah-besi+snap-tengah (belum), **C** = saran-kotak-2-arah (belum). Detail lengkap ada di tabel #10 di atas.
+
+Kelompok A dikerjakan via brainstorm→spec→plan→subagent-driven-development (fresh subagent per task + code review tiap task + final whole-branch review), lalu 9 iterasi PERBAIKAN lanjutan berdasarkan tes nyata Elvan di HP (5 foto dikirim via upload-inbox, sangat membantu diagnosis — beberapa bug baru ketemu akar pastinya setelah lihat foto, bukan dari deskripsi teks). Semua di `public/js/denah-editor.js`, plan: `docs/superpowers/plans/2026-07-16-denah-ui-kelompok-a-*.md` (implementation/fixes/fullscreen-mode), ledger lengkap tiap task: `.superpowers/sdd/progress.md`.
+
+**Fitur/fix yang jadi (dikonfirmasi Elvan):**
+- Ribbon 5-tab (Ukuran/Support/Besi/Mode/Ukur Sisi) — akhirnya jadi overlay melayang+sticky (2 iterasi gagal sebelumnya: push-down mendorong kanvas turun, lalu tombol Selesai numpuk panel ribbon)
+- Pinch-zoom+pan+tombol Reset
+- **Mode Layar Penuh** ("Perbesar Layar") — `this.el` di-reparent ke `document.body` selama aktif, LALU BALIK ke posisi asli saat "Selesai". Alasan: `position:fixed` RUSAK di Safari iOS kalau elemen bersarang di kontainer `overflow-y:auto`+`-webkit-overflow-scrolling:touch` (app pakai ini di `.page-content`, `layouts/app.blade.php`) — elemen ikut ke-scroll bareng kontainer, bukan nempel viewport beneran. **Pelajaran penting buat modal/overlay lain di masa depan: cek dulu apa bersarang di `.page-content` sebelum pakai `position:fixed` polos.**
+- Ortho-snap support manual, plus bug "lurus pas drag, bengkok pas lepas jari" — snap-grid tanpa syarat di `pointerup` menggeser lagi sumbu yang barusan ortho-snap ke anchor non-kelipatan-grid (anchor sering presisi dari resize/"Ukur Sisi", bukan kelipatan grid). **Diperbaiki di 2 cabang drag terpisah** (`sup` lalu ketahuan lagi di `vert`/sudut poligon, pola bug identik) — **pelajaran: kalau perbaiki bug kelas ini, cek SEMUA cabang serupa sekaligus, jangan cuma yang dilaporkan duluan**
+- `toCm()`: `getScreenCTM()` → `getBoundingClientRect()` (drag presisi saat zoom, getScreenCTM tak konsisten ngurai CSS transform leluhur di sebagian browser HP)
+- Ukuran visual (titik sudut kecil, garis+label besar, konsisten ke titik handle support manual juga)
+- Undo + **Redo** baru (redoStack dibersihkan di `pushUndo()` — satu titik terpusat, otomatis kepakai di semua ~13 lokasi mutasi)
+- Popup "Ganti Besi": label nama batang (Frame F3/Support S5/Tiang T2 + panjang cm, nomor SAMA persis kayak di kanvas) + tombol Batal + clamp posisi biar tak kepotong tepi layar
+
+**BELUM DIKERJAKAN (sengaja ditunda, daftar tunggu — bukan lupa):**
+- Magnifier/offset-indicator biar jari tak nutupin garis pas drag presisi (zoom & support manual) — masalah UX umum, perlu didesain
+- Input panjang diketik utk support manual (kayak "Ukur Sisi" tapi utk support) — Elvan sendiri usul "mungkin bagian selanjutnya"
+- `.de-matmenu` (popup ganti-besi) SENDIRI masih bersarang di `.page-content` di mode non-fullscreen — berpotensi kena bug iOS Safari yang sama (lihat di atas) kalau discroll SELAGI popup terbuka. BELUM ada laporan nyata dari Elvan — jangan diperbaiki sebelum ada bukti, sesuai prinsip "jangan asumsi bug ada."
+
+>>> RESUME POINT — 18 Juli: REDESAIN TOTAL Tambah Tiang (`0833447`) DIKONFIRMASI ELVAN BAGUS — tekan-tahan wajib + menu konfirmasi berhasil nutup 2 celah lama (tap-meleset, pinch-zoom nyasar) yang B-1..B-4 gagal tutup total. Tes yang sama nemu bug BARU: geser tiang lama susah "kena" + tekan-tahan nyasar buka menu Tambah Tiang. Root cause ketemu (`1c211fb`): threshold hit-test tiang pakai `this.SC` (skala auto-fit konten, TETAP) bukan skala TAMPIL aktual di layar (beda kalau HP nyusutin svg via CSS max-width:100% — di layar 360px toleransi sentuh nyata jadi ~12px, bukan ~24px yang dimaksud). Fix: `screenScale(el)` basis sama kayak `toCm()`. Dibuktikan reproduksi jsdom (kode lama gagal, kode baru lulus) + regresi 18+11 tes lama tetap hijau, sudah di-push. **LANJUT: tunggu Elvan tes ulang fix ini + Kelompok B di HP** (B-1..B-4 kemungkinan besar juga ketutup lewat fix yang sama, cek ulang jangan diasumsikan). Kalau ada laporan bug tiang baru lagi, JANGAN tambal cepat, minta video/reproduksi dulu. **Terpisah, belum diselidiki:** tombol "Lanjut → Finalisasi"/"+ Opsi" macet di HP Elvan (dilaporkan lagi 18 Juli, dulu dikonfirmasi tak terkait Kelompok B) — butuh video, jangan nebak. Setelah tiang beres: rancang pola sama (drag=pindah, tekan-tahan=menu) buat Support manual/otomatis + Frame, lalu lanjut Kelompok C (saran-kotak-2-arah). Utang lama opsional tak mendesak: foto bar #12 cutting list PA-DUTA (tutup validasi 4x8=9). <<<
+
+**5 Agustus 2026 — Migrasi notifikasi WA (Fonnte, banned) → Telegram karyawan, Task 1-10 SELESAI (subagent-driven-development), sudah di-merge lokal ke `main` (BELUM di-push).**
+
+Plan: `docs/superpowers/plans/2026-08-05-notifikasi-telegram-karyawan.md` (spec: `docs/superpowers/specs/2026-08-05-notifikasi-telegram-karyawan-design.md`). 12 task total, dikerjakan lewat subagent-driven-development (fresh implementer + review per task, review akhir whole-branch pakai opus).
+
+**Yang jadi:**
+- `App\Services\TelegramService::kirim(?string $chatId, string $pesan): bool` — satu jalur kirim kanonik, pure PHP, testable tanpa DB (`tests/telegram/test_telegram_service.php`). Token dari `.env` (`TELEGRAM_KARYAWAN_TOKEN`), bukan hardcode.
+- `TelegramWebhookController` — webhook publik (`POST /telegram/karyawan/webhook`, dikecualikan CSRF) yang terima `/start <token>` dari Telegram, simpan `chat_id` ke `users.telegram_chat_id`.
+- Tombol "Hubungkan Telegram" di halaman Profil (deep-link `t.me/<bot>?start=<token>`).
+- 9 controller + 3 file cron dimigrasi dari `kirimWA()`/Fonnte ke `TelegramService` — semua `kirimWA()`/`FonnteService` lama DIHAPUS TOTAL (bukan cuma diganti pemanggilannya). Konfirmasi lewat grep seluruh repo: nol sisa referensi Fonnte/kirimWA di luar 12 file yang disentuh.
+- **Bug tersembunyi ikut ketemu & diperbaiki di sepanjang jalan:** (1) `FonnteService` ternyata TIDAK PERNAH ADA sebagai file — `KpiController`/`cron-kpi.php` motret class itu, artinya jalur SP-notif & hasil-ujian selama ini fatal error kalau kepanggil (sekarang fixed, Task 10). (2) Pola bug berulang: method notif sudah dimigrasi ke Telegram DI DALAMNYA, tapi PEMANGGIL LUAR-nya masih nge-gate pakai `if ($x->no_hp)` — jadi karyawan yang udah connect Telegram tapi belum isi no HP tetap gak dapat notif. Ketemu & di-fix di `LuarKotaController` (Task 6) dan `TugasHarianController` (Task 7), sudah dicek nggak ada di controller lain.
+- Review akhir (whole-branch, model opus) nemu 2 gap Important yang langsung diperbaiki (commit `81951c6`): `parse_mode=Markdown` bikin pesan GAGAL TERKIRIM DIAM-DIAM kalau teks bebas (nama customer, alasan izin, dll) mengandung karakter `_`/`*`/`` ` ``/`[` tak berpasangan (Telegram nolak API call-nya) — sekarang retry sekali tanpa Markdown kalau kena. Plus `TelegramService` sebelumnya nol logging — sekarang `Log::error()` kalau token kosong atau API nolak, biar kegagalan kirim kelihatan, bukan senyap kayak insiden Fonnte kemarin.
+- `RabController::kirimNotifDeal()` (notif WA ke customer) SENGAJA dinonaktifkan (early `return`), BUKAN dipindah — customer bukan `User` sistem, gak bisa connect Telegram. Nunggu WhatsApp Business API resmi (roadmap #5 — "Telegram jangan dipaksakan ke karyawan/customer" sekarang jadi pengecualian sengaja untuk karyawan, khusus customer tetap berlaku).
+
+**⚠️ BELUM di-push ke GitHub — JANGAN push sebelum SQL ini jalan di phpMyAdmin production (Elvan konfirmasi 5 Agustus: belum dijalankan):**
+```sql
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(50) NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_link_token VARCHAR(64) NULL;
+```
+Kalau push duluan sebelum SQL jalan: auto-deploy jalan otomatis, `/profil` 500 buat semua 14 karyawan (nulis ke kolom yang belum ada), plus izin/kendala/2 cron ikut error sampai SQL dijalankan.
+
+**Utang lain (dicatat review akhir, TIDAK diperbaiki di branch ini — di luar scope/pre-existing, bukan disembunyikan):**
+- `public/cron-kpi.php` sebenarnya DEAD CODE dari sebelum migrasi ini — motret `bootstrap/autoload.php` yang sudah tak ada sejak Laravel 5.5+ (bug pre-existing, bukan diperkenalkan sesi ini). Notif KPI bulanan lewat Telegram = phantom sampai ini diperbaiki terpisah.
+- ~~Absen kode harian tanpa fallback in-app~~ — SUDAH DIPERBAIKI, lihat entri "Kode Absen Per-Karyawan" di bawah (5 Agustus, sesi kedua).
+- Token Fonnte lama masih ada di histori git (repo public) — akun sudah banned jadi risiko rendah, tapi sebaiknya di-revoke juga di dashboard Fonnte.
+- Token bot Owner (approval RAB) di `ApprovalController.php` MASIH hardcode di kode — ini Task 12 (independen, terpisah dari migrasi karyawan ini, tunggu Elvan revoke token lama dulu via BotFather).
+
+**Task 11 progress (5 Agustus) — SQL sudah jalan, sudah push+deploy, bot dibuat, webhook terdaftar, tes koneksi + tes kirim (kode absen) lewat Owner sendiri SUKSES.** Sisa: umumkan ke 14 karyawan buat klik "Hubungkan Telegram" di halaman Profil masing-masing (Step 8, belum dilakukan — nunggu rollout kode-absen-per-karyawan di bawah kelar dulu, biar sosialisasi digabung sekali jalan, bukan dua kali).
+
+**Task 12 (independen, belum dikerjakan):** pindah token Owner dari hardcode di `ApprovalController.php` ke `.env` — tunggu Elvan revoke token lama dulu via BotFather.
+
+---
+
+**5 Agustus 2026 (sesi kedua) — Kode Absen Per-Karyawan SELESAI (subagent-driven-development), sudah di-merge lokal ke `main` (BELUM di-push).**
+
+Lanjutan langsung dari migrasi Telegram di atas — begitu Elvan tes kirim kode absen lewat akun sendiri, langsung kepikiran: kode absen selama ini **satu kode buat SEMUA karyawan per hari** (siapapun yang tahu kode bisa dipakai absen atas nama siapapun — celah titip-absen). Brainstorm→spec→plan→implementasi (4 task) di sesi yang sama.
+
+Spec: `docs/superpowers/specs/2026-08-05-kode-absen-per-karyawan-design.md`. Plan: `docs/superpowers/plans/2026-08-05-kode-absen-per-karyawan.md`.
+
+**Yang jadi:**
+- Tabel `kode_absen` dapat kolom `user_id` — sekarang 1 kode = 1 karyawan = 1 hari (bukan 1 kode buat semua).
+- Cron `cron-kode-absen.php` generate + kirim kode PERSONAL per karyawan aktif (idempotent, aman di-trigger ulang). Karyawan yang belum connect Telegram tetap dapat kode di DB (buat fallback dashboard), cuma gak ada pesan terkirim.
+- **Perbaikan keamanan intinya** (Task 3): `AbsensiController::absenMasuk()` & `validasiKode()` sekarang cek kode HARUS milik user yang login (`where('user_id', $user->id)`), bukan cuma "kode valid hari ini". Kode si A gak bisa dipakai si B walau B tahu kodenya. **Diverifikasi khusus oleh review akhir** (dilacak dari generate di cron sampai validasi di controller, digrep seluruh repo — nol jalur lain yang kelewat).
+- Halaman baru `/absensi/kode-hari-ini` (Owner + Supervisor/Mandor) — tabel kode semua karyawan hari ini + status connect Telegram, buat direlay manual ke yang belum connect.
+
+**Bug ikut ketemu & diperbaiki lewat review akhir (bukan cuma "ready to merge" langsung):**
+- Owner (level 1) ternyata jadi TERKUNCI PERMANEN dari fitur absen masuk (cron sengaja skip level 1) — dicek ke Elvan langsung: **Owner memang gak pernah absen masuk**, jadi tombol "Absen Masuk" disembunyikan khusus buat level 1 (bukan diikutkan ke cron).
+- Supervisor (level 3) punya akses ke halaman `/absensi/kode-hari-ini` tapi TANPA link menu buat nemuinnya (plan sendiri yang kelewat, cuma nambah link di sidebar Owner) — sudah ditambah.
+- Layar tempat karyawan ngetik kode (`form-masuk.blade.php`) masih nyebut "WhatsApp" di 5 tempat — sisa sebelum migrasi Telegram, ketinggalan, bikin instruksi ke karyawan salah arah (WA sudah mati). Sudah diganti semua ke "Telegram".
+- Dashboard fallback tadinya cuma baca doang — karyawan baru/reaktivasi setelah jam 06:30 gak kebagian kode dan dashboard gak bisa nolong. Sekarang self-healing (generate on-the-fly kalau belum ada).
+- Cron loop dikasih try/catch — 1 karyawan error DB gak lagi bikin semua yang setelahnya ikut gagal.
+- 1 fix kecil tambahan dari scoped re-review: perbandingan level pakai `===` (strict) diganti `==` — kolom `level` gak ada cast di model, isu potensial silent-fail yang bisa balikin lagi bug "Owner lihat tombol rusak".
+
+**⚠️ BELUM di-push — sebelum push, jalankan SQL ini dulu di phpMyAdmin production:**
+```sql
+ALTER TABLE kode_absen ADD COLUMN IF NOT EXISTS user_id BIGINT UNSIGNED NULL;
+ALTER TABLE kode_absen ADD UNIQUE INDEX IF NOT EXISTS kode_absen_tanggal_user_unique (tanggal, user_id);
+```
+(Kalau baris index ditolak karena versi MySQL <8.0.29, jalankan tanpa `IF NOT EXISTS` di baris itu saja — detail di spec.)
+
+**PENTING, beda dari migrasi Telegram kemarin:** setelah SQL jalan, **cron HARUS di-trigger manual di hari yang sama juga** (`https://app.kanopibsd.co.id/cron-kode-absen.php?key=canopi_cron_2026`) — karyawan yang sudah ada belum otomatis punya kode `user_id` sampai cron pagi berikutnya. Kalau push/SQL dijalankan siang hari, semua karyawan tetap terkunci sampai besok pagi kalau cron gak dipicu manual.
+
+**STATUS 5 Agustus (akhir hari) — SELESAI PENUH & LIVE:** SQL kode_absen sudah jalan, sudah push+deploy, cron manual sudah di-trigger hari itu juga, kode absen per-karyawan aktif di production. Elvan sudah kabari ke SEMUA 14 karyawan buat klik "Hubungkan Telegram" di Profil. **Task 11 (setup bot + rollout karyawan) CLOSED.**
+
+**Belum diverifikasi eksplisit (bukan blocker, sekadar catatan buat sesi depan kalau ada laporan):** cron jam 06:30 WIB besok jalan otomatis via **cronjob.org eksternal** (bukan cPanel Cron Jobs — lihat memory `cron-scheduling-cronjob-org.md`), belum ada konfirmasi langsung dari Elvan bahwa kode absen personal beneran masuk pagi itu. Kalau ada laporan "kode gak masuk", cek dashboard cronjob.org dulu (bukan cPanel), baru cek isi `kode_absen` tabel/log Laravel.
+
+**Task 12 SELESAI (5 Agustus, sore) — token bot Owner sudah dirotasi.** Elvan revoke token lama via BotFather, token baru diisi ke `.env` server (`TELEGRAM_OWNER_TOKEN`, `TELEGRAM_OWNER_CHAT_ID=8385647457`), `ApprovalController.php::kirimTelegram()` diubah dari hardcode ke `getenv()` — commit `b5dbefd`, sudah push+deploy, **diverifikasi Elvan langsung**: trigger approval RAB, notif Telegram tetap masuk pakai token baru. Token lama yang sempat ke-expose di histori commit publik sudah tidak valid lagi (di-revoke).
+
+**>>> SEMUA 12 TASK DARI KEDUA MIGRASI (Fonnte→Telegram + Kode Absen Per-Karyawan) SELESAI & LIVE per 5 Agustus 2026. Tidak ada task nyisa dari sesi ini. <<<**
+
+**Sisa kerjaan (di luar scope kedua migrasi ini, dicatat biar gak lupa, bukan urgent):**
+- `public/cron-kpi.php` masih dead code (bug pre-existing, `bootstrap/autoload.php` tak ada sejak Laravel 5.5+) — notif KPI bulanan lewat Telegram belum jalan sampai ini diperbaiki terpisah.
+- Token Fonnte lama masih ada di histori git — akun sudah banned, risiko rendah, tapi belum di-revoke di dashboard Fonnte.
+
+---
+
+**6 Agustus 2026 — Sesi debug notif Telegram: 3 bug ketemu & 2 sudah di-fix, 1 masih menggantung (403 cron via cron-job.org).**
+
+1. **Notif izin ke Owner gak masuk — BUKAN bug, sudah beres.** Akar masalah: akun Elvan sendiri (level 1) belum pernah klik "Hubungkan Telegram" di Profil-nya sendiri (beda bot dari bot approval-RAB yang dipakai sebelumnya). Setelah connect manual, beres.
+
+2. **FIX (live, commit `bf569e8`):** `public/cron-kode-absen.php` dulu ngirim kode absen ke SEMUA karyawan aktif tanpa cek status izin — karyawan yang izin/sakit/cuti hari itu tetap kebagian kode. Sekarang exclude user yang ada row `absensi` hari itu dengan status `sakit`/`izin`/`cuti`/`dinas_luar`.
+
+3. **FIX (live, commit `e69a097`):** `cron-kode-absen.php` ternyata TIDAK idempotent buat pengiriman — walau kode dipakai ulang (gak generate baru), script tetap kirim ULANG pesan Telegram ke semua karyawan connect tiap kali berhasil jalan. Ketauan pas kejadian nyata: karyawan lapor terima kode 4x (04:00, 04:33, 05:10, 06:47) dalam 1 pagi — kombinasi klik gak sengaja + kemungkinan retry cron-job.org + job manual susulan. Sekarang begitu ketemu kode existing → langsung `continue`, gak lanjut kirim.
+
+4. **BELUM SELESAI — `cron-kode-absen.php` sering 403 kalau diakses persis di jam bulat** (06:30:08, 13:00:13, 20:00:15 gagal; 06:47 dua hari berturut-turut sukses). Diagnosa dengan 2 file tes kembar (`cron-test-403.php` tanpa DB, `cron-test-403c.php` Laravel+DB tanpa Telegram — sudah dihapus lagi, commit `7982d37`) membuktikan ini BUKAN soal `.htaccess`/isi script/parsing key (file kembar sukses di jam yang sama saat file asli 403). Dugaan kuat: proteksi anti-bot di hosting (Niagahoster jalan di infra Hostinger/LiteSpeed) kena trigger pas jam bulat rame trafik cron dari banyak pengguna cron-job.org sekaligus — tapi ini **belum dikonfirmasi lewat log server** (gak ada akses cPanel/WAF dari Claude Code, VPS ini beda mesin dari hosting). Sumber kiriman jam 04:00 & 04:33 juga masih misteri — dicek TERBUKTI bukan dari Claude Code (commit pertama sesi ini baru jam 05:07 WIB, dan deploy toh cuma FTP sync, gak pernah trigger endpoint apapun).
+
+**TODO sesi depan:** Elvan cek dashboard cron-job.org — (a) SEMUA job yang ngarah ke `cron-kode-absen.php` (curiga ada job lama/dobel yang kelupaan, itu bisa jelasin kiriman 04:00 & 04:33), (b) response detail (header/body) dari eksekusi yang 403 buat lihat itu block dari layer mana. Kalau gak ketemu akar pastinya, solusi praktis (belum diterapkan): geser jadwal kirim dari jam bulat (06:30) ke jam ganjil (mis. 06:23) — sudah kebukti kerja 2x di jam 06:47.
+
+**Update 14 Agustus:** dikonfirmasi Elvan — kode absen sekarang terkirim NORMAL, 1x per hari (kirim dobel/4x sudah gak terjadi lagi, sesuai fix idempotensi `e69a097`). **Catatan:** ini menutup dampak praktisnya (gak ada lagi laporan kode dobel/gak masuk), tapi akar pasti 403 di jam bulat sendiri belum dikonfirmasi lewat log server — kalau muncul lagi laporan aneh soal kode absen, cek dulu apa masih di jam bulat atau bukan.
+
+---
+
+**11 Agustus 2026 — Fitur baru "Jadwal Libur Per-Karyawan" SELESAI & LIVE (subagent-driven-development, 7 task + final review + 1 fix round).**
+
+Dipicu pertanyaan simpel ("karyawan libur tetap dapat kode absen?"), investigasi nemuin masalah lebih serius: `cron-alpha.php` juga gak kenal jadwal libur — karyawan yang punya hari libur tetap tapi gak pernah ngajuin izin buat itu (dikonfirmasi Elvan: memang gak pernah) bisa ke-tandain **Alpha**, yang motong gaji hari itu DAN langsung jatuhin kelas KPI sebulan ke "none". Plus `GajiService::hitungHariKerja()` ngitung hari kerja SERAGAM (semua hari kecuali Minggu) buat semua karyawan, bias buat siapapun yang liburnya bukan hari Minggu.
+
+Spec: `docs/superpowers/specs/2026-08-11-jadwal-libur-karyawan-design.md`. Plan (7 task): `docs/superpowers/plans/2026-08-11-jadwal-libur-karyawan.md`.
+
+**Yang jadi:**
+- `users.hari_libur_default` (nullable, 0=Minggu..6=Sabtu) — jadwal libur tetap per-karyawan, diisi Owner lewat form edit/tambah karyawan.
+- Tabel `jadwal_libur` — ajuan tukar/skip/tambah libur per-tanggal, alur approval mirip izin (Owner/Mandor approve/tolak, notif Telegram dua arah). Halaman karyawan: `/jadwal-libur` (riwayat) + `/jadwal-libur/ajukan`. Halaman Owner/Mandor: `/jadwal-libur/approval` (link ditaruh di KEDUA sidebar — Owner dan Pipeline/level 3 — biar gak ulang gap lama kayak `kode-hari-ini` yang sempat cuma ada di sidebar Owner).
+- `App\Services\LiburService::isLibur()` — satu sumber kebenaran tunggal (override approved menang, fallback ke default), dipakai di 3 titik yang tadinya nganggep semua karyawan kerja tiap hari: `cron-alpha.php` (skip Alpha), `cron-kode-absen.php` (skip kirim kode), `GajiService::hitungHariKerja()` (hari kerja per-karyawan, bukan seragam).
+- Logic murni (`cocokLiburPada`/`hitungHariKerjaPada`) dipisah dari wrapper database, testable tanpa DB — `tests/jadwal-libur/test_libur_service.php`, 13/13 lulus.
+
+**Ketemu & dibenerin lewat final whole-branch review (opus), sebelum sampai production:**
+- **Kritis:** SQL deploy awal LUPA backfill — tanpa `UPDATE users SET hari_libur_default = 0 WHERE ... IS NULL`, semua 14 karyawan mulai dengan NULL ("gak ada libur"), diam-diam nganggep mereka kerja 31 hari (bukan 26) bulan ini, nurunin persen kehadiran & kelas KPI semua orang di slip gaji berikutnya. Baris `UPDATE` sudah ditambahkan ke SQL final SEBELUM dijalankan Elvan — **dikonfirmasi tidak ada regresi**.
+- **Penting:** `ProfilController` (halaman profil karyawan sendiri) ternyata punya salinan lama logic "kerja tiap hari kecuali Minggu" yang gak kesentuh 7 task awal (konsumer ke-4 yang gak ketauan sampai review whole-branch) — sekarang ikut lewat `LiburService` (nambah parameter opsional `$sampaiHari` buat varian "bulan-berjalan").
+- **Penting:** karyawan yang mendadak kerja di hari liburnya (gak direncanain) gak ada kode absen nunggu — ditambah indikator "🗓️ Libur" di halaman `/absensi/kode-hari-ini` (Owner/Mandor) biar keliatan itu memang libur, bukan error, dan bisa direlay manual kalau perlu.
+- 2 minor ikut dibenerin: karyawan baru sekarang bisa langsung diisi jadwal libur pas dibuat (dulu cuma bisa lewat Edit), dan halaman detail karyawan (`show.blade.php`) sekarang nampilin jadwal libur default-nya.
+
+**⚠️ SQL sudah dijalankan Elvan (11 Agustus) — konfirmasi: tanpa error.** Sudah push + deploy (`commit 8b9ba8e`).
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Set `hari_libur_default` buat minimal 1-2 karyawan lewat form Edit, cek tersimpan.
+- Ajuan jadwal libur dari sisi karyawan → notif Telegram ke Owner/Mandor → approve/tolak → notif balik ke karyawan.
+- Karyawan yang sudah di-set libur: cek `cron-alpha.php` gak nandain dia Alpha di hari itu, dan `cron-kode-absen.php` gak kirim kode ke dia.
+- Slip gaji bulan berikutnya: `hari_kerja` beda per-karyawan sesuai jadwal libur masing-masing (bandingkan minimal 2 karyawan beda jadwal).
+- Halaman `/profil` karyawan sendiri: persen kehadiran & kelas KPI konsisten sama yang di slip gaji Owner (dulu dua sumber logic beda, sekarang seharusnya satu).
+
+**Dicatat, bukan diperbaiki (di luar cakupan sesi ini):**
+- `JadwalLiburController::approve()`/`reject()` gak ada guard "udah diproses" (bisa double-notif kalau di-klik 2x/tab basi) — sengaja dibiarin karena `IzinAbsenController` punya gap yang sama persis, mending konsisten dua-duanya belum diperbaiki daripada beda perlakuan.
+- `LiburService::hitungHariKerja()` ada inkonsistensi kecil gaya kode (`?:` vs `??` buat parameter `$sampaiHari`) — gak kepakai sama caller manapun sekarang (cuma dipanggil dengan nilai ≥1), jadi gak berbahaya, tapi dicatat buat siapapun yang nambah caller baru nanti.
+
+---
+
+**11 Agustus 2026 (sesi kedua) — Fitur "Jam Masuk/Pulang Per-Karyawan" SELESAI & di-push (subagent-driven-development, 6 task + final whole-branch review + 1 fix round), kerja langsung di `main` (pilihan Elvan, bukan worktree).**
+
+Lanjutan dari brainstorm yang sempat kepotong sesi sebelumnya (konteks tinggi) — keputusan sudah dikunci waktu itu, sesi ini re-verifikasi kode masih akurat lalu langsung tulis spec+plan+eksekusi. Ganti telat/lembur dari konstanta hardcode (`JAM_MASUK`/`JAM_LEMBUR`, sama buat semua karyawan) ke kolom `users.jam_masuk`/`jam_pulang` per-karyawan yang sudah ada di DB tapi selama ini dekoratif. Spec: `docs/superpowers/specs/2026-08-11-jam-masuk-pulang-per-karyawan-design.md`. Plan: `docs/superpowers/plans/2026-08-11-jam-masuk-pulang-per-karyawan.md`.
+
+**Yang jadi:**
+- `AbsensiController::absenMasuk()`/`absenPulang()` — telat & lembur baca `$user->jam_masuk`/`jam_pulang`, bukan konstanta seragam.
+- Gate `JAM_BUKA_ABSEN` (06:30) dikecualikan buat karyawan mode luar kota aktif (`LuarKota::sedangLuarKota()`) — bisa absen masuk lebih pagi (mis. berangkat jam 3-4 pagi).
+- `JAM_SETENGAH` (10:00) dan absen siang (13:00-14:00) TETAP seragam, sengaja tidak ikut geser per keputusan brainstorm.
+- Validasi `date_format:H:i` ditambah ke field `jam_masuk`/`jam_pulang` di form Karyawan (`KaryawanController::store()`/`update()`).
+- Konstanta mati `JAM_MASUK`/`JAM_LEMBUR`/`JAM_PULANG` dihapus dari `AbsensiController`.
+- Test standalone (pola sama `tests/jadwal-libur/*.php`): `tests/absensi/test_gate_buka_absen.php` (5/5 PASS) + `tests/absensi/test_jam_individu.php` (7/7 PASS, verifikasi nol-regresi format `H:i` vs `H:i:s`).
+
+**Ketemu & dibenerin lewat final whole-branch review (opus), sebelum push:**
+- **Penting:** `resources/views/karyawan/edit.blade.php` render nilai mentah `H:i:s` ke `<input type="time">` — begitu Task 5 nambah `date_format:H:i`, form Edit Karyawan bisa gagal simpan (termasuk field lain yang gak terkait) kalau browser submit `07:00:00` bukan `07:00`. Di-fix `substr(...,0,5)`, mengikuti pola yang sudah ada di `absensi/rekap.blade.php`.
+- **Penting:** default `jam_masuk` di form tambah karyawan baru masih `07:30` — beda dari standar backfill `07:00` yang dikunci di keputusan brainstorm. Karyawan baru pasca-deploy bisa diam-diam dapat ambang telat beda 30 menit dari yang lain. Di-fix ke `07:00`.
+- 2 minor ikut dibenerin: variabel `$jamLemburMax` mati (di-compact ke view yang gak pernah bacanya) dihapus; `tests/absensi/test_jam_individu.php` yang diminta spec tapi kelewat waktu eksekusi 6 task, ditambahkan di ronde fix akhir.
+
+**Dicatat, bukan diperbaiki (temuan reviewer di luar cakupan implementasi, buat jadi perhatian Elvan bukan bug kode):**
+- Kalau `jam_masuk` seorang karyawan di-set LEBIH PAGI dari 06:30 (gate `JAM_BUKA_ABSEN` yang tetap seragam), dia otomatis telat tiap hari tanpa pesan error yang jelas kenapa — kombinasi 2 keputusan brainstorm yang gak saling ketemu. **Kalau mau set jam masuk karyawan, jangan di bawah 06:30.**
+- Gate `JAM_BUKA_ABSEN` cuma dicek di `formMasuk()` (tampilan), endpoint POST `absenMasuk()` gak pernah menegakkannya — pre-existing dari sebelum fitur ini, bukan regresi baru.
+
+**⚠️ SQL backfill WAJIB dijalankan sebelum kode ini aktif dipakai** (dikonfirmasi Elvan sudah/akan dijalankan bareng push 11 Agustus):
+```sql
+UPDATE users SET jam_masuk = '07:00:00', jam_pulang = '17:00:00'
+WHERE status = 'aktif';
+```
+Tanpa ini: karyawan yang belum di-backfill tetap pakai default lama dari migrasi (`07:30`/`17:00`) — bukan crash, cuma diam-diam beda ambang telat 30 menit dari standar armada sampai di-backfill manual.
+
+**Status git:** push ke `main` sukses (commit `0153a2d`, 8 commit total sesi ini) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit.
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Set `jam_masuk` custom (mis. 08:00) buat 1 karyawan, absen jam 07:30 → harus `hadir` bukan `telat`.
+- Karyawan yang jamnya TIDAK di-custom → tetap `telat` di 07:30 seperti sebelumnya (nol-regresi).
+- Karyawan mode luar kota aktif → absen masuk jam 05:00 lolos (dulu diblokir sampai 06:30).
+- Edit karyawan TANPA ubah field jam → simpan berhasil (ini regresi yang sempat ketemu & sudah di-fix, tapi belum dites nyata di production).
+- Lembur dengan `jam_pulang` custom → mulai dihitung dari jam custom, bukan 17:00.
+
+---
+
+**12 Agustus 2026 — Fitur "Gabungkan Ajuan Jadwal Libur Jadi 1 Form (Tukar/Skip/Tambah)" SELESAI & di-push (subagent-driven-development, 5 task + final whole-branch review + 1 fix round).**
+
+Dipicu Elvan minta 1 form buat tukar/skip/tambah libur (bukan 2 ajuan terpisah kayak sebelumnya). Brainstorm penuh (banyak klarifikasi kasus nyata: tukar maju, tukar mundur lintas minggu, jendela 2-minggu Senin-Minggu). Spec: `docs/superpowers/specs/2026-08-11-tukar-libur-1-form-design.md`. Plan: `docs/superpowers/plans/2026-08-11-tukar-libur-1-form.md`.
+
+**Yang jadi:**
+- 3 jenis ajuan eksplisit di 1 form: **Tukar** (geser 1 hari libur, tanggal lama+baru dalam 1 baris data, approve/tolak otomatis atomik), **Skip** (dulu "Batal", cuma relabel — value DB tetap `batal`), **Tambah** (gak berubah). Tabel `jadwal_libur` dapat kolom `tanggal_baru` (nullable) + enum `jenis` dapat nilai `tukar`.
+- `LiburService::cocokLiburPada()`/`hitungHariKerjaPada()` (logic inti, teruji dari fitur sebelumnya) **TIDAK disentuh sama sekali** — baris `tukar` di-expand jadi 2 entry override sintetis (`batal`+`tambah`) lewat method pure baru `expandTukar()`, jadi 4 titik konsumen (`cron-alpha.php`, `cron-kode-absen.php`, `GajiService`, `ProfilController`) otomatis dapat dukungan Tukar tanpa disentuh.
+- Tanggal Tukar/Skip dibatasi sistem (bukan cek manual Elvan lagi): harus beneran hari libur default karyawan, dalam jendela sisa-minggu-ini+minggu-depan (Senin-Minggu). Tambah tetap bebas (H+1 aja) — karyawan sering ajukan jauh-jauh hari buat acara.
+- Form `create.blade.php` didesain ulang total: 3 kartu jenis, field tanggal berubah dinamis via JS (pola `disabled` toggle biar cuma jenis aktif yang ke-submit).
+- Test standalone `tests/jadwal-libur/test_libur_service.php` bertambah dari 13 jadi 25 assertion (expandTukar, jendelaTukarSkip, tanggalKandidatLibur) — semua hijau.
+
+**Ketemu & dibenerin lewat final whole-branch review (opus), sebelum push:**
+- **Penting:** 2 perbandingan `dayOfWeek !==`/`===` ke `$user->hari_libur_default` (kolom `unsignedTinyInteger` TANPA cast) di `JadwalLiburController::store()` — persis kelas bug yang sama kayak `level` yang dibenerin di sesi jadwal-libur sebelumnya. Satu sisi gagal TERTUTUP (Skip/Tukar selalu ditolak), sisi lain gagal TERBUKA (gerbang "tanggal pengganti harus hari kerja" gak pernah nyala). Di-fix `!=`/`==` (loose), ikutin preseden yang sudah ada di repo ini, BUKAN nambah cast baru.
+- Minor: pesan sukses di `approve()` kelewat pakai `labelTanggal()`, jadi approval Tukar cuma nampilin tanggal lama — di-fix.
+- Reviewer verifikasi manual kasus tricky (dites hitung tangan + jalanin test beneran): swap lintas bulan (Juli→Agustus) gak nyasar/kehilang di query `hitungHariKerjaPada()`, dan jaminan "approve/tolak atomik" di `approve()`/`reject()` beneran gak ada jalur update-sebagian.
+
+**Dicatat, bukan diperbaiki (parkir di ledger, low-impact, disetujui gak masuk scope ini):**
+- `labelTanggal()` bisa null-deref kalau baris `tukar` punya `tanggal_baru` NULL — gak bisa kejadian lewat `store()` (satu-satunya penulis), cuma resiko kalau ada yang edit DB manual.
+- Select tanggal Skip/Tukar belum ada atribut `required` — submit kosong nampilin pesan error bahasa Inggris Laravel, bukan native browser prompt.
+- Kalau Elvan ubah `hari_libur_default` seorang karyawan SETELAH ajuan Tukar/Skip di-approve (dalam jendela 2 minggu yang sama) — karyawan itu bisa "untung" (dapat hari pengganti tanpa beneran kehilangan hari lama). Jarang kejadian (14 karyawan), gak dirugikan siapapun, gak diperbaiki di v1.
+
+**⚠️ SQL WAJIB dijalankan sebelum kode ini aktif** (dikonfirmasi Elvan sudah jalan 12 Agustus, sempat kena error "No database selected" — solusinya klik nama database dulu di sidebar phpMyAdmin sebelum buka tab SQL):
+```sql
+ALTER TABLE jadwal_libur MODIFY COLUMN jenis ENUM('tambah','batal','tukar') NOT NULL;
+ALTER TABLE jadwal_libur ADD COLUMN IF NOT EXISTS tanggal_baru DATE NULL AFTER tanggal;
+```
+Tanpa ini: `tanggal_baru` gak ada di DB → `LiburService::ambilOverride()` query-nya gagal → 500 serentak di `/profil` (semua karyawan), `/absensi/kode-hari-ini`, generate slip gaji, DAN 2 cron pagi (karyawan gak dapat kode absen).
+
+**Status git:** push ke `main` sukses (commit `0e15657`) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit.
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Karyawan tanpa `hari_libur_default` → form cuma nampilin opsi Tambah.
+- Ajukan Tukar → dropdown "Tanggal Lama" cuma nampilin hari libur default beneran dalam 2 minggu; "Tanggal Baru" gak bisa pilih di luar jendela atau di hari libur default.
+- Ajukan Tukar → approve → cek kode absen: tanggal lama DAPAT kode (dianggap kerja), tanggal baru TIDAK dapat kode (dianggap libur).
+- Ajukan Skip → approve → `cron-alpha.php` gak nandain Alpha di tanggal itu meski gak absen (dianggap kerja beneran, harus absen).
+- Riwayat & approval nampilin 2 tanggal ("dari → ke") buat Tukar.
+- Notif Telegram (ajuan masuk & hasil) buat Tukar nampilin 2 tanggal dengan benar.
+- Coba ajukan tanggal yang bentrok sama ajuan lain (pending/approved) → ditolak.
+
+---
+
+**12 Agustus 2026 (sesi ketiga) — Fitur "Validasi Silang Izin ↔ Jadwal Libur" SELESAI & di-push (subagent-driven-development, 2 task + final whole-branch review + 1 follow-up fix).**
+
+Dipicu pertanyaan Elvan soal beda Izin/Sakit/Cuti vs Tambah Libur — ketauan dua sistem itu gak saling ngecek sama sekali, karyawan bisa dapat ajuan approved di keduanya buat tanggal yang sama. Spec: `docs/superpowers/specs/2026-08-12-validasi-silang-izin-libur-design.md`. Plan: `docs/superpowers/plans/2026-08-12-validasi-silang-izin-libur.md`.
+
+**Yang jadi:**
+- `IzinAbsenController::store()` sekarang cek `JadwalLibur` (tanggal ATAU tanggal_baru) sebelum simpan izin baru.
+- `JadwalLiburController::store()` sekarang cek `IzinAbsen` sebelum simpan ajuan Tukar/Skip/Tambah baru — buat Tukar, dua-duanya (tanggal lama & baru) dicek.
+- Scope per-karyawan (2 karyawan beda boleh bentrok tanggal), status `pending`/`approved` yang dianggap aktif (`rejected` gak menghalangi).
+- `dinasLuar()` (dicatat langsung Owner/Mandor) SENGAJA dikecualikan dari validasi ini — keputusan sadar Owner, bukan celah yang perlu dicegah sistem.
+
+**Ketemu & dibenerin lewat final whole-branch review (opus) + 1 follow-up fix (dikonfirmasi Elvan, bukan diputuskan sepihak):**
+- **Bug lama ikut kebenerin sekalian** (bukan dari fitur ini, tapi jadi lebih kerasa dampaknya): `approve()`/`reject()` di KEDUA controller gak ada penjaga "udah diproses" — tab browser basi bisa approve ulang/approve ajuan yang udah ditolak, yang bisa bikin validasi silang baru ini balik jebol. Ini bug yang sama yang sengaja ditunda pas sesi jadwal-libur sebelumnya (biar dua controller konsisten sama-sama belum dibenerin) — sekarang dibenerin BARENG di keduanya sekaligus (4 fungsi: `IzinAbsenController::approve()`/`reject()`, `JadwalLiburController::approve()`/`reject()`), sekalian nutup bug notif dobel yang juga udah lama ada.
+- **Ketemu efek samping gak sengaja:** query validasi silang di `JadwalLiburController` ternyata otomatis ikut ngeblokir Dinas Luar juga (bukan cuma Izin/Sakit/Cuti) — dikonfirmasi ke Elvan, TERNYATA itu perilaku yang diinginkan (karyawan dinas luar emang gak boleh dapat libur ekstra di tanggal sama), cuma pesan errornya dibenerin biar nyebut "dinas luar" juga.
+
+**Status git:** push ke `main` sukses (commit `89ef840`) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit. **Tidak ada SQL production yang perlu dijalankan** buat fitur ini (murni kode, gak ada tabel/kolom baru).
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Karyawan A ajuin Cuti tanggal X (pending) → coba ajuin Tukar Libur tanggal X → harus ditolak.
+- Karyawan A ajuin Izin tanggal X, Karyawan B (beda orang) ajuin Tukar Libur tanggal X → harus TETAP BISA.
+- Owner catat Dinas Luar di tanggal yang karyawan itu punya ajuan Jadwal Libur aktif → harus TETAP BISA (Dinas Luar dikecualikan dari sisi dia yang nyatet).
+- Karyawan ajuin Jadwal Libur di tanggal yang Owner udah catat Dinas Luar buat dia → harus DITOLAK (arah sebaliknya, baru dikonfirmasi 12 Agustus).
+- Buka 2 tab approval izin/libur, proses salah satu di tab 1, coba approve/tolak lagi di tab 2 (basi) → harus ditolak dengan pesan "Ajuan ini sudah diproses."
+
+---
+
+**13 Agustus 2026 — 2 perbaikan kecil modul Absensi (sidebar Owner + koreksi potongan siang), langsung di `main`, sudah di-push.**
+
+Dipicu Elvan gak nemu fitur koreksi absen lewat menu sidebar (cuma nyempil di kartu shortcut Dashboard), lanjut ke kebutuhan hapus/kurangin potongan absen siang secara manual (kebijakan Owner, bukan bug).
+
+**1. Sidebar Owner dibenerin (commit `8cf6daf`):**
+- Ketemu ada 2 halaman absensi mirip nama yang beda isi: `/absensi/rekap-bulanan` (link sidebar lama "Rekap Bulanan", filter bulan/tahun, **read-only, tanpa tombol koreksi**) vs `/absensi/rekap` (cuma bisa diakses lewat kartu Dashboard, filter tanggal harian + tombol "✏️ Koreksi"). Elvan yang lewat sidebar gak akan pernah nemu fitur koreksinya.
+- Link sidebar Owner "Absensi" (`/absensi`, form+riwayat absen PRIBADI — Owner gak pernah absen masuk, dikonfirmasi 11 Agustus) diganti jadi "Rekap Absen" → `/absensi/rekap` (dicek dulu: nol tempat lain di kode yang gantung ke link sidebar itu, aman diganti).
+
+**2. Koreksi potongan telat/siang manual (commit `da0b405`):**
+- Modal Koreksi di `/absensi/rekap` sekarang punya field baru **"Potongan Telat/Siang (Rp)"** (`resources/views/absensi/rekap.blade.php`), pre-filled dari `potongan_telat` yang lagi tercatat, bisa diubah ke 0 atau angka lain — buat kasus Owner mau maafkan potongan tanpa harus ubah status absen.
+- **Bug laten ikut ketemu & dibenerin sekalian:** `AbsensiController::koreksi()` (baris ~449-487) sebelumnya hitung ulang `gaji_hari_ini` dari nol pas ubah status, TANPA mempertimbangkan `potongan_telat` yang sudah tercatat — jadi tiap kali Owner koreksi status (apapun alasannya), efek potongan siang diam-diam KEHAPUS dari gaji padahal angka `potongan_telat`-nya sendiri gak berubah (2 kolom jadi gak nyambung). Sekarang `gajiHariIni` di controller subtract `potongan_telat` (yang baru atau existing) buat status `hadir`/`telat`/`setengah_hari`.
+- `koreksiManual()` (buat karyawan yang belum absen sama sekali) SENGAJA tidak disentuh — gak relevan, entry baru gak punya potongan siang sebelumnya.
+
+**Status git:** push ke `main` sukses, 2 commit (`8cf6daf`, `da0b405`) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit.
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Sidebar Owner: klik "Rekap Absen" → harus ke halaman dengan filter tanggal + tombol Koreksi (bukan 404/ke halaman lama).
+- Modal Koreksi: buka buat karyawan yang lagi kena potongan siang → field "Potongan Telat/Siang" harus udah keisi angka yang bener (bukan 0).
+- Ubah potongan ke 0 → Simpan → cek gaji hari itu di rekap naik balik sesuai gaji harian penuh (buat status hadir/telat).
+- Koreksi status TANPA ubah field potongan → potongan yang lama harus tetap sama (bukan ke-reset ke 0 gak sengaja).
+
+---
+
+**13 Agustus 2026 (sesi kedua) — Fitur "Libur Nasional / Libur Bersama" SELESAI & LIVE (brainstorm→spec→plan→subagent-driven-development, 5 task + final whole-branch review + 2 putaran fix), langsung di `main` (pilihan Elvan), sudah push+deploy.**
+
+Dipicu pertanyaan Elvan soal Lebaran (libur ~2 minggu)/Tahun Baru/17 Agustus — dicek ke kode, sistem cuma punya jadwal libur PER-KARYAWAN (fitur 11 Agustus), nol konsep libur yang berlaku ke SEMUA karyawan sekaligus. Tanpa ini `cron-alpha.php` bakal nandain semua karyawan Alpha pas libur nasional. Spec: `docs/superpowers/specs/2026-08-13-libur-nasional-design.md`. Plan (5 task): `docs/superpowers/plans/2026-08-13-libur-nasional.md`.
+
+**Yang jadi:**
+- Tabel baru `libur_nasional` (nama+rentang tanggal) dan `libur_nasional_piket` (pengecualian per-karyawan per-tanggal, buat driver/teknisi yang tetap piket).
+- `LiburService` (sudah ada dari fitur jadwal-libur individual) diperluas: `expandLiburNasional()` (pure, pola sama `expandTukar()`) + `ambilLiburNasional()` (wrapper DB), di-merge ke `isLibur()`/`hitungHariKerja()` **paling depan** (libur nasional menang lawan jadwal pribadi kalau bentrok, kecuali karyawan itu piket) — `cocokLiburPada()`/`hitungHariKerjaPada()` (logic inti, 25 assertion lama) **TIDAK disentuh sama sekali**, otomatis ke-cover ke 5 titik konsumen (4 yang direncanakan + `AbsensiController::kodeHariIni()` yang ketemu pas final review, bonus gratis).
+- Halaman baru `/libur-nasional` — kalender bulanan visual, Owner klik 2 tanggal buat pilih rentang libur baru + kelola piket per-tanggal; karyawan lain lihat read-only. Link ditambah ke KEDUA sidebar (Owner + karyawan lain), bukan cuma satu — belajar dari gap "Rekap Absen" sesi pagi ini.
+- Notifikasi Telegram: broadcast ke semua karyawan connect pas libur nasional baru ditambah, notif personal ke karyawan yang ditunjuk piket.
+
+**Ketemu & dibenerin lewat proses review berlapis (bukan cuma "jadi lalu di-push"):**
+- **Task-review Task 4:** 2 bug XSS/escaping JS (apostrof di nama libur bikin dialog konfirmasi hapus gagal muncul tanpa pesan error — form submit langsung tanpa pengaman; nama karyawan diakhiri backslash bisa menyuntik `<script>`) — diperbaiki, sempat ketemu 1 lagi SETELAH fix pertama (escape `@json()` yang baru dipasang malah bikin data mentah masuk ke `innerHTML` tanpa HTML-escape) — dirantai perbaikannya sampai bersih.
+- **Final whole-branch review (model paling capable, nemu 3 hal yang gak mungkin ketangkep review per-task):**
+  1. `@json()` Blade ternyata kehilangan flag keamanannya sendiri kalau argumennya mengandung koma (bug internal Laravel Blade compiler, `compileJson()` pakai `explode(',', ...)` naif) — proteksi XSS dari fix task-4 TERNYATA gak aktif, cuma "kebetulan aman" dari default PHP. Diverifikasi ulang oleh reviewer dengan compile Blade beneran, bukan cuma baca kode.
+  2. Piket dicocokkan lewat `libur_nasional_id` — gagal SENYAP kalau 2 libur nasional beda nama tanggal-nya overlap (contoh nyata: "Cuti Bersama" 15-19 Agustus + "HUT RI" 17 Agustus terpisah) — karyawan yang di-piket-in tetap dianggap libur di baris yang gak kebagian data piketnya. Spec sudah eksplisit bilang kolom itu "buat tampilan doang, BUKAN logic inti" tapi implementasi awal malah makai buat logic. Fix: piket dicocokkan per user+tanggal SAJA (bukan per-`libur_nasional_id`), sekalian nutup N+1 query.
+  3. Modal kalender pakai `position:fixed` bersarang di `.page-content` (`overflow-y:auto`+`-webkit-overflow-scrolling:touch`) — jebakan iOS Safari yang PERSIS sama yang udah pernah kejadian nyata di DenahEditor (16 Juli). Ketangkep SEBELUM Elvan lapor dari HP, bukan sesudah — beda dari pola-pola sebelumnya yang nunggu laporan nyata dulu.
+- Semua 3 temuan Important di atas: 1 putaran fix, di-re-review scoped, ADDRESSED semua, 0 breakage baru. Test standalone: `tests/libur-nasional/test_libur_nasional.php` (7 assertion, termasuk kasus 2-libur-overlap) + `tests/jadwal-libur/test_libur_service.php` (25 assertion lama) — 100% lulus dua-duanya di titik commit terakhir.
+
+**Insiden kecil pas deploy (bukan bug kode, dicatat buat sesi depan):** SQL `CREATE TABLE` yang dikasih ke Elvan sempat 2x gagal di phpMyAdmin — ternyata ekstensi pengecek-ejaan browser (kemungkinan Grammarly) diam-diam "membetulkan" garis bawah jadi spasi di kolom yang kebaca sebagai frasa wajar (`dibuat_oleh`→`dibuat oleh`, `user_id`→`user id`, `libur_nasional_id`→`libur nasional id`) sementara `tanggal_mulai`/`created_at` yang gak dikenali sebagai frasa tetap utuh — solusinya matikan ekstensi itu atau pakai jendela Incognito buat halaman phpMyAdmin. **Pelajaran buat sesi depan:** kalau SQL manual gagal parse dengan pola aneh (garis bawah hilang selektif), curigai ekstensi browser dulu sebelum curiga SQL-nya sendiri.
+
+**Status git:** push ke `main` sukses, 10 commit (`d3a943d`..`81fceb9`) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit. **SQL sudah dijalankan Elvan di phpMyAdmin production** (2 tabel baru, dikonfirmasi sukses setelah masalah ekstensi browser teratasi).
+
+**Dicatat, bukan diperbaiki di sesi ini (minor dari final review, low-impact, gak masuk fix wave):**
+- Broadcast Telegram libur nasional baru gak di-scope `status='aktif'` — karyawan resign yang masih punya `telegram_chat_id` bakal tetap kebagian pengumuman.
+- Tambah piket yang sama 2x (klik ulang) gak nge-double-row (`firstOrCreate` sudah benar), TAPI tetap kirim notif Telegram ulang — mirip pola insiden kode-absen-4x (6 Agustus), belum sampai jadi masalah nyata karena piket jarang di-klik ulang.
+- Validasi gagal (misal nama libur >100 karakter) balik ke kalender TANPA pesan error yang kelihatan — form cuma nge-reset diam-diam.
+- `LiburNasional::piket()` (relasi hasMany) gak pernah dipakai — `destroy()` andelin FK cascade langsung, bukan lewat relasi ini.
+- Flash banner sukses/error di halaman ini render 2x (pola lama yang sudah ada di halaman lain kayak `addon/index.blade.php`, bukan bug baru).
+
+**13 Agustus 2026 (sesi ketiga) — VERIFIKASI LANGSUNG oleh Elvan di production (browser desktop + HP), dipandu manual (ekstensi Claude in Chrome gak connect di Edge, jadi bukan otomatis) — SEMUA JALAN, 1 bug kecil ketemu & langsung dibenerin:**
+
+Dicoba satu-satu: buka `/libur-nasional` lewat sidebar → kalender muncul ✅ → "+ Tambah Libur Nasional" → klik 2 tanggal → modal terisi otomatis ✅ → simpan → tanggal ter-highlight + masuk daftar bawah ✅ → klik tanggal libur → modal Kelola Piket → tambah karyawan → badge "📌 1 piket" muncul ✅ → karyawan itu dapat notif Telegram ✅ → dibuka lagi di HP, modal rapi (fix #3 final review soal `position:fixed` TERBUKTI berhasil, gak ada masalah) ✅.
+
+**1 bug ketemu (commit `3d09d0e`):** tombol "Hapus" di baris TERAKHIR daftar "Semua Libur Nasional" ketutup nav bar bawah yang melayang di HP — beda dari halaman lain yang punya masalah sama tapi "gak masalah karena masih bisa discroll" (Elvan konfirmasi eksplisit ini bukan bug baru di layout dasar app, cuma halaman ini kurang jarak scroll ekstra di elemen paling akhir). Fix: `margin-bottom:80px` di kotak daftar itu. **Dicek ulang Elvan setelah deploy — tombol udah gak ketutup.**
+
+**Status: FITUR LIBUR NASIONAL SELESAI PENUH, LIVE, DAN TERVERIFIKASI LANGSUNG DI PRODUCTION (desktop+HP) per 13 Agustus 2026.**
+
+**BELUM diverifikasi (bukan blocker, checklist sesi depan kalau ada laporan aneh):**
+- Karyawan yang di-piket-in TETAP dapat kode absen besok paginya (`cron-kode-absen.php`), karyawan lain di tanggal sama TIDAK dapat kode — butuh nunggu siklus cron pagi asli, belum dites.
+- `cron-alpha.php` gak nandain Alpha siapapun pas libur nasional (kecuali yang piket) — sama, butuh siklus cron asli.
+- Login sebagai karyawan biasa (bukan Owner) → buka `/libur-nasional` dari sidebar → read-only, gak ada tombol tambah/kelola — belum dicoba lewat akun non-Owner.
+
+---
+
+**13 Agustus 2026 (sesi keempat) — Redesain "Absen Siang" jadi 2 checkpoint: SPEC+PLAN SELESAI & DISETUJUI, BELUM DIEKSEKUSI (>>> RESUME POINT kalau context di-clear <<<).**
+
+Dipicu Elvan mau kaji ulang kebijakan absen siang & potongannya. Digali lewat brainstorming (bukan bug, murni redesain kebijakan): absen siang sekarang (jendela 13:00-14:00, 1 checkpoint) nyampur 2 tujuan — deteksi kendala harian & cegah istirahat kelamaan — dan laporan kendala baru masuk jam 1-2 siang, kelewat telat buat Owner ambil keputusan hari itu juga. Istirahat resmi jam 12:00-13:00.
+
+**Spec:** `docs/superpowers/specs/2026-08-13-kebijakan-absen-siang-design.md` (10 keputusan terkunci). **Plan (7 task, kode lengkap per-task):** `docs/superpowers/plans/2026-08-13-kebijakan-absen-siang.md`. Elvan sudah setuju plan-nya, tinggal pilih Subagent-Driven vs Inline Execution buat mulai eksekusi — **BELUM DIPILIH, belum ada kode yang diubah sama sekali buat fitur ini.**
+
+**Ringkasan desain (biar gak perlu baca ulang spec dari nol):**
+- Absen siang lama (1 checkpoint, dropdown kendala) dipecah jadi **2 checkpoint independen** — gak saling ngeblok.
+- **Checkpoint 1 "Lapor Progress"** (jam 11:00-12:30, sebelum istirahat): foto WAJIB langsung dari kamera (gak boleh galeri, reuse pola JS `getUserMedia`+canvas yang UDAH ADA & terbukti jalan di `form-siang.blade.php` lama) → 1 pertanyaan progress yang DIGILIR per-karyawan-per-hari (bank pertanyaan ditulis di kode, dipilih deterministik dari `(dayOfYear + userId) % jumlah`, BUKAN AI) → dijawab bebas → toggle "Ada kendala?" → kalau Ya, 2 pertanyaan wajib gali akar masalah ("Apa kendalanya?" + "Kenapa itu bisa terjadi?") → kalau ada kendala, Owner langsung dapat notif Telegram (reuse `kirimNotifKendala()` yang sudah ada) → karyawan dapat balasan otomatis (bukan AI, dari kumpulan kalimat siap pakai). Kelewat jam 12:30 belum lapor = denda flat Rp20rb (reuse `POTONGAN_TELAT`, angka SAMA kayak yang lain, bukan angka baru).
+- **Checkpoint 2 "Kembali Kerja"** (jam 13:00 tepat): disederhanain jadi cukup **1 tombol tap**, GPS tetap dicek (diam-diam via `navigator.geolocation`, gak ada form/peta kelihatan). Rumus potongan prorata per menit telat **TIDAK diubah sama sekali** — reuse `hitungMenitTelat()`/`hitungPotongan()` yang sudah ada, cuma dipindah dari form lama ke endpoint baru (`kembaliKerja()`, gak perlu halaman form terpisah, tombolnya langsung di halaman utama `/absensi`).
+- Kolom DB lama dipakai ulang (`foto_siang_1`, `lat_siang`/`lng_siang`, `deskripsi_kendala` → sekarang jawaban "apa kendalanya"), kolom baru ditambah (`jam_lapor_progress`, `pertanyaan_progress`, `jawaban_progress`, `kendala_kenapa`, `potongan_progress_dicatat`, `lat_kembali_kerja`/`lng_kembali_kerja`/`gps_valid_kembali_kerja`) — migration ada di Task 1 plan, SQL manual buat production juga ada di situ (belum dijalankan, karena belum push).
+- **PENTING kalau lanjut sesi baru:** halaman `form-siang.blade.php` lama RENCANANYA DIHAPUS TOTAL (Task 6), diganti `form-lapor-progress.blade.php` — dan route `absensi.form-siang`/`absensi.siang` RENCANANYA DIHAPUS, diganti `absensi.form-lapor-progress`/`absensi.lapor-progress` + `absensi.kembali-kerja` baru. Belum kejadian, cuma rencana di plan.
+- Ini FITUR YANG DIPAKAI SEMUA 14 KARYAWAN tiap hari (bukan admin-only) — kalau nanti deploy, WAJIB sosialisasi ke semua karyawan SEBELUM jam 11:00 di hari-H (dicatat di plan bagian "Ringkasan urutan deploy").
+
+**Buat lanjutin:** baca `docs/superpowers/plans/2026-08-13-kebijakan-absen-siang.md`, tanya Elvan mau Subagent-Driven atau Inline Execution, lalu jalankan `superpowers:subagent-driven-development` (atau `executing-plans`) dari situ.
+
+---
+
+**14 Agustus 2026 — Redesain "Absen Siang" (Lapor Progress + Kembali Kerja) EKSEKUSI SELESAI & LIVE (subagent-driven-development, 7 task + final whole-branch review + 2 fix wave), langsung di `main` (pilihan Elvan, bukan worktree), push+deploy dini hari (±01:00 WIB, aman jauh dari jendela 11:00-12:30).**
+
+Lanjutan langsung dari resume point sesi sebelumnya — spec+plan sudah disetujui, tinggal eksekusi. Elvan pilih Subagent-Driven + langsung di main (konsisten sesi-sesi sebelumnya). 7 task dikerjakan fresh-implementer-per-task + task review tiap task, ditutup 1 final whole-branch review (model paling capable).
+
+**Yang jadi (ringkas, detail lengkap kode ada di plan):**
+- Checkpoint 1 "Lapor Progress" (`AbsensiController::formLaporProgress()`/`laporProgress()`, view `form-lapor-progress.blade.php`) — foto live-kamera wajib, 1 pertanyaan progress digilir per-karyawan-per-hari (`pilihPertanyaanProgress()`, deterministik `(dayOfYear+userId)%bank`, bukan AI), toggle kendala → 2 pertanyaan gali akar masalah → notif Telegram ke Owner/Mandor kalau ada kendala. Lewat jam 12:30 belum lapor = denda flat Rp20rb (`POTONGAN_TELAT`, reuse).
+- Checkpoint 2 "Kembali Kerja" (`AbsensiController::kembaliKerja()`, 1 tombol tap di `absensi/index.blade.php`, TANPA halaman form terpisah) — GPS diam-diam, potongan prorata reuse `hitungMenitTelat()`/`hitungPotongan()` TIDAK DIUBAH, cuma dipindah lokasi.
+- 2 checkpoint INDEPENDEN — diverifikasi end-to-end (final review): gak ada flag/kolom yang dibagi, satu telat gak nunda/gak gugurin yang lain.
+- Kolom baru di `absensi` (`jam_lapor_progress`, `pertanyaan_progress`, `jawaban_progress`, `kendala_kenapa`, `potongan_progress_dicatat`, `lat_kembali_kerja`/`lng_kembali_kerja`/`gps_valid_kembali_kerja`) — migration dibuat, deploy sebenarnya via SQL manual (Elvan sudah jalankan 14 Agustus sebelum push).
+- `formSiang()`/`absenSiang()` + view `form-siang.blade.php` + route `absensi.form-siang`/`absensi.siang` lama **DIHAPUS TOTAL** — diverifikasi grep seluruh repo, nol sisa referensi di luar yang memang direncanakan diganti.
+- Bonus ketemu pas Task 3: fix tak sengaja — form lama gak kirim `tipe:'siang'` ke `/absensi/cek-gps` (frontend gate radius 100m/masuk, backend pakai 200m/siang, gak sinkron) — sekarang sinkron di form baru.
+
+**3 bug ketemu & diperbaiki lewat proses review berlapis (bukan cuma "jadi lalu push"):**
+- **Task 6 fix round 1 (2 celah, Elvan pilih "tambal sekarang"):** `getUserMedia()` di form Lapor Progress gak ada `.catch()` (kamera ditolak izin → modal macet gelap, bisa ke-submit foto kosong); submit `fetch()` gak ada `.catch()` (sesi expired/network gagal → tombol "Mengirim..." macet permanen).
+- **Task 7 fix round 1 (1 celah, kelas bug sama, ruling sama diterapkan tanpa nanya ulang):** `fetch()` tombol "Kembali Kerja" juga gak ada `.catch()`.
+- **Final whole-branch review (model paling capable) nemu 3 hal yang gak kelihatan dari review per-task:**
+  1. **Kritis — celah waktu deploy:** kalau deploy dilakukan SETELAH jam 12:30, semua karyawan yang udah absen pagi bakal dianggap "belum lapor progress" dan kena potongan Rp20rb retroaktif buat checkpoint yang belum ada pas mereka mulai kerja. Ditambal: catatan kondisional di plan (baris SQL `UPDATE absensi SET potongan_progress_dicatat=1 WHERE tanggal=CURDATE()` HANYA kalau deploy lewat 12:30, TIDAK kalau sesuai target sebelum 11:00) — **tidak dipakai sesi ini karena push terjadi dini hari, jauh dari jendela manapun.**
+  2. `refreshGPS()` di form Lapor Progress ternyata JUGA gak ada `.catch()` — fetch ke-3 di file yang sama yang kelewat pas fix round Task 6 (pola bug sama, 2 fetch lain sudah ditambal, yang ini kelewat). Ditambal.
+  3. `laporProgress()` gak ada guard "sudah lapor hari ini" — beda dari kembaran `kembaliKerja()` yang punya. Retry di koneksi lemot bisa kirim laporan dobel → notif Telegram dobel ke Owner (mirip insiden lama kode-absen 4x kirim). Ditambal, guard ditaruh SEBELUM validate/update (diverifikasi re-review, bukan cuma ditambal asal).
+- **1 temuan bukan bug, keputusan produk:** jawaban "Lapor Progress" harian (progress + jawaban bebas) tersimpan ke DB tapi gak ada layar yang nampilin (cuma kepake kalau ada kendala, dikirim Telegram). Ditanya ke Elvan langsung — **keputusan: TETAP disimpan** (bukti/audit trail, murah, berguna buat sengketa/KPI/SWE roadmap nanti), **layar buat nampilin DITUNDA** sampai ada kebutuhan konkret — bukan di-drop sekarang.
+
+**Minor yang dicatat, bukan diperbaiki (parkir di ledger, low-impact, sengaja gak masuk fix wave):**
+- Test `test_pilih_pertanyaan_progress.php` — 1 assertion ("user sama tanggal beda") tautologis (bandingin formula ke dirinya sendiri), plan-mandated persis dari brief, tetap hijau.
+- `$gpsValid = true;` dead variable di `laporProgress()`/`kembaliKerja()` — plan-mandated verbatim, tak berbahaya.
+- Tabel riwayat (bukan blok fase aktif) di `absensi/index.blade.php` masih label "Siang" bukan "Kembali" — kosmetik, di luar scope file yang disentuh Task 7.
+- Potongan flat checkpoint 1&2 diam-diam (gak ada flash message pas kena denda) — sudah gitu dari dulu buat checkpoint 2, sekarang dobel jadi 2 tempat.
+- Denda flat cuma jalan LAZY pas karyawan buka `/absensi` (bukan cron otomatis) — kalau gak buka app hari itu, gak kena denda hari itu. Sama kayak sebelumnya, sekarang berlaku ke checkpoint 1 juga.
+- `$gpsWajib` gak dipakai di view baru (dari dulu juga gak dipakai di form lama) — akibatnya level workshop (3/5/6) tetap kena gate GPS-frontend walau backend sengaja skip radius check buat mereka. Berpotensi masalah nyata buat teknisi di lokasi customer >200m dari workshop — **BELUM ada laporan nyata, tapi disarankan dicek pas verifikasi manual.**
+
+**Status git:** push ke `main` sukses (`c045091..da4761e`, 10 commit) — auto-deploy GitHub Actions jalan otomatis ±1-2 menit. **SQL sudah dijalankan Elvan (14 Agustus) sebelum push.**
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Buka `/absensi` jam 11:00-12:30 tanpa lapor progress → tombol "LAPOR PROGRESS SEKARANG" muncul, submit dengan/tanpa kendala dua-duanya jalan, balasan otomatis muncul.
+- 2 karyawan beda buka jam sama → pertanyaan progress beda (bukti pemilihan per-user jalan).
+- Ada kendala → Owner/Mandor dapat notif Telegram lengkap (progress+kendala+penyebab).
+- Lewat jam 12:30 belum lapor → potongan Rp20rb flat masuk ke rekap gaji hari itu.
+- Jam 13:00, tap "LANJUT KERJA" → tercatat, kalau telat potongan prorata sesuai menit (rumus TIDAK berubah, tapi tetap worth dicek sekali).
+- Lewat jam 14:00 belum tap kembali kerja → potongan Rp20rb flat (mekanisme lama, harus tetap jalan sama persis).
+- **Teknisi/level workshop (3/5/6) submit Lapor Progress dari lokasi customer (jauh dari workshop)** — cek apakah gate GPS-frontend nahan mereka gak sengaja (lihat minor terakhir di atas).
+- Submit Lapor Progress 2x berturut-turut (retry) → submit ke-2 harus ditolak dengan pesan "sudah lapor progress hari ini" (verifikasi guard baru dari final review).
+- ~~Kabari semua 14 karyawan soal perubahan alur ini~~ — **SUDAH dilakukan (dikonfirmasi 14 Agustus).**
+
+---
+
+**14 Agustus 2026 (sesi kelima) — Migrasi Media ke Cloudflare R2 SELESAI & LIVE (brainstorm→spec→plan→eksekusi inline, 8 task), langsung di `main`, push bertahap per-task.**
+
+Dipicu pertanyaan Elvan soal di mana foto absen/survei disimpan — ketauan tersebar 2 tempat gak seragam (foto absen di disk lokal server, tanpa retensi; foto lokasi survei di Cloudinary). Sekalian jadi kesempatan bikin roadmap lama #4 "Sesi Media R2" (yang tadinya baru judul doang, belum ada rancangan). Spec: `docs/superpowers/specs/2026-08-14-migrasi-media-r2-design.md`. Plan (8 task, kode lengkap): `docs/superpowers/plans/2026-08-14-migrasi-media-r2.md`.
+
+**Yang jadi:**
+- `App\Services\R2Service` — inti upload ke R2, murni `curl_init` + tanda tangan AWS SigV4 manual (**tanpa package Composer baru** — dicek langsung, cPanel Niagahoster gak ada Terminal/Composer). Dua kemampuan: `put()` (upload server-side, dipakai foto absen) dan `presignPutUrl()` (izin upload sementara 15 menit, browser upload LANGSUNG ke R2, dipakai foto & video lokasi). Test standalone `tests/r2/test_r2_service.php` (12 assertion, structural — signature 64-hex, deterministik, sensitif ke secret key, dll — bukan tebak angka AWS dari memori) — **12/12 lulus, dan smoke test nyata ke R2 (upload-baca file sungguhan) juga sukses sebelum dipasang ke fitur asli.**
+- Foto absen (masuk/lapor-progress/kembali-kerja) — `simpanFotoBase64()` (1 titik dipakai 3 tempat) diganti dari `Storage::disk('public')` ke `R2Service::put()`. Alur dari sisi karyawan TIDAK berubah sama sekali. Guard baru ditambah di 3 pemanggil: kalau upload gagal, absen ditolak dengan pesan jelas (bukan diam-diam kesimpen tanpa foto).
+- Foto profil lokasi survei — pindah dari Cloudinary ke R2 (presigned URL, endpoint baru `POST /lokasi/{id}/presign`). Foto lama TIDAK dimigrasi, tetap di Cloudinary (data lama dibiarkan, cuma upload baru yang ke R2).
+- **Fitur baru:** video profil lokasi survei — maks 1 video/lokasi, maks 200MB, direkam pakai kamera native HP (`<input type=file accept=video/* capture>`, BUKAN recorder custom — belajar dari masalah iOS Safari custom-JS yang berulang kali kejadian di project ini). Kolom baru `pipeline_leads.lokasi_video` (JSON array, pola sama `lokasi_foto`).
+- Retensi: foto absen 60 hari lewat **R2 Object Lifecycle Rule** (fitur native dashboard Cloudflare, prefix `absensi/`, zero kode/cron) — foto/video lokasi survei permanen (gak ada rule hapus). Script manual `foto-absen-bersih.php` (dibuat sesi sebelumnya) **belum dihapus** — masih dibutuhkan buat bersihin foto absen LAMA yang masih di disk lokal (gak ikut migrasi).
+
+**2 masalah nyata ketemu pas verifikasi langsung bareng Elvan (bukan asumsi, kebukti dari uji nyata):**
+1. **CORS** — upload foto lokasi dari browser gagal total ("0 foto siap", gak ada error kelihatan karena pesan gagal ke-overwrite pesan sukses tepat sesudahnya). Root cause: bucket R2 belum diizinkan nerima request langsung dari `app.kanopibsd.co.id` (gap di plan — lupa dimasukkan sebagai langkah setup). **Fix: CORS Policy ditambah di Settings bucket** (`AllowedOrigins: app.kanopibsd.co.id`, `AllowedMethods: PUT`). Bukan bug kode.
+2. **Sertifikat "invalid" pas buka link foto/video** — didiagnosa berlapis (cek cert langsung dari VPS pakai `openssl`/`curl`: **valid**, `SSL certificate verify ok`; incognito: masih error; HP+data seluler beda jaringan: masih error juga) → akhirnya ketauan **DNS ISP/provider seluler Elvan yang ganggu domain `r2.dev`** (bukan salah kita, bukan salah Cloudflare). Solusi: pakai app **1.1.1.1** (DNS publik Cloudflare) — langsung normal.
+3. **Risiko belum ditutup (dicatat, bukan dikerjakan sesi ini):** Cloudflare sendiri kasih peringatan `r2.dev` "not recommended for production, rate-limited". Kalau ISP karyawan lain (Owner/Admin/Supervisor yang buka halaman Profil Lokasi) kena gangguan DNS serupa, mereka bisa gak bisa lihat foto/video lokasi — gak realistis suruh semua orang install 1.1.1.1. **Solusi jangka panjang: pindah ke custom domain sendiri** (misal `media.kanopibsd.co.id`) — butuh pindahin DNS domain ke Cloudflare, perubahan lebih besar & berisiko ke domain production yang sudah jalan, SENGAJA ditunda sampai ada laporan nyata dari karyawan lain (bukan dikerjakan spekulatif).
+
+**Status git:** push bertahap per-task ke `main` (bukan 1 kali di akhir) — `2f6a175`(R2Service)..terakhir. SQL `pipeline_leads.lokasi_video` sudah dijalankan Elvan sebelum push Task 6 (belajar dari insiden kolom hilang pagi ini, gak mau ulang).
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Foto absen (masuk/lapor-progress/kembali-kerja) — **belum sempat dites ulang pakai foto sungguhan** setelah swap ke R2 (waktu sesi ini kepotong jendela jam checkpoint). Kemungkinan besar aman (pola upload sama persis kayak smoke test yang sudah sukses), tapi tetap perlu dicoba nyata.
+- Kalau `.env` R2 kosong/salah → absen harus nolak dengan pesan "Gagal menyimpan foto, coba lagi." (bukan 500), belum disimulasikan.
+- Upload foto/video lokasi dari ISP/HP karyawan LAIN (bukan cuma Elvan) — buat lihat apakah masalah DNS `r2.dev` di atas kejadian juga ke orang lain.
+- Lifecycle rule 60 hari — baru bisa kebukti kerja setelah ≥60 hari (gak bisa dites instan).
+- Kapan pindah `foto-absen-bersih.php` jadi gak perlu lagi / dihapus — tunggu sampai semua foto absen lokal lama sudah lewat 60 hari atau dibersihkan manual sekali.
+
+---
+
+**14 Agustus 2026 (sesi keenam) — Risiko `r2.dev` dari sesi kelima DITUTUP: custom domain `media.kanopitangerang.co.id` LIVE, murni kerja DNS/infra (nol kode, nol commit).**
+
+Lanjutan langsung dari risiko yang sengaja ditunda di sesi kelima ("Cloudflare warning `r2.dev` not recommended for production, ISP lain bisa kena masalah DNS yang sama"). Dibahas panjang lewat perbandingan opsi sebelum eksekusi (bukan langsung jalan) — opsi yang dipertimbangkan: (1) beli domain baru, (2) proxy lewat `app.kanopibsd.co.id` (ditolak — numpang shared hosting, berisiko buat video besar), (3) Cloudflare Workers + `workers.dev` (ditolak — `[Kemungkinan Besar]` masuk kategori blokir ISP yang SAMA kayak `r2.dev`, dua-duanya "domain dev/preview Cloudflare gratisan"), (4) tetap `r2.dev`, (5) fallback proxy otomatis kalau gambar gagal load, (6) VPS Hostinger jadi reverse-proxy (dipertimbangkan tapi bikin VPS — yang tadinya cuma alat kerja Claude Code — jadi kritis buat app produksi).
+
+**Solusi akhir (opsi ke-7, muncul pas Elvan sebut punya domain lain):** Elvan ternyata punya domain kedua di Niagahoster, `kanopitangerang.co.id` — cuma dipakai company profile + tombol CTA WA, email-nya juga sudah gak dipakai. Domain "murah risiko" ini yang dipindah PENUH ke Cloudflare (bukan `kanopibsd.co.id`), lalu `media.kanopitangerang.co.id` disambungkan ke bucket R2 yang sama. `kanopibsd.co.id` (domain app produksi) **tidak disentuh sama sekali**.
+
+**Temuan teknis penting (buat kalau ada kasus serupa lagi):**
+- **Cloudflare TIDAK bisa mendelegasikan subdomain-saja jadi zona sendiri lewat dashboard self-serve** (dicoba duluan, kena error "provide root domain, not subdomain") — fitur itu ada tapi terkunci di paket enterprise/kontak sales. R2 Custom Domain **wajib** domain ROOT-nya aktif penuh sebagai zona Cloudflare, gak ada jalan pintas.
+- Prosedur migrasi domain penuh yang aman: Cloudflare "Add a Site" otomatis niru semua record DNS lama (dapat 29 record di kasus ini — A/CNAME/MX/SRV/TXT termasuk DKIM & cPanel service subdomain kayak `webdisk`/`whm`/`cpcalendars`, jauh lebih lengkap dari cek manual `dig` sebelumnya) → **semua record lama di-set "DNS only" (bukan proxied)** biar behaviour situs 100% sama → baru ganti nameserver di registrar → verifikasi situs+email masih hidup sebelum lanjut. Cloudflare defaultnya otomatis set beberapa A record jadi "Proxied" pas import — ini WAJIB dicek & dibalik manual, jangan diterima apa adanya.
+- Terverifikasi nol downtime: `kanopitangerang.co.id` & `www` tetap HTTP 200/301 normal sepanjang & sesudah migrasi, MX tetap ke-carry.
+- Upload-inbox (`http://187.77.143.121:8891/<token>`, token di `/etc/systemd/system/claude-upload.service`) dipakai intensif sesi ini buat terima screenshot progres tiap langkah dari Elvan — link harus include token di path, base URL tanpa token 404.
+
+**Hasil akhir:** `.env` production `R2_PUBLIC_URL` diganti Elvan sendiri (akses cPanel File Manager, Claude Code gak ada SSH ke Niagahoster) jadi `https://media.kanopitangerang.co.id`. **Dites nyata oleh Elvan — foto & video baru berhasil dibuka lewat domain baru.** Foto/video lama tetap di link `r2.dev` lama (gak dimigrasi, sesuai keputusan sesi kelima). Risiko "`r2.dev` not recommended for production" dari sesi kelima **CLOSED**.
+
+**Status git:** tidak ada — sesi ini murni kerja DNS (Cloudflare + Niagahoster) dan 1 baris `.env` di server, nol perubahan kode/repo.
+
+**BELUM diverifikasi (checklist sesi depan kalau ada laporan aneh):**
+- Karyawan/Owner/Admin/Supervisor LAIN (bukan cuma Elvan) buka link foto/video lokasi — pastikan `media.kanopitangerang.co.id` juga lancar buat mereka (belum ada laporan negatif, tapi baru Elvan yang tes).
+- `kanopitangerang.co.id` (company profile + WA CTA) — pastikan tetap tampil normal dalam beberapa hari ke depan (sudah dicek langsung sesudah migrasi, tapi worth dilihat lagi kalau ada laporan aneh dari yang buka situsnya).
+---
+
+**15 Agustus 2026 — Final Hardening Payroll, Karyawan & Kerja Hari Libur SELESAI — STRICT TDD, SQL PRODUCTION TERVERIFIKASI, SIAP COMMIT/PUSH/DEPLOY.**
+
+Plan: `.hermes/plans/2026-08-15_100411-final-hardening-payroll-absensi.md`. Dikerjakan RED→GREEN per task (tes ditulis dulu, dibuktikan gagal, baru dipatch minimal), lalu regresi penuh. SQL `docs/sql/2026-08-15-kerja-hari-libur.sql` sudah dijalankan Elvan di phpMyAdmin production: seluruh `CREATE/ALTER` sukses; unique index `kode_absen_tanggal_user_unique` terverifikasi 2 baris (`tanggal`,`user_id`, `Non_unique=0`); kolom baru `absensi`/`slip_gaji` tersedia; tabel baru masih 0 baris. **Tidak ada backfill data lama.**
+
+**Hasil final: 36/36 berkas tes PHP lulus, 5/5 Node lulus, 147/147 syntax PHP bersih, 8/8 Blade dikompilasi+lint, 226 route terbaca, `git diff --check` bersih.** `artisan view:cache` di VPS tetap terhalang extension CLI `DOMDocument`; kompilasi Blade langsung dipakai dan menangkap+menutup satu nesting `@if` yang sempat salah sebelum rilis.
+
+**Yang jadi per task:**
+- **Task 0 — Masa kerja Kasbon.** `App\Services\MasaKerjaService` (murni): urutan sumber `tanggal_bergabung → tgl_masuk_kerja → created_at`. Sebelumnya `tgl_masuk_kerja` DILEWATI, langsung jatuh ke `created_at` (= tanggal baris dibuat di sistem, bukan tanggal orangnya mulai kerja) — karyawan lama bisa terlihat "baru" dan pengajuan kasbonnya ditolak padahal berhak. `index()` & `store()` kini memakai helper yang SAMA (dulu dua salinan rumus). SQL audit `docs/sql/2026-08-15-audit-tanggal-bergabung.sql` **READ-ONLY, SELECT saja** — diverifikasi otomatis oleh tes (komentar di-strip dulu, lalu dicek nol kata kunci menulis). **Tidak ada backfill UPDATE dibuat** — sesuai keputusan Bos, itu butuh izin terpisah setelah melihat daftarnya.
+- **Task 1 — Privilege escalation modul Karyawan (paling serius).** Form Edit dulu menampilkan pilihan level **1–7 untuk siapa pun** yang bisa membuka modul (route `level:1,2`) — artinya **Admin Operasional bisa mengangkat dirinya sendiri jadi Owner lewat satu dropdown**, lalu membuka seluruh modul keuangan. `App\Services\KaryawanAksesService` (murni) jadi satu sumber kebijakan: Admin hanya boleh target level 3–7 (termasuk DITOLAK atas sesama Admin & dirinya sendiri), guard `pastikanBolehKelola()` dipanggil di 7 method per-karyawan SEBELUM data dimuat/diubah, `index()` dibatasi di QUERY, dan payload finansial/rekening/tunjangan/`tanggal_bergabung` **dibuang di server** (bukan cuma disembunyikan di layar). Ikut ketemu: `show.blade.php` membocorkan **nomor rekening + atas nama** ke Admin (blok itu cuma dipagari "kalau nomornya terisi") — sudah ditutup.
+- **Task 2 — Mandor tidak boleh self-activation.** `alasanTolakAktivasi()` kini menerima ID aktor & target (diambil dari sesi/route, bukan body request). Mandor boleh mengaktifkan orang lain, TIDAK dirinya sendiri — tanpa ini dia bisa memberi dirinya hari kerja berbayar di hari liburnya kapan saja.
+- **Task 3 — Aktivasi jadi hari kerja normal (pembalikan semantik).** `LiburService::expandAktivasi()` menjadikan tanggal aktivasi override `batal` **berprioritas tertinggi** (mengalahkan libur nasional, override jadwal, dan jadwal default). Hari itu masuk **penyebut DAN pembilang** → KPI ≤100% secara matematis, bukan dengan membuang record. Rancangan lama mengeluarkan baris aktivasi dari statistik, akibatnya **karyawan yang diaktifkan lalu MANGKIR hilang dari laporan** (alpha tidak terhitung, KPI tidak turun). `hanyaReguler()` dihapus dari GajiService/KpiService/ProfilController/AbsensiController. Upah ekstra 1× gaji harian tetap dihitung terpisah lewat `hari_kerja_libur`/`upah_hari_libur`.
+- **Task 4 — Lembur dibayar SEKALI, pembagi 9.** Dulu `absenPulang()` menambahkan nominal lembur ke `absensi.gaji_hari_ini` **DAN** menyimpan `lembur_jam`, lalu slip membayar lagi dari `lembur_jam` — untuk pegawai harian (gaji pokoknya diakumulasi dari `gaji_hari_ini`) lemburnya **benar-benar terbayar dua kali**. Pembaginya pun beda: controller `/7,5` vs slip `/9`. Sekarang satu helper `GajiService::bonusLembur()` (pembagi 9 × 1,2), satu pembayar (slip). Angka terkunci Bos terverifikasi: **gaji harian Rp180.000, lembur 2 jam = Rp48.000 tepat.** Slip lama tidak dimutasi (slip hanya pernah `create` di balik penjaga duplikat).
+- **Task 5 — Koreksi manual pakai tanggal rekap terpilih.** Form Koreksi di halaman rekap **tidak mengirim tanggal sama sekali**, jadi controller jatuh ke `today()`: Owner yang memfilter ke 10 Agustus lalu mencatat absen manual menulis barisnya ke HARI INI — tanggal yang mau diperbaiki tetap kosong, hari ini dapat baris palsu, dan pemeriksaan kerja-hari-libur (termasuk pembuatan baris otorisasi berupah) dilakukan atas tanggal yang keliru. Sekarang view mengirim `tanggal`, dan `alasanTolakTanggalKoreksi()` (murni) menolak kosong/relatif/ngawur/di luar kalender/masa depan, dicek SEBELUM baris apa pun ditulis.
+- **Task 6 — GET halaman kode tidak lagi membungkam Telegram cron.** Halaman "Kode Absen Hari Ini" (sebuah GET) memanggil pembuat kode, padahal cron pagi memutuskan kirim/tidak dari `wasRecentlyCreated`. Jadi **membuka halaman itu sebelum 06:30 membuat cron melewati SEMUA karyawan tanpa mengirim satu pesan pun**, tanpa error apa pun. Sekarang GET baca-saja (`kodeHariIniUntukJikaAda()`), cron tetap satu-satunya pembuat+pengirim reguler, aktivasi kerja libur tetap kirim seketika, dan ada endpoint POST baru `absensi.kirim-kode` (`level:1,3`, atomik, kirim hanya jika `wasRecentlyCreated`) + tombol "Buat & Kirim Kode" untuk karyawan yang belum punya kode.
+- **Task 7 — Regresi/minor.** `absensi.rekap-bulanan` **dikembalikan ke `auth`** — mengunci `level:1` di sesi sebelumnya ternyata kebablasan karena halaman itu juga dipakai karyawan biasa untuk rekap absensinya SENDIRI (memutus 13 orang); pagarnya dipindah ke controller lewat `bolehRekapSemua()` (Owner saja lintas-karyawan, semua level lain dipaksa self-only — ambang lama `level > 2` malah membuka Admin). Migrasi `..._000002` kini `Schema::hasColumn()` di `up()` DAN `down()`. Profil menampilkan angka "Kerja Hari Libur" yang selama ini dihitung tapi tak pernah ditampilkan. Slip yatim (user terhapus) kini `abort 404` rapi, bukan TypeError — ditempatkan setelah cek hak akses, sebelum `petaLiburBulan()`.
+
+**2 blocker ketemu saat audit ulang Task 0–4 (bukan dari tes yang sudah ada), diperbaiki dengan tes lebih dulu:**
+1. **Admin tidak akan pernah bisa menyimpan form Karyawan.** Setelah field finansial disembunyikan (Task 1), validasi `store()`/`update()` masih menuntut `tipe_gaji` `required` — Admin dapat error atas field yang tidak pernah dia lihat, dan justru kemampuan yang dibangun Task 1 (Admin mengelola level 3–7) jadi mati total. Untuk `update()` cacat ini **sudah ada sejak sebelum sesi ini** (blok Data Gaji di form Edit memang sudah Owner-only). Fix: `KaryawanAksesService::aturanFinansial()` — aturan finansial hanya ditegakkan untuk Owner.
+2. **Pesan ke karyawan berbohong.** Telegram aktivasi, layar absen, dialog konfirmasi Owner, model, dan komentar SQL semuanya menjanjikan *"jatah libur kamu TIDAK hangus / hari itu tetap dihitung libur"* — setelah keputusan Bos dikunci (aktivasi membatalkan libur TANPA pengganti) kalimat itu **tidak benar**, dan itulah kalimat yang dipakai karyawan memutuskan mau masuk atau tidak. Semua diganti jadi "hari ini dihitung hari kerja biasa, jatah libur hari itu terpakai (tidak ada hari pengganti), dibayar 1× gaji harian + uang makan", dijaga tes agar tidak kembali.
+
+**Berkas tes baru (7):** `tests/keamanan/test_masa_kerja_kasbon.php`, `test_akses_karyawan.php`, `test_regresi_minor.php`, `tests/kerja-hari-libur/test_aktivasi_hari_kerja.php`, `test_lembur.php`, `test_koreksi_tanggal.php`, `test_kode_read_only.php`. Berkas kode baru: `app/Services/MasaKerjaService.php`, `app/Services/KaryawanAksesService.php`.
+
+**Middleware aktual (dari `php artisan route:list --json`, bukan regex atas routes/web.php):**
+`absensi.rekap` `auth,level:1` · `absensi.rekap-bulanan` `auth` (self-only di controller) · `absensi.koreksi` & `absensi.koreksi-manual` `auth,level:1` · `absensi.kode-hari-ini`, `absensi.kerja-hari-libur`, `absensi.kirim-kode` `auth,level:1,3` · `penggajian.*` administratif `auth,level:1` · `penggajian.slip` & `slip-saya` `auth` (ownership guard di controller) · `kasbon.karyawan.*` `auth` · `karyawan.*` `auth,level:1,2` (dibatasi lagi per-target di controller).
+
+**Gerbang rilis LOLOS (15 Agustus):** SQL production sukses, unique index kode absen terverifikasi, dan Bos memberi izin eksplisit untuk commit → push → auto-deploy. **Commit fitur `2e43bde` sudah push ke `main`; GitHub Actions run `31883852662` sukses; production terverifikasi HTTP 200 pada login dan route baru `kirim-kode`/`kerja-hari-libur` termuat sebagai POST-only. Fitur LIVE.** Opsional & terpisah setelah rilis: jalankan `docs/sql/2026-08-15-audit-tanggal-bergabung.sql` (read-only) untuk melihat daftar nama + 3 tanggal, lalu putuskan perlu-tidaknya backfill. **Backfill belum dibuat dan tidak boleh dibuat tanpa izin terpisah.**
+
+**BELUM diverifikasi (perlu browser/DB nyata setelah deploy):**
+- Login sebagai Admin (level 2): buka `/karyawan` → hanya level 3–7 tampil; buka `/karyawan/{id}` milik Owner/Admin → 403; simpan Tambah & Edit karyawan → **berhasil** (ini blocker #1 di atas, diperbaiki tapi belum dicoba di browser); form tidak menampilkan gaji/rekening/tunjangan/tanggal bergabung.
+- Mandor (level 3) menekan "Aktifkan Masuk Hari Ini" untuk DIRINYA SENDIRI → ditolak dengan pesan jelas.
+- Karyawan yang diaktifkan lalu tidak masuk → `cron-alpha.php` menandainya alpha, dan alpha itu terlihat di rekap + menurunkan KPI.
+- Slip bulan berjalan: pegawai harian dengan lembur → bonus lembur muncul **sekali** (Rp48.000 untuk 180rb/2 jam), `gaji_hari_ini` tidak lagi mengandung lembur.
+- Buka `/absensi/kode-hari-ini` SEBELUM cron 06:30 → cron pagi tetap mengirim Telegram ke semua karyawan (ini inti Task 6).
+- Tombol "Buat & Kirim Kode" untuk karyawan yang belum punya kode → terkirim sekali, klik ulang tidak mengirim lagi.
+- Rekap harian: filter ke tanggal lampau → Koreksi manual menulis ke tanggal itu, bukan hari ini.
+- Karyawan biasa membuka `/absensi/rekap-bulanan` → hanya melihat dirinya sendiri, tanpa dropdown pemilih karyawan.
