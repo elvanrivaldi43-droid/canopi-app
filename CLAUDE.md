@@ -217,27 +217,27 @@ Bos memilih workflow **Direct/Single-session Claude + Deterministic Guardrail**:
 satu task, satu worktree, satu writer, verifikasi mekanis oleh Hermes, dan maksimal
 satu reviewer read-only hanya untuk payroll/auth/SQL/cron/arsitektur berisiko.
 
-Plan fondasi lokal:
-`.hermes/plans/2026-08-15_144801-deterministic-guardrail-fondasi.md`.
-Branch/worktree: `feature/deterministic-guardrail` di
-`.worktrees/deterministic-guardrail`.
+Plan Fondasi Tahap 1 dan Verification Gate V2 disimpan lokal di `.hermes/plans/`.
+Pekerjaan memakai satu writer per worktree dan tidak memakai continuation Claude.
 
-- Dua run Claude berbatas berhenti tanpa edit; tidak ada continuation.
-- Bos memilih fallback Hermes: perampingan mekanis dengan arsip byte-identik,
-  kemudian manifest dan runner dibangun secara deterministik.
-- Manifest tes dan `scripts/canopi-check` selesai dibuat Hermes dengan RED→GREEN.
-  Inventory final: 43 tes otomatis (38 PHP + 5 Node) dan 1 helper
-  manual/excluded.
-- Verifikasi nyata Fondasi Tahap 1: `--list` 43 tes, `--fast` PASS,
-  `--full` PASS (43 tes, 207 file PHP, 226 route, 119 Blade).
-- Worktree baru perlu symlink `vendor` lokal ke repo utama; `tests/bootstrap.php`
-  menimpa classmap `App\\*` ke worktree agar tidak menguji kode branch lain.
-  Runner membuat `storage/framework/views` lokal bila belum ada.
-- Tahap berikutnya setelah gate/rilis Fondasi Tahap 1: MariaDB test lokal dan
-  GitHub Actions verification sebagai scope terpisah. Jangan membuka continuation
-  dari run Claude yang gagal di atas.
-- GitHub Actions verification, MariaDB test lokal, preview VPS, dan feature flag
-  **belum dikerjakan**; masing-masing butuh scope/gate terpisah.
+- Fondasi manifest + `scripts/canopi-check` tersedia di remote `main` melalui
+  `20c5f3d`; dua workflow FTP saat rilis fondasi gagal karena
+  `Timeout (control socket)`, tetapi production tetap sehat (`/login` 200).
+- Hermes Deploy Watchdog aktif sebagai cron script-only setiap 5 menit
+  (`no_agent`, tanpa token LLM) dan hanya melapor bila workflow `main` baru selesai.
+- Verification workflow dibuat dengan RED→GREEN di `feature/verification-gate`
+  (`d7e5432`), tanpa FTP, secret production, DB, migration, atau `.env`.
+- Gate lokal final: 44 tes, 208 file PHP, 226 route, 119 Blade — PASS.
+- Bukti GitHub branch terisolasi:
+  - GREEN awal: run `31894530711` — success.
+  - NEGATIVE manifest drift: run `31894619793` — failure sesuai desain,
+    deploy count 0.
+  - Probe dihapus dan pulih GREEN: run `31894714432` — success.
+- Final tree probe identik dengan branch GREEN; `origin/main` tetap `20c5f3d`.
+- **Belum dilakukan:** mengubah `deploy.yml`/`needs: verify`, merge/push gate ke
+  `main`, MariaDB test lokal, preview VPS, atau feature flag. Tahap berikutnya
+  adalah sambungkan verification ke deploy di branch, lalu berhenti untuk izin
+  Bos sebelum `main`.
 
 ### Utang aktif / resume point
 
