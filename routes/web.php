@@ -426,6 +426,14 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'level:1'])->group(function () {
     Route::get('/tahap-master',        [\App\Http\Controllers\TahapMasterController::class, 'index'])->name('tahap-master.index');
     Route::post('/tahap-master/simpan',[\App\Http\Controllers\TahapMasterController::class, 'simpan'])->name('tahap-master.simpan');
+
+    Route::get('/template-tahap',                     [\App\Http\Controllers\TemplateTahapController::class, 'index'])->name('template-tahap.index');
+    Route::get('/template-tahap/create',               [\App\Http\Controllers\TemplateTahapController::class, 'create'])->name('template-tahap.create');
+    Route::post('/template-tahap',                      [\App\Http\Controllers\TemplateTahapController::class, 'store'])->name('template-tahap.store');
+    Route::get('/template-tahap/{templateTahap}/edit',  [\App\Http\Controllers\TemplateTahapController::class, 'edit'])->name('template-tahap.edit');
+    Route::put('/template-tahap/{templateTahap}',       [\App\Http\Controllers\TemplateTahapController::class, 'update'])->name('template-tahap.update');
+    Route::delete('/template-tahap/{templateTahap}',    [\App\Http\Controllers\TemplateTahapController::class, 'destroy'])->name('template-tahap.destroy');
+    Route::patch('/template-tahap/{templateTahap}/toggle', [\App\Http\Controllers\TemplateTahapController::class, 'toggleAktif'])->name('template-tahap.toggle');
 });
 
 // ================================================================
