@@ -421,6 +421,14 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // ================================================================
+// TAHAP PRODUKSI (SWE Fase 1 — owner)
+// ================================================================
+Route::middleware(['auth', 'level:1'])->group(function () {
+    Route::get('/tahap-master',        [\App\Http\Controllers\TahapMasterController::class, 'index'])->name('tahap-master.index');
+    Route::post('/tahap-master/simpan',[\App\Http\Controllers\TahapMasterController::class, 'simpan'])->name('tahap-master.simpan');
+});
+
+// ================================================================
 // KALKULATOR POTONG BESI (single blok — referensi)
 // ================================================================
 Route::middleware(['auth'])->group(function () {
