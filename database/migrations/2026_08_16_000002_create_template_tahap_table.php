@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // SQL sudah dijalankan manual di production sebelum push (lihat CLAUDE.md).
+        // Guard ini biar `artisan migrate` tidak crash "table already exists".
+        if (Schema::hasTable('template_tahap')) return;
+
         Schema::create('template_tahap', function (Blueprint $table) {
             $table->id();
             $table->string('nama');

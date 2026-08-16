@@ -258,6 +258,10 @@ class ProjectController extends Controller
             ->all();
         $request->merge(['pic' => $picBersih]);
 
+        if ($projectTahap->status !== 'belum') {
+            return back()->with('warning', 'Tahap ini sudah dimulai.');
+        }
+
         $request->validate([
             'qty'                    => 'nullable|numeric|min:0',
             'satuan'                 => 'nullable|string|max:50',
@@ -267,22 +271,24 @@ class ProjectController extends Controller
             'pic.*.peran'            => 'required|in:tukang,kenek',
         ]);
 
-        $projectTahap->update([
-            'qty'                    => $request->qty,
-            'satuan'                 => $request->satuan,
-            'tanggal_selesai_target' => $request->tanggal_selesai_target,
-            'tanggal_mulai_aktual'   => now()->toDateString(),
-            'status'                 => 'sedang',
-        ]);
-
-        foreach ($request->pic as $picRow) {
-            ProjectTahapPic::create([
-                'project_tahap_id' => $projectTahap->id,
-                'user_id'          => $picRow['user_id'],
-                'peran'            => $picRow['peran'],
-                'ditambahkan_oleh' => Auth::id(),
+        DB::transaction(function () use ($request, $projectTahap) {
+            $projectTahap->update([
+                'qty'                    => $request->qty,
+                'satuan'                 => $request->satuan,
+                'tanggal_selesai_target' => $request->tanggal_selesai_target,
+                'tanggal_mulai_aktual'   => now()->toDateString(),
+                'status'                 => 'sedang',
             ]);
-        }
+
+            foreach ($request->pic as $picRow) {
+                ProjectTahapPic::create([
+                    'project_tahap_id' => $projectTahap->id,
+                    'user_id'          => $picRow['user_id'],
+                    'peran'            => $picRow['peran'],
+                    'ditambahkan_oleh' => Auth::id(),
+                ]);
+            }
+        });
 
         return back()->with('success', 'Tahap "' . $projectTahap->nama_tahap . '" dimulai.');
     }
@@ -292,6 +298,10 @@ class ProjectController extends Controller
     // ============================================================
     public function selesaiTahap(ProjectTahap $projectTahap)
     {
+        if ($projectTahap->status !== 'sedang') {
+            return back()->with('warning', 'Tahap ini belum dimulai atau sudah selesai.');
+        }
+
         $projectTahap->update([
             'status'                 => 'selesai',
             'tanggal_selesai_aktual' => now()->toDateString(),

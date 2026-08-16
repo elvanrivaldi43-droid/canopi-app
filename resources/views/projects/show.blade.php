@@ -138,6 +138,12 @@
     <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; margin-bottom:20px;">
         <h3 style="color:#e2e8f0; font-size:15px; font-weight:700; margin:0 0 16px;">Tahap Produksi</h3>
 
+        @if($errors->any())
+        <div style="background:#451a03; border:1px solid #f59e0b; color:#fcd34d; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px;">
+            @foreach($errors->all() as $e)<div>⚠️ {{ $e }}</div>@endforeach
+        </div>
+        @endif
+
         @if($project->tahap->isEmpty())
         <p style="color:#64748b; font-size:13px; margin:0;">Belum ada tahap produksi untuk project ini (tidak ada template yang cocok jenis project-nya, atau memang belum ditambahkan).</p>
         @else

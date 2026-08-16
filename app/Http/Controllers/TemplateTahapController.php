@@ -57,9 +57,12 @@ class TemplateTahapController extends Controller
     {
         abort_if(Auth::user()->level != 1, 403);
         $templateTahap->load('items');
-        $tahapList = TahapMaster::where('is_active', true)->orderBy('urutan')->get();
-        $jenisProjectOptions = array_values(Project::$jenisProjectOptions);
         $selectedIds = $templateTahap->items->pluck('tahap_master_id')->toArray();
+        $tahapList = TahapMaster::where('is_active', true)
+            ->orWhereIn('id', $selectedIds)
+            ->orderBy('urutan')
+            ->get();
+        $jenisProjectOptions = array_values(Project::$jenisProjectOptions);
         return view('template-tahap.edit', compact('templateTahap', 'tahapList', 'jenisProjectOptions', 'selectedIds'));
     }
 
