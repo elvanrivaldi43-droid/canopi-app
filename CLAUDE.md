@@ -146,7 +146,7 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 3. Tahap Perlindungan Lapangan — pemicu rantai tiang WF→scaffolding+takel, checklist wajib (talang→air rumah?/pohon?→cover jaring/bersih rutin)
 4. ~~Sesi Media R2~~ — **SELESAI 14 Agustus** untuk upload baru (foto absen 60 hari + foto/video lokasi via custom domain); data Cloudinary/lokal lama tidak dimigrasi otomatis
 5. Portal Customer (PUNCAK) — link acak `/lihat/{kode}` tanpa login, PDF-ke-WA + link portal opsional, TTD online, tracking produksi, booking jadwal, bayar termin — butuh modul pembayaran + SWE dulu
-6. SWE (Smart Work Engine) — PALING AKHIR. Tabel tahap produksi terpisah dari tabel produktivitas RAB, rekomendasi PIC per tahap, tracking hari kerja asli, auto-koreksi produktivitas dari data nyata
+6. SWE (Smart Work Engine) — diloncat maju atas keputusan Bos (16 Agustus), kalibrasi RAB (#1) menyusul belakangan. **Fase 1 (Fondasi Tahap Produksi) LIVE.** Sisa: Fase 2 (skill+rekomendasi PIC), Fase 3 (kapasitas tim), Fase 4 (evaluasi produktivitas) — lihat `docs/superpowers/specs/2026-08-16-swe-smart-work-engine-design.md`
 7. Multi-produk (pagar/tralis) — setelah kanopi matang+kalibrasi tuntas
 
 **Ditunda/belum diputuskan:**
@@ -210,6 +210,11 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
   `tanggal_bergabung → tgl_masuk_kerja → created_at`. Tidak ada backfill otomatis.
   Audit tiga tanggal bersifat read-only dan backfill tetap memerlukan daftar nama
   + persetujuan Bos terpisah.
+- **SWE Fase 1 (Fondasi Tahap Produksi) LIVE per 16 Agustus 2026:** tahap produksi
+  (potong/las/cat/kirim/instal) otomatis tergenerasi dari template saat RAB deal
+  jadi project; halaman `/tahap-master` + `/template-tahap` (Owner); mulai/selesai
+  tahap dengan PIC dipilih manual (rekomendasi skill otomatis = Fase 2, belum
+  dikerjakan). SQL production sudah dijalankan Bos, sudah push+deploy.
 
 ### Pekerjaan aktif — Deterministic Guardrail
 
@@ -266,6 +271,10 @@ Pekerjaan memakai satu writer per worktree dan tidak memakai continuation Claude
    `UPDATE` sebelum hasil SELECT nama + tiga tanggal diperiksa Bos.
 6. Foto absen lokal lama dan `foto-absen-bersih.php` baru boleh dipensiunkan
    setelah retensi/migrasi data lama benar-benar selesai.
+7. **SWE Fase 2 (skill karyawan + rekomendasi PIC otomatis) belum dikerjakan.**
+   Spec penuh: `docs/superpowers/specs/2026-08-16-swe-smart-work-engine-design.md`
+   bagian 6. Plan Fase 1 (sudah selesai, referensi pola):
+   `docs/superpowers/plans/2026-08-16-swe-fase1-tahap-produksi.md`.
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 
