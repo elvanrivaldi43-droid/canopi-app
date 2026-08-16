@@ -225,17 +225,7 @@ class RabController extends Controller
             $namaCustomer = $lead->nama_customer ?? $request->nama_penandatangan ?? 'Customer';
             $noHp         = $lead->no_hp ?? '';
             $alamat       = $lead->alamat ?? '';
-            $namaProduk   = match($rab->produk_kode) {
-                'KANOPI_STD'     => 'Kanopi Standar',
-                'KANOPI_DINDING' => 'Kanopi + Dinding',
-                'MEZZANINE'      => 'Mezzanine',
-                'PAGAR'          => 'Pagar',
-                'TRALIS'         => 'Tralis',
-                'TENDA_MEMBRANE' => 'Tenda Membrane',
-                'AWNING'         => 'Awning',
-                'CARPORT'        => 'Carport',
-                default          => $rab->produk_kode,
-            };
+            $namaProduk   = \App\Models\Project::$jenisProjectOptions[$rab->produk_kode] ?? $rab->produk_kode;
 
             try {
                 // Cek kolom apa saja yang ada di tabel projects
@@ -260,6 +250,11 @@ class RabController extends Controller
                 // Update rab_header dengan project_id yang baru terbuat
                 if ($project) {
                     $rab->update(['project_id' => $project->id]);
+
+                    // SWE Fase 1: auto-generate tahap produksi dari template yang cocok
+                    // jenis_project-nya. Tidak ketemu template -> tidak apa-apa, project
+                    // tetap kebuat, Supervisor bisa tambah tahap manual belakangan.
+                    app(\App\Services\TahapProduksiService::class)->generateUntukProject($project);
                 }
 
             } catch (\Exception $e) {

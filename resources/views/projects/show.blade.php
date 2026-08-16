@@ -134,6 +134,89 @@
     </div>
     @endif
 
+    {{-- Tahap Produksi --}}
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:20px; margin-bottom:20px;">
+        <h3 style="color:#e2e8f0; font-size:15px; font-weight:700; margin:0 0 16px;">Tahap Produksi</h3>
+
+        @if($errors->any())
+        <div style="background:#451a03; border:1px solid #f59e0b; color:#fcd34d; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px;">
+            @foreach($errors->all() as $e)<div>⚠️ {{ $e }}</div>@endforeach
+        </div>
+        @endif
+
+        @if($project->tahap->isEmpty())
+        <p style="color:#64748b; font-size:13px; margin:0;">Belum ada tahap produksi untuk project ini (tidak ada template yang cocok jenis project-nya, atau memang belum ditambahkan).</p>
+        @else
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            @foreach($project->tahap as $tahap)
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div>
+                        <b style="color:#f1f5f9;">{{ $tahap->urutan + 1 }}. {{ $tahap->nama_tahap }}</b>
+                        <span style="font-size:11px; color:#94a3b8; margin-left:8px;">{{ $tahap->status_label }}</span>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        @if($tahap->status === 'belum')
+                        <button type="button" onclick="document.getElementById('mulaiTahap{{ $tahap->id }}').style.display='block'"
+                                style="background:#f59e0b; color:#0f172a; padding:6px 14px; border-radius:6px; border:none; font-size:12px; font-weight:700; cursor:pointer;">Mulai Tahap</button>
+                        @elseif($tahap->status === 'sedang')
+                        <form method="POST" action="{{ route('projects.tahap.selesai', $tahap) }}" style="display:inline;">
+                            @csrf
+                            <button type="submit" style="background:#334155; color:#e2e8f0; padding:6px 14px; border-radius:6px; border:none; font-size:12px; font-weight:600; cursor:pointer;">Tandai Selesai</button>
+                        </form>
+                        @endif
+                    </div>
+                </div>
+
+                @if($tahap->pic->isNotEmpty())
+                <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">
+                    PIC: {{ $tahap->pic->map(fn($p) => $p->user->name . ' (' . $p->peran_label . ')')->join(', ') }}
+                </div>
+                @endif
+
+                @if($tahap->tanggal_mulai_aktual)
+                <div style="font-size:11px; color:#64748b; margin-top:4px;">
+                    Mulai: {{ $tahap->tanggal_mulai_aktual->format('d/m/Y') }}
+                    @if($tahap->tanggal_selesai_aktual) — Selesai: {{ $tahap->tanggal_selesai_aktual->format('d/m/Y') }} @endif
+                </div>
+                @endif
+
+                @if($tahap->status === 'belum')
+                <div id="mulaiTahap{{ $tahap->id }}" style="display:none; margin-top:10px; border-top:1px solid #263349; padding-top:10px;">
+                    <form method="POST" action="{{ route('projects.tahap.mulai', $tahap) }}">
+                        @csrf
+                        <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:3px;">Qty / Luas (opsional)</label>
+                        <input type="number" step="0.01" name="qty" style="width:100%; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:8px; color:#f1f5f9; margin-bottom:8px;">
+
+                        <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:3px;">Satuan (opsional)</label>
+                        <input type="text" name="satuan" placeholder="m2" style="width:100%; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:8px; color:#f1f5f9; margin-bottom:8px;">
+
+                        <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:3px;">Target Selesai (opsional)</label>
+                        <input type="date" name="tanggal_selesai_target" style="width:100%; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:8px; color:#f1f5f9; margin-bottom:8px;">
+
+                        <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:3px;">PIC (pilih manual, minimal 1)</label>
+                        @foreach($karyawan as $k)
+                        <div style="display:flex; align-items:center; gap:6px; padding:4px 0;">
+                            <input type="checkbox" name="pic[{{ $loop->index }}][user_id]" value="{{ $k->id }}" id="pic{{ $tahap->id }}_{{ $k->id }}"
+                                onchange="document.getElementById('rp{{ $tahap->id }}_{{ $k->id }}').style.display=this.checked?'inline-block':'none'">
+                            <label for="pic{{ $tahap->id }}_{{ $k->id }}" style="font-size:12px; color:#e2e8f0;">{{ $k->name }}</label>
+                            <select name="pic[{{ $loop->index }}][peran]" id="rp{{ $tahap->id }}_{{ $k->id }}" style="display:none; font-size:11px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#f1f5f9;">
+                                <option value="tukang">Tukang</option>
+                                <option value="kenek">Kenek</option>
+                            </select>
+                        </div>
+                        @endforeach
+
+                        <button type="submit" style="background:#f59e0b; color:#0f172a; padding:8px 14px; border-radius:6px; border:none; font-size:12px; font-weight:700; cursor:pointer; margin-top:10px;">Simpan & Mulai</button>
+                    </form>
+                </div>
+                @endif
+            </div>
+            @endforeach
+        </div>
+        @endif
+    </div>
+
     {{-- TABS --}}
     <div x-data="{ tab: 'tim' }">
         {{-- Tab Nav --}}

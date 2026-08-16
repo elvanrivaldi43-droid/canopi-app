@@ -395,6 +395,10 @@ Route::middleware(['auth', 'level:1,2,3'])->group(function () {
     Route::post('/projects/{project}/tim', [ProjectController::class, 'storeTim'])->name('projects.tim.store');
     Route::delete('/project-tim/{tim}', [ProjectController::class, 'destroyTim'])->name('projects.tim.destroy');
 
+    // Tahap produksi (SWE Fase 1)
+    Route::post('/project-tahap/{projectTahap}/mulai',   [ProjectController::class, 'mulaiTahap'])->name('projects.tahap.mulai');
+    Route::post('/project-tahap/{projectTahap}/selesai', [ProjectController::class, 'selesaiTahap'])->name('projects.tahap.selesai');
+
     // Material aktual (Admin input)
     Route::post('/projects/{project}/material', [ProjectController::class, 'storeMaterial'])->name('projects.material.store');
     Route::delete('/project-material/{material}', [ProjectController::class, 'destroyMaterial'])->name('projects.material.destroy');
@@ -418,6 +422,22 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/produktivitas/simpan',[\App\Http\Controllers\ProduktivitasController::class, 'simpan']);
     Route::get('/addon', [\App\Http\Controllers\AddonController::class, 'index']);
     Route::post('/addon/simpan', [\App\Http\Controllers\AddonController::class, 'simpan']);
+});
+
+// ================================================================
+// TAHAP PRODUKSI (SWE Fase 1 — owner)
+// ================================================================
+Route::middleware(['auth', 'level:1'])->group(function () {
+    Route::get('/tahap-master',        [\App\Http\Controllers\TahapMasterController::class, 'index'])->name('tahap-master.index');
+    Route::post('/tahap-master/simpan',[\App\Http\Controllers\TahapMasterController::class, 'simpan'])->name('tahap-master.simpan');
+
+    Route::get('/template-tahap',                     [\App\Http\Controllers\TemplateTahapController::class, 'index'])->name('template-tahap.index');
+    Route::get('/template-tahap/create',               [\App\Http\Controllers\TemplateTahapController::class, 'create'])->name('template-tahap.create');
+    Route::post('/template-tahap',                      [\App\Http\Controllers\TemplateTahapController::class, 'store'])->name('template-tahap.store');
+    Route::get('/template-tahap/{templateTahap}/edit',  [\App\Http\Controllers\TemplateTahapController::class, 'edit'])->name('template-tahap.edit');
+    Route::put('/template-tahap/{templateTahap}',       [\App\Http\Controllers\TemplateTahapController::class, 'update'])->name('template-tahap.update');
+    Route::delete('/template-tahap/{templateTahap}',    [\App\Http\Controllers\TemplateTahapController::class, 'destroy'])->name('template-tahap.destroy');
+    Route::patch('/template-tahap/{templateTahap}/toggle', [\App\Http\Controllers\TemplateTahapController::class, 'toggleAktif'])->name('template-tahap.toggle');
 });
 
 // ================================================================
