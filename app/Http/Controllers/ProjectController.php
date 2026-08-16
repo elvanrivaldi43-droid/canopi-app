@@ -10,6 +10,8 @@ use App\Models\RabItem;
 use App\Models\RateKondisi;
 use App\Models\MasterMaterial;
 use App\Models\PipelineLead;
+use App\Models\ProjectTahap;
+use App\Models\ProjectTahapPic;
 use App\Models\User;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
@@ -134,7 +136,8 @@ class ProjectController extends Controller
             'tim.user',
             'rabItems',
             'materialAktual',
-            'pembayaran'
+            'pembayaran',
+            'tahap.pic.user',
         ]);
 
         $rateKondisi   = RateKondisi::aktif()->get();
@@ -238,6 +241,63 @@ class ProjectController extends Controller
     {
         $tim->delete();
         return back()->with('success', 'Anggota tim dihapus.');
+    }
+
+    // ============================================================
+    // SWE FASE 1 — MULAI TAHAP (PIC dipilih MANUAL, tanpa rekomendasi skill —
+    // itu Fase 2)
+    // ============================================================
+    public function mulaiTahap(Request $request, ProjectTahap $projectTahap)
+    {
+        // Checkbox PIC yang tidak dicentang tetap mengirim <select name="pic[i][peran]">
+        // pasangannya (tanpa user_id) → indeks desync dari pic[i][user_id]. Buang baris
+        // yang tidak punya user_id SEBELUM validasi, biar baris valid tidak ikut ditolak.
+        $picBersih = collect($request->input('pic', []))
+            ->filter(fn ($row) => !empty($row['user_id']))
+            ->values()
+            ->all();
+        $request->merge(['pic' => $picBersih]);
+
+        $request->validate([
+            'qty'                    => 'nullable|numeric|min:0',
+            'satuan'                 => 'nullable|string|max:50',
+            'tanggal_selesai_target' => 'nullable|date',
+            'pic'                    => 'required|array|min:1',
+            'pic.*.user_id'          => 'required|integer|exists:users,id',
+            'pic.*.peran'            => 'required|in:tukang,kenek',
+        ]);
+
+        $projectTahap->update([
+            'qty'                    => $request->qty,
+            'satuan'                 => $request->satuan,
+            'tanggal_selesai_target' => $request->tanggal_selesai_target,
+            'tanggal_mulai_aktual'   => now()->toDateString(),
+            'status'                 => 'sedang',
+        ]);
+
+        foreach ($request->pic as $picRow) {
+            ProjectTahapPic::create([
+                'project_tahap_id' => $projectTahap->id,
+                'user_id'          => $picRow['user_id'],
+                'peran'            => $picRow['peran'],
+                'ditambahkan_oleh' => Auth::id(),
+            ]);
+        }
+
+        return back()->with('success', 'Tahap "' . $projectTahap->nama_tahap . '" dimulai.');
+    }
+
+    // ============================================================
+    // SWE FASE 1 — TANDAI SELESAI
+    // ============================================================
+    public function selesaiTahap(ProjectTahap $projectTahap)
+    {
+        $projectTahap->update([
+            'status'                 => 'selesai',
+            'tanggal_selesai_aktual' => now()->toDateString(),
+        ]);
+
+        return back()->with('success', 'Tahap "' . $projectTahap->nama_tahap . '" ditandai selesai.');
     }
 
     // ============================================================

@@ -395,6 +395,10 @@ Route::middleware(['auth', 'level:1,2,3'])->group(function () {
     Route::post('/projects/{project}/tim', [ProjectController::class, 'storeTim'])->name('projects.tim.store');
     Route::delete('/project-tim/{tim}', [ProjectController::class, 'destroyTim'])->name('projects.tim.destroy');
 
+    // Tahap produksi (SWE Fase 1)
+    Route::post('/project-tahap/{projectTahap}/mulai',   [ProjectController::class, 'mulaiTahap'])->name('projects.tahap.mulai');
+    Route::post('/project-tahap/{projectTahap}/selesai', [ProjectController::class, 'selesaiTahap'])->name('projects.tahap.selesai');
+
     // Material aktual (Admin input)
     Route::post('/projects/{project}/material', [ProjectController::class, 'storeMaterial'])->name('projects.material.store');
     Route::delete('/project-material/{material}', [ProjectController::class, 'destroyMaterial'])->name('projects.material.destroy');
