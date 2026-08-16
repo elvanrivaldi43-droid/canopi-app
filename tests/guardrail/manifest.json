@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "tests": [
+    {
+      "path": "tests/absensi/test_gate_buka_absen.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/absensi/test_jam_individu.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/absensi/test_pilih_pertanyaan_progress.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/guardrail/test_canopi_check.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/guardrail/test_deploy_verification_gate.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/guardrail/test_manifest.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/guardrail/test_verify_workflow.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/jadwal-libur/test_libur_service.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/keamanan/test_akses_karyawan.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/keamanan/test_akses_payroll_rekap.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/keamanan/test_masa_kerja_kasbon.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/keamanan/test_regresi_minor.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_absen_masuk_izin.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_aktivasi.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_aktivasi_hari_kerja.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_cron_alpha_hari_libur.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_cron_kode_absen.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_kerja_hari_libur.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_kirim_kode_izin.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_kode_absen_atomik.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_kode_read_only.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_koreksi_kerja_hari_libur.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_koreksi_status.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_koreksi_tanggal.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_lembur.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_payroll_kerja_hari_libur.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_route_middleware.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_slip_hari_libur.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_sql_deploy.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/kerja-hari-libur/test_statistik_kerja_hari_libur.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/libur-nasional/test_libur_nasional.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/r2/test_r2_service.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_align_snap.mjs",
+      "runner": "node",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_box_reindex.mjs",
+      "runner": "node",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_box_union.mjs",
+      "runner": "node",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_denah_blok.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_hitung.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_konverter.mjs",
+      "runner": "node",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_ortho_snap.mjs",
+      "runner": "node",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_paduta.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_seed.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_stok.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/rangka/test_stok_material.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/telegram/test_telegram_service.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/telegram/test_webhook_parser.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    }
+  ],
+  "excluded": [
+    {
+      "path": "tests/bootstrap.php",
+      "reason": "Helper/bootstrap manual; bukan executable test standalone.",
+      "manual": true
+    }
+  ]
+}

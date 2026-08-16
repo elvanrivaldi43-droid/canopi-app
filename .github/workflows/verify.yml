@@ -1,0 +1,49 @@
+name: Verify Canopi
+
+on:
+  push:
+    branches:
+      - feature/verification-gate
+      - probe/verification-gate-negative
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verification Guardrail
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, curl
+          coverage: none
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Prepare Laravel directories
+        run: mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install Node dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Ensure guardrail executable
+        run: chmod +x scripts/canopi-check
+
+      - name: Run full deterministic guardrail
+        run: ./scripts/canopi-check --full

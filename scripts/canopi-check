@@ -1,0 +1,464 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Deterministic local verification for CanopiBSD.
+ *
+ * Usage:
+ *   ./scripts/canopi-check --list
+ *   ./scripts/canopi-check --fast
+ *   ./scripts/canopi-check --full
+ */
+
+function canopiRoot(): string
+{
+    return dirname(__DIR__);
+}
+
+/** @return array{exit_code:int,output:string} */
+function canopiRunCommand(array $command, string $cwd, bool $stream = true): array
+{
+    $pipes = [];
+    $process = proc_open(
+        $command,
+        [1 => ['pipe', 'w'], 2 => ['redirect', 1]],
+        $pipes,
+        $cwd
+    );
+
+    if (!is_resource($process)) {
+        $output = 'Gagal memulai command: ' . canopiCommandLabel($command) . "\n";
+        if ($stream) {
+            fwrite(STDERR, $output);
+        }
+        return ['exit_code' => 127, 'output' => $output];
+    }
+
+    $output = (string) stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    $exitCode = proc_close($process);
+
+    if ($stream && $output !== '') {
+        echo $output;
+    }
+
+    return ['exit_code' => $exitCode, 'output' => $output];
+}
+
+function canopiCommandLabel(array $command): string
+{
+    return implode(' ', array_map(
+        static fn (mixed $arg): string => escapeshellarg((string) $arg),
+        $command
+    ));
+}
+
+function canopiForbiddenStagedPath(string $path): ?string
+{
+    $path = str_replace('\\', '/', trim($path));
+
+    if ($path === '.env' || (str_starts_with($path, '.env.') && !str_ends_with($path, '.example'))) {
+        return 'file environment/credential tidak boleh staged';
+    }
+
+    $forbiddenPrefixes = [
+        '.hermes/',
+        '.claude/',
+        'storage/',
+        'bootstrap/cache/',
+        'public/uploads/',
+        'public/upload/',
+        'public/test-artifacts/',
+    ];
+
+    foreach ($forbiddenPrefixes as $prefix) {
+        if (str_starts_with($path, $prefix)) {
+            return "artifact internal tidak boleh staged ({$prefix})";
+        }
+    }
+
+    $basename = strtolower(basename($path));
+    if (in_array($basename, ['id_rsa', 'id_ed25519', 'credentials.json', 'service-account.json'], true)) {
+        return 'file credential/private key tidak boleh staged';
+    }
+
+    return null;
+}
+
+function canopiAddedLineViolation(string $line): ?string
+{
+    if (!str_starts_with($line, '+') || str_starts_with($line, '+++')) {
+        return null;
+    }
+
+    $content = substr($line, 1);
+    $trimmed = ltrim($content);
+    $isComment = str_starts_with($trimmed, '//')
+        || str_starts_with($trimmed, '#')
+        || str_starts_with($trimmed, '*')
+        || str_starts_with($trimmed, '<!--');
+
+    if (!$isComment && preg_match('/\b(?:dd|dump)\s*\(/i', $content) === 1) {
+        return 'temporary debug helper terdeteksi';
+    }
+
+    if (preg_match('/(?:token|password|passwd|secret|api[_-]?key)\s*[:=]\s*["\'][^"\']{8,}["\']/i', $content) === 1) {
+        return 'kemungkinan credential hardcoded terdeteksi';
+    }
+
+    if (preg_match('/-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----/', $content) === 1) {
+        return 'private key terdeteksi';
+    }
+
+    return null;
+}
+
+/** @return array{version:int,tests:array<int,array<string,mixed>>,excluded:array<int,array<string,mixed>>} */
+function canopiLoadManifest(string $root): array
+{
+    $path = $root . '/tests/guardrail/manifest.json';
+    if (!is_file($path)) {
+        throw new RuntimeException('Manifest tidak ditemukan: tests/guardrail/manifest.json');
+    }
+
+    try {
+        $manifest = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $e) {
+        throw new RuntimeException('Manifest JSON tidak valid: ' . $e->getMessage(), 0, $e);
+    }
+
+    if (!is_array($manifest) || !isset($manifest['tests']) || !is_array($manifest['tests'])) {
+        throw new RuntimeException('Struktur manifest tidak valid');
+    }
+
+    return $manifest;
+}
+
+/** @return list<string> */
+function canopiNullSeparatedPaths(array $command, string $root): array
+{
+    $result = canopiRunCommand($command, $root, false);
+    if ($result['exit_code'] !== 0) {
+        throw new RuntimeException('Git inventory gagal: ' . canopiCommandLabel($command) . "\n" . $result['output']);
+    }
+
+    return array_values(array_filter(explode("\0", $result['output']), static fn (string $path): bool => $path !== ''));
+}
+
+function canopiCheckSafety(string $root): bool
+{
+    echo "[safety] staged path + added-line scan\n";
+
+    try {
+        $staged = canopiNullSeparatedPaths(
+            ['git', 'diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z'],
+            $root
+        );
+    } catch (RuntimeException $e) {
+        fwrite(STDERR, "FAIL: {$e->getMessage()}\n");
+        return false;
+    }
+
+    foreach ($staged as $path) {
+        $violation = canopiForbiddenStagedPath($path);
+        if ($violation !== null) {
+            fwrite(STDERR, "FAIL: {$path}: {$violation}\n");
+            return false;
+        }
+    }
+
+    foreach ([
+        ['git', 'diff', '--cached', '--unified=0', '--no-color'],
+        ['git', 'diff', '--unified=0', '--no-color'],
+    ] as $command) {
+        $diff = canopiRunCommand($command, $root, false);
+        if ($diff['exit_code'] !== 0) {
+            fwrite(STDERR, 'FAIL: scan diff gagal: ' . canopiCommandLabel($command) . "\n");
+            return false;
+        }
+
+        foreach (preg_split('/\R/', $diff['output']) ?: [] as $line) {
+            $violation = canopiAddedLineViolation($line);
+            if ($violation !== null) {
+                fwrite(STDERR, "FAIL: {$violation}: {$line}\n");
+                return false;
+            }
+        }
+    }
+
+    echo "PASS: safety scan\n";
+    return true;
+}
+
+/** @return list<string> */
+function canopiChangedPhpFiles(string $root): array
+{
+    $paths = [];
+    foreach ([
+        ['git', 'diff', 'HEAD', '--name-only', '--diff-filter=ACMR', '-z'],
+        ['git', 'ls-files', '--others', '--exclude-standard', '-z'],
+    ] as $command) {
+        foreach (canopiNullSeparatedPaths($command, $root) as $path) {
+            if (str_ends_with($path, '.php') && !str_ends_with($path, '.blade.php') && is_file($root . '/' . $path)) {
+                $paths[$path] = true;
+            }
+        }
+    }
+
+    $hasil = array_keys($paths);
+    sort($hasil);
+    return $hasil;
+}
+
+/** @return list<string> */
+function canopiAllPhpFiles(string $root): array
+{
+    $paths = canopiNullSeparatedPaths(
+        ['git', 'ls-files', '-co', '--exclude-standard', '-z', '--', '*.php'],
+        $root
+    );
+
+    $hasil = [];
+    foreach ($paths as $path) {
+        if (str_ends_with($path, '.blade.php') || !is_file($root . '/' . $path)) {
+            continue;
+        }
+        $hasil[$path] = true;
+    }
+
+    $hasil = array_keys($hasil);
+    sort($hasil);
+    return $hasil;
+}
+
+function canopiLintPhp(array $paths, string $root, string $label): bool
+{
+    echo "[php-lint] {$label}: " . count($paths) . " file\n";
+    foreach ($paths as $path) {
+        $result = canopiRunCommand([PHP_BINARY, '-l', $path], $root, false);
+        if ($result['exit_code'] !== 0) {
+            fwrite(STDERR, "FAIL: syntax {$path}\n{$result['output']}");
+            return false;
+        }
+    }
+    echo "PASS: PHP syntax ({$label})\n";
+    return true;
+}
+
+function canopiRunTests(array $manifest, string $root): bool
+{
+    $tests = $manifest['tests'];
+    usort($tests, static function (array $a, array $b): int {
+        $aGuard = $a['path'] === 'tests/guardrail/test_manifest.php' ? 0 : 1;
+        $bGuard = $b['path'] === 'tests/guardrail/test_manifest.php' ? 0 : 1;
+        return [$aGuard, $a['path']] <=> [$bGuard, $b['path']];
+    });
+
+    echo '[tests] menjalankan ' . count($tests) . " tes manifest\n";
+    foreach ($tests as $index => $entry) {
+        $path = (string) $entry['path'];
+        if (($entry['manual'] ?? false) === true) {
+            fwrite(STDERR, "FAIL: tes otomatis ditandai manual: {$path}\n");
+            return false;
+        }
+        if (($entry['requires_db'] ?? false) === true) {
+            fwrite(STDERR, "FAIL: tes requires_db belum didukung Tahap 1: {$path}\n");
+            return false;
+        }
+
+        $command = $entry['runner'] === 'node' ? ['node', $path] : [PHP_BINARY, $path];
+        printf("  [%d/%d] %s\n", $index + 1, count($tests), $path);
+        $result = canopiRunCommand($command, $root, false);
+        if ($result['exit_code'] !== 0) {
+            fwrite(STDERR, "FAIL: {$path}\n{$result['output']}");
+            return false;
+        }
+    }
+
+    echo "PASS: seluruh tes manifest\n";
+    return true;
+}
+
+function canopiCheckGitDiff(string $root): bool
+{
+    echo "[git] diff whitespace checks\n";
+    foreach ([
+        ['git', 'diff', '--check'],
+        ['git', 'diff', '--cached', '--check'],
+    ] as $command) {
+        $result = canopiRunCommand($command, $root, false);
+        if ($result['exit_code'] !== 0) {
+            fwrite(STDERR, "FAIL: " . canopiCommandLabel($command) . "\n{$result['output']}");
+            return false;
+        }
+    }
+    echo "PASS: git diff checks\n";
+    return true;
+}
+
+function canopiCheckRoutes(string $root): bool
+{
+    echo "[routes] php artisan route:list --json\n";
+    $result = canopiRunCommand([PHP_BINARY, 'artisan', 'route:list', '--json'], $root, false);
+    if ($result['exit_code'] !== 0) {
+        fwrite(STDERR, "FAIL: route load\n{$result['output']}");
+        return false;
+    }
+
+    try {
+        $routes = json_decode($result['output'], true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $e) {
+        fwrite(STDERR, 'FAIL: output route bukan JSON valid: ' . $e->getMessage() . "\n");
+        return false;
+    }
+
+    if (!is_array($routes) || $routes === []) {
+        fwrite(STDERR, "FAIL: route list kosong\n");
+        return false;
+    }
+
+    echo 'PASS: routes loaded (' . count($routes) . ")\n";
+    return true;
+}
+
+function canopiCheckBlade(string $root): bool
+{
+    echo "[blade] compile + syntax\n";
+
+    $viewCache = $root . '/storage/framework/views';
+    if (!is_dir($viewCache) && !mkdir($viewCache, 0700, true) && !is_dir($viewCache)) {
+        fwrite(STDERR, "FAIL: tidak bisa membuat cache path Blade lokal\n");
+        return false;
+    }
+
+    try {
+        require_once $root . '/vendor/autoload.php';
+        $app = require $root . '/bootstrap/app.php';
+        $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+        $kernel->bootstrap();
+        $compiler = $app->make('blade.compiler');
+    } catch (Throwable $e) {
+        fwrite(STDERR, 'FAIL: bootstrap Blade: ' . $e->getMessage() . "\n");
+        return false;
+    }
+
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($root . '/resources/views', FilesystemIterator::SKIP_DOTS)
+    );
+    $files = [];
+    foreach ($iterator as $file) {
+        if ($file->isFile() && str_ends_with($file->getFilename(), '.blade.php')) {
+            $files[] = $file->getPathname();
+        }
+    }
+    sort($files);
+
+    $tempDir = sys_get_temp_dir() . '/canopi-blade-' . getmypid();
+    if (!is_dir($tempDir) && !mkdir($tempDir, 0700, true) && !is_dir($tempDir)) {
+        fwrite(STDERR, "FAIL: tidak bisa membuat temp Blade\n");
+        return false;
+    }
+
+    try {
+        foreach ($files as $index => $path) {
+            try {
+                $compiled = $compiler->compileString((string) file_get_contents($path));
+            } catch (Throwable $e) {
+                fwrite(STDERR, 'FAIL: compile ' . substr($path, strlen($root) + 1) . ': ' . $e->getMessage() . "\n");
+                return false;
+            }
+
+            $temp = $tempDir . '/' . $index . '.php';
+            file_put_contents($temp, $compiled);
+            $lint = canopiRunCommand([PHP_BINARY, '-l', $temp], $root, false);
+            if ($lint['exit_code'] !== 0) {
+                fwrite(STDERR, 'FAIL: Blade syntax ' . substr($path, strlen($root) + 1) . "\n{$lint['output']}");
+                return false;
+            }
+            @unlink($temp);
+        }
+    } finally {
+        foreach (glob($tempDir . '/*') ?: [] as $temp) {
+            @unlink($temp);
+        }
+        @rmdir($tempDir);
+    }
+
+    echo 'PASS: Blade compile (' . count($files) . ")\n";
+    return true;
+}
+
+function canopiPrintList(array $manifest): void
+{
+    echo "CANOPI CHECK\nMODE: list\n";
+    foreach ($manifest['tests'] as $entry) {
+        printf(
+            "[%s][db:%s] %s\n",
+            $entry['runner'],
+            $entry['requires_db'] ? 'yes' : 'no',
+            $entry['path']
+        );
+    }
+    echo 'TOTAL: ' . count($manifest['tests']) . "\n";
+    echo 'EXCLUDED: ' . count($manifest['excluded'] ?? []) . "\n";
+}
+
+function canopiMain(array $argv): int
+{
+    $mode = $argv[1] ?? '--fast';
+    if (!in_array($mode, ['--list', '--fast', '--full'], true)) {
+        fwrite(STDERR, "Usage: ./scripts/canopi-check [--list|--fast|--full]\n");
+        return 2;
+    }
+
+    $root = canopiRoot();
+    try {
+        $manifest = canopiLoadManifest($root);
+    } catch (RuntimeException $e) {
+        fwrite(STDERR, "FAIL: {$e->getMessage()}\n");
+        return 1;
+    }
+
+    if ($mode === '--list') {
+        canopiPrintList($manifest);
+        return 0;
+    }
+
+    echo "CANOPI CHECK\nMODE: " . substr($mode, 2) . "\n";
+
+    if (!canopiCheckSafety($root)) {
+        return 1;
+    }
+
+    try {
+        $phpFiles = $mode === '--full' ? canopiAllPhpFiles($root) : canopiChangedPhpFiles($root);
+    } catch (RuntimeException $e) {
+        fwrite(STDERR, "FAIL: {$e->getMessage()}\n");
+        return 1;
+    }
+
+    if (!canopiLintPhp($phpFiles, $root, $mode === '--full' ? 'all' : 'changed')) {
+        return 1;
+    }
+    if (!canopiRunTests($manifest, $root)) {
+        return 1;
+    }
+    if (!canopiCheckGitDiff($root)) {
+        return 1;
+    }
+
+    if ($mode === '--full') {
+        if (!canopiCheckRoutes($root) || !canopiCheckBlade($root)) {
+            return 1;
+        }
+    }
+
+    echo "PASS: canopi-check " . substr($mode, 2) . " selesai\n";
+    return 0;
+}
+
+if (!defined('CANOPI_CHECK_LIBRARY_MODE')) {
+    exit(canopiMain($argv));
+}
