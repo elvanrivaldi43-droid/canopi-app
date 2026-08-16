@@ -225,17 +225,7 @@ class RabController extends Controller
             $namaCustomer = $lead->nama_customer ?? $request->nama_penandatangan ?? 'Customer';
             $noHp         = $lead->no_hp ?? '';
             $alamat       = $lead->alamat ?? '';
-            $namaProduk   = match($rab->produk_kode) {
-                'KANOPI_STD'     => 'Kanopi Standar',
-                'KANOPI_DINDING' => 'Kanopi + Dinding',
-                'MEZZANINE'      => 'Mezzanine',
-                'PAGAR'          => 'Pagar',
-                'TRALIS'         => 'Tralis',
-                'TENDA_MEMBRANE' => 'Tenda Membrane',
-                'AWNING'         => 'Awning',
-                'CARPORT'        => 'Carport',
-                default          => $rab->produk_kode,
-            };
+            $namaProduk   = \App\Models\Project::$jenisProjectOptions[$rab->produk_kode] ?? $rab->produk_kode;
 
             try {
                 // Cek kolom apa saja yang ada di tabel projects
