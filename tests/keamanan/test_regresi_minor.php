@@ -217,8 +217,11 @@ $check('ProfilController: komentar statistik menyebut hari kerja biasa/normal',
 // ═══════════════════════════════════════════════════════════
 foreach (glob($base . '/docs/sql/*.sql') as $f) {
     $isi = strtoupper((string) preg_replace('/--[^\n]*/', '', (string) file_get_contents($f)));
+    // Lookbehind mengecualikan "ON DELETE"/"ON UPDATE" — itu klausa FK constraint
+    // (DDL, mis. "ON DELETE CASCADE"), bukan perintah UPDATE/DELETE yang menyentuh
+    // data. $isi sudah di-uppercase di atas, jadi lookbehind-nya "ON " literal.
     $check('SQL `' . basename($f) . '` tidak mengandung UPDATE/DELETE data',
-        (bool) preg_match('/\b(UPDATE|DELETE|TRUNCATE)\b/', $isi), false);
+        (bool) preg_match('/\b(?<!ON )(UPDATE|DELETE|TRUNCATE)\b/', $isi), false);
 }
 
 echo $fail ? "\n=== ADA YANG GAGAL ===\n" : "\n=== SEMUA TES LULUS ===\n";
