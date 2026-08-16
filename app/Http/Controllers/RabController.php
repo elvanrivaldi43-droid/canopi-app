@@ -250,6 +250,11 @@ class RabController extends Controller
                 // Update rab_header dengan project_id yang baru terbuat
                 if ($project) {
                     $rab->update(['project_id' => $project->id]);
+
+                    // SWE Fase 1: auto-generate tahap produksi dari template yang cocok
+                    // jenis_project-nya. Tidak ketemu template -> tidak apa-apa, project
+                    // tetap kebuat, Supervisor bisa tambah tahap manual belakangan.
+                    app(\App\Services\TahapProduksiService::class)->generateUntukProject($project);
                 }
 
             } catch (\Exception $e) {
