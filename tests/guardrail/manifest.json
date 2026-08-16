@@ -260,6 +260,18 @@
       "manual": false
     },
     {
+      "path": "tests/swe/test_jenis_project_options.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/swe/test_tahap_produksi_service.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/telegram/test_telegram_service.php",
       "runner": "php",
       "requires_db": false,
