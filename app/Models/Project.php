@@ -38,6 +38,20 @@ class Project extends Model
         'menunggu_dp' => '#fbbf24',
     ];
 
+    // Peta produk_kode RAB -> jenis_project. SATU-SATUNYA sumber; RabController::approve()
+    // dan TemplateTahapController pakai daftar yang SAMA ini, biar nama jenis_project di
+    // template_tahap selalu bisa dicocokkan persis ke project yang baru dibuat.
+    public static $jenisProjectOptions = [
+        'KANOPI_STD'     => 'Kanopi Standar',
+        'KANOPI_DINDING' => 'Kanopi + Dinding',
+        'MEZZANINE'      => 'Mezzanine',
+        'PAGAR'          => 'Pagar',
+        'TRALIS'         => 'Tralis',
+        'TENDA_MEMBRANE' => 'Tenda Membrane',
+        'AWNING'         => 'Awning',
+        'CARPORT'        => 'Carport',
+    ];
+
     // Relationships
     public function lead()
     {
@@ -67,6 +81,10 @@ class Project extends Model
     public function pembayaran()
     {
         return $this->hasMany(PembayaranProject::class, 'id_project');
+    }
+    public function tahap()
+    {
+        return $this->hasMany(ProjectTahap::class, 'project_id')->orderBy('urutan');
     }
 
     // Computed attributes
