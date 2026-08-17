@@ -193,8 +193,9 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 - Repo GitHub = sumber deploy production; auto-deploy FTP dari `main` normal.
 - Telegram karyawan + kode absen per-karyawan **LIVE**. Kode bersifat atomik,
   personal, tidak terkirim ganda, dan tidak berlaku setelah ada
-  sakit/izin/cuti/dinas luar. Cron eksternal melalui cron-job.org; dampak praktis
-  403 jam bulat sudah tidak muncul, tetapi akar WAF hosting belum terkonfirmasi.
+  sakit/izin/cuti/dinas luar. **Penjadwal pindah dari cron-job.org ke crontab
+  VPS per 17 Agustus 2026** (log permanen di `/root/cron-logs/`, bukan lagi
+  retensi 1 hari) — detail di memory `cron-scheduling-vps`.
 - Jadwal libur per-karyawan, jam masuk/pulang per-karyawan, validasi silang
   izin↔libur, libur nasional, serta checkpoint Lapor Progress/Kembali Kerja
   **LIVE**.
