@@ -310,6 +310,10 @@ class DenahEditor {
 .de-tool.on{background:#1e293b;color:#fff}
 .de-mini{padding:9px 13px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:12px;cursor:pointer}
 .de-hint{font-size:12px;color:#64748b;margin:6px 2px;min-height:16px}
+.de-sup-axis{align-items:flex-end;gap:8px}
+.de-sup-axname{font-size:12px;font-weight:600;color:#334155;min-width:66px;padding-bottom:7px}
+.de-sup-axis>label{flex:0 1 auto}
+.de-sup-cm{font-size:12px;font-weight:700;color:#0369a1;padding-bottom:7px;white-space:nowrap}
 .de-ribbon{position:sticky;top:0;z-index:15;margin-bottom:10px}
 .de-ribbon-tabs{display:flex;border:1px solid #334155;border-radius:8px;overflow:hidden;background:#1e293b}
 .de-ribbon-tab{flex:1;text-align:center;padding:11px 4px;min-height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:12px;color:#cbd5e1;cursor:pointer;user-select:none;border-right:1px solid #334155}
@@ -377,17 +381,19 @@ class DenahEditor {
         <span class="de-mini" data-role="btnSaran">Pakai saran</span>
         <span class="de-hint" data-role="saranHint"></span>
       </div>
-      <div class="de-row" data-role="rowSupH" style="margin-top:8px">
-        <span style="font-size:12px;color:#334155;min-width:64px">Horizontal</span>
+      <div class="de-row de-sup-axis" data-role="rowSupH" style="margin-top:10px">
+        <span class="de-sup-axname">Horizontal</span>
         <label>Mode<select data-role="modeH"><option value="cm">cm per kotak</option><option value="kolom">jumlah kolom</option></select></label>
         <label data-role="lblKotakH">Kotak (cm)<input type="number" data-role="inKotakH" step="5" min="1"></label>
-        <label data-role="lblKolomH" style="display:none">Jumlah kolom<input type="number" data-role="inKolomH" step="1" min="1"></label>
+        <label data-role="lblKolomH" style="display:none">Jumlah kolom<input type="number" data-role="inKolomH" step="1" min="1" max="200"></label>
+        <span class="de-sup-cm" data-role="hintH"></span>
       </div>
-      <div class="de-row" data-role="rowSupV" style="margin-top:6px">
-        <span style="font-size:12px;color:#334155;min-width:64px">Vertikal</span>
+      <div class="de-row de-sup-axis" data-role="rowSupV" style="margin-top:8px">
+        <span class="de-sup-axname">Vertikal</span>
         <label>Mode<select data-role="modeV"><option value="cm">cm per kotak</option><option value="kolom">jumlah kolom</option></select></label>
         <label data-role="lblKotakV">Kotak (cm)<input type="number" data-role="inKotakV" step="5" min="1"></label>
-        <label data-role="lblKolomV" style="display:none">Jumlah kolom<input type="number" data-role="inKolomV" step="1" min="1"></label>
+        <label data-role="lblKolomV" style="display:none">Jumlah kolom<input type="number" data-role="inKolomV" step="1" min="1" max="200"></label>
+        <span class="de-sup-cm" data-role="hintV"></span>
       </div>
       <div class="de-row" style="margin-top:8px">
         <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
@@ -495,8 +501,8 @@ class DenahEditor {
     this._q('[data-role=modeV]').onchange = e => { this.S.modeV = e.target.value; this._syncSupportRows(); this.render(); };
     this._q('[data-role=inKotakH]').oninput = e => { this.S.modeH = 'cm'; this.S.kotakH = Math.max(1, +e.target.value) || this.S.kotakH; this.render(); };
     this._q('[data-role=inKotakV]').oninput = e => { this.S.modeV = 'cm'; this.S.kotakV = Math.max(1, +e.target.value) || this.S.kotakV; this.render(); };
-    this._q('[data-role=inKolomH]').oninput = e => { this.S.modeH = 'kolom'; this.S.kolomH = Math.min(200, Math.max(1, Math.floor(+e.target.value))) || this.S.kolomH; this.render(); };
-    this._q('[data-role=inKolomV]').oninput = e => { this.S.modeV = 'kolom'; this.S.kolomV = Math.min(200, Math.max(1, Math.floor(+e.target.value))) || this.S.kolomV; this.render(); };
+    this._q('[data-role=inKolomH]').oninput = e => { this.S.modeH = 'kolom'; this.S.kolomH = Math.min(200, Math.max(1, Math.floor(+e.target.value))) || this.S.kolomH; this._syncSupportRows(); this.render(); };
+    this._q('[data-role=inKolomV]').oninput = e => { this.S.modeV = 'kolom'; this.S.kolomV = Math.min(200, Math.max(1, Math.floor(+e.target.value))) || this.S.kolomV; this._syncSupportRows(); this.render(); };
     this._q('[data-role=inGrid]').onchange = e => { this.S.grid = +e.target.value; this.render(); };
     this._q('[data-role=inT]').oninput = e => { this.S.tinggi = +e.target.value || 300; this.render(); };
     this._q('[data-role=inL]').oninput = () => this.updSaranHint();
@@ -823,6 +829,12 @@ class DenahEditor {
     this._q('[data-role=lblKolomH]').style.display = modeH === 'kolom' ? '' : 'none';
     this._q('[data-role=lblKotakV]').style.display = modeV === 'cm' ? '' : 'none';
     this._q('[data-role=lblKolomV]').style.display = modeV === 'kolom' ? '' : 'none';
+    // Mode 'kolom': tampilkan hasil bagi rata (cm per kotak) di sebelah input jumlah kolom.
+    //  H bagi span Y (Panjang), V bagi span X (Lebar) -- konvensi sama dgn applySaran/updSaranHint.
+    const bb = DenahConv._bbox(this.S.verts);
+    const fmtCm = (span, kolom) => (span > 0 && kolom >= 1) ? `= ${Math.round(span / kolom * 10) / 10} cm/kotak` : '';
+    this._q('[data-role=hintH]').textContent = modeH === 'kolom' ? fmtCm(bb.y1 - bb.y0, this.S.kolomH) : '';
+    this._q('[data-role=hintV]').textContent = modeV === 'kolom' ? fmtCm(bb.x1 - bb.x0, this.S.kolomV) : '';
   }
 
   // ---- Saran spacing per-sumbu (Spacing Per-Sumbu, 21 Ags) ----
