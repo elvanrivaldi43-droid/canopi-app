@@ -307,11 +307,6 @@
       "path": "tests/bootstrap.php",
       "reason": "Helper/bootstrap manual; bukan executable test standalone.",
       "manual": true
-    },
-    {
-      "path": "tests/rangka/preview_server.php",
-      "reason": "Local preview helper for DenahEditor development — not a test",
-      "manual": true
     }
   ]
 }
