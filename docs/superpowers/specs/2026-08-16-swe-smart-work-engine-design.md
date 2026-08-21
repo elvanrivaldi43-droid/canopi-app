@@ -97,12 +97,16 @@ Skill karyawan pakai daftar `rab_skill` yang **sudah ada** (dipakai juga untuk t
 RAB di-approve → status "deal" → `Project::create()` (kode existing, tidak berubah) → **ditempelin langsung sesudahnya**: cocokkan `jenis_project` project baru ke `template_tahap.jenis_project` yang sama → generate baris `project_tahap` dari `template_tahap_item`-nya (status semua `'belum'`). Tidak ketemu template yang cocok → project tetap kebuat, tanpa tahap otomatis (Supervisor bisa tambah manual dari `tahap_master` belakangan).
 
 **B. Jalankan 1 tahap**
-Supervisor buka project → pilih tahap → tombol **"Cari PIC"** → input manual: qty/luas kerjaan + target selesai berapa hari → sistem hitung saran jumlah orang:
+Supervisor buka project → pilih tahap → panel **"Mulai Tahap"** yang sudah ada dari Fase 1 (`resources/views/projects/show.blade.php:184-212`) diisi qty + target selesai (field yang SUDAH ADA, bukan field baru) → klik tombol **"Hitung Saran"** (ditaruh persis di bawah field "Target Selesai", sebelum daftar checklist PIC) → AJAX (pola sama `/rab-blok/hitung`, read-only, tanpa reload halaman) hitung saran jumlah orang:
+- `target_hari = tanggal_selesai_target − hari ini` (kalau target kosong, saran jumlah orang tidak dihitung — cuma badge skill cocok/tidak yang tetap tampil)
 - `hari_estimasi_default = qty / rab_jenis_kerja.produktivitas_per_hari` (atau `produktivitas_inst`, sesuai `tahap_master.tipe`)
-- `multiplier = hari_estimasi_default / target_hari_diminta`
+- `multiplier = hari_estimasi_default / target_hari`
 - `jumlah_tukang_disarankan = ceil(jml_tukang(_inst) × multiplier)`, sama untuk kenek (minimal 1 kalau hasil 0)
+- Hasil ditampilkan sebagai baris teks "Disarankan: X tukang, Y kenek" di atas checklist — checklist & form submit `mulaiTahap()` (`ProjectController.php:250`) **tidak berubah sama sekali**, cuma diperkaya tampilannya.
 
-Daftar kandidat PIC ditampilkan: karyawan dengan `user_skill` cocok ke skill dari `rab_jenis_kerja.skill_default`, DAN belum terpakai di `project_tahap_pic` lain yang tanggalnya bentrok. **Catatan teknis:** `skill_default` sekarang kolom teks bebas (diisi manual di halaman Kelola Produktivitas, bukan relasi ke `rab_skill.id`) — Fase 2 perlu cocokkan by nama (case-insensitive) atau ketatkan jadi dropdown/FK ke `rab_skill` saat itu, biar typo gak bikin rekomendasi PIC salah/kosong. Yang skill tidak cocok tetap tampil (ditandai), tetap bisa dipilih manual. Supervisor centang siapa saja yang turun → simpan ke `project_tahap_pic`, tahap otomatis jadi `'sedang'`, `tanggal_mulai_aktual` = hari itu.
+`rab_jenis_kerja.skill_default` diubah dari teks bebas jadi **dropdown pilih dari `rab_skill`** (halaman Kelola Produktivitas yang sudah ada) — data lama yang belum cocok bukan dianggap error, cuma rekomendasinya kosong sampai Owner buka & simpan ulang pakai dropdown baru.
+
+Kandidat PIC di checklist ditandai badge ✅ (skill di `user_skill` cocok ke `rab_jenis_kerja.skill_default` DAN status di `project_tahap_pic` lain BUKAN `'sedang'` — cek status, bukan overlap tanggal, karena `tanggal_selesai_target` sering kosong di Fase 1 jadi gak bisa diandalkan) atau 🔴 (skill tidak cocok, atau lagi sibuk di tahap lain). Urutan tampilan: cocok & kosong dulu, lalu cocok tapi sibuk, lalu tidak cocok paling bawah. Yang tidak cocok tetap tampil & tetap bisa dicentang manual (saran, bukan gembok). Supervisor centang siapa saja yang turun → simpan ke `project_tahap_pic`, tahap otomatis jadi `'sedang'`, `tanggal_mulai_aktual` = hari itu.
 
 **C. Selesaikan tahap**
 Tombol **"Tandai Selesai"** → `tanggal_selesai_aktual` = hari itu, status `'selesai'`. Ini memicu Bagian E (evaluasi produktivitas) kalau sample sudah cukup.
@@ -137,6 +141,8 @@ Di halaman yang sama, daftar **karyawan nganggur** (aktif, tidak punya `project_
 - **Alur pengajuan formal untuk pengurangan karyawan** — cuma flag/laporan, keputusan PHK/rotasi 100% di luar sistem.
 - **Checklist "Tahap Perlindungan Lapangan"** (roadmap #3, rantai WF→scaffolding+takel) — fitur beda, belum digarap, tidak digabung ke SWE.
 - **Backfill data project lama** — tidak ada, karena belum ada project nyata (masih dummy).
+
+**Batas scope Fase 2 khusus** (disetujui Elvan 21 Agustus 2026): Fase 2 cuma mengerjakan `rab_skill.default_role`, tabel `user_skill`, checklist skill di halaman Karyawan, dropdown `rab_jenis_kerja.skill_default`, dan tombol+endpoint "Hitung Saran" di panel Mulai Tahap. TIDAK termasuk dashboard `/kapasitas-tim`, notif Telegram defisit skill, maupun `evaluasi_produktivitas` — itu Fase 3 dan Fase 4, dikerjakan terpisah setelah Fase 2 selesai & diuji.
 
 ---
 
