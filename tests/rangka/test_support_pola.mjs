@@ -60,5 +60,31 @@ check('frame/tiang tercampur -> tidak pengaruhi nomor manual',
 check('tidak ada support manual -> object kosong',
   DenahConv.numberSupportsManual([{ id: 'Sh_0_0', jenis: 'support' }]), {});
 
+// ── snapPromotedSupport ────────────────────────────────────
+// Grid support horizontal (Sh_, a.y===b.y) "naik kelas" jadi manual saat dilepas: X datang dari
+// scanX (perpotongan polygon presisi) dan HARUS dipertahankan persis -- snap grid di situ
+// menggeser support sepanjang badannya sendiri (ubah panjang, bisa lepas dari tepi frame).
+// Cuma Y (sumbu bebas, sama axis lock dgn lockSupportAxis) yang boleh di-snap ke grid.
+const promA = { x: 53.4, y: 97.2 }, promB = { x: 247.9, y: 97.2 };
+check('Sh_ naik kelas -> X TIDAK berubah (persis), Y di-snap ke grid 20',
+  DenahConv.snapPromotedSupport('Sh_1_0', promA, promB, 20),
+  { a: { x: 53.4, y: 100 }, b: { x: 247.9, y: 100 } });
+
+// Grid support vertikal (Sv_, a.x===b.x) -> Y (sumbu terkunci, dari scanY) dipertahankan persis,
+// X (sumbu bebas) di-snap ke grid.
+const promC = { x: 148.6, y: 22.3 }, promD = { x: 148.6, y: 218.7 };
+check('Sv_ naik kelas -> Y TIDAK berubah (persis), X di-snap ke grid 20',
+  DenahConv.snapPromotedSupport('Sv_0_1', promC, promD, 20),
+  { a: { x: 140, y: 22.3 }, b: { x: 140, y: 218.7 } });
+
+// Kedua ujung sumbu terkunci HARUS tetap SAMA satu sama lain setelah snap (bukan cuma "dekat") --
+// itu yang menjaga support horizontal/vertikal tetap benar-benar horizontal/vertikal.
+const snappedH = DenahConv.snapPromotedSupport('Sh_2_0', promA, promB, 20);
+check('Sh_ naik kelas -> kedua ujung Y (sumbu bebas) tetap sama persis satu sama lain',
+  snappedH.a.y === snappedH.b.y, true);
+const snappedV = DenahConv.snapPromotedSupport('Sv_2_0', promC, promD, 20);
+check('Sv_ naik kelas -> kedua ujung X (sumbu bebas) tetap sama persis satu sama lain',
+  snappedV.a.x === snappedV.b.x, true);
+
 if (fail) { console.log('\n=== ADA YANG GAGAL ==='); process.exit(1); }
 console.log('\n=== SEMUA TES LULUS ===');

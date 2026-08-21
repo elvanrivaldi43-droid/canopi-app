@@ -127,6 +127,18 @@ const DenahConv = {
       b: { x: startB.x + ddx, y: startB.y + ddy },
     };
   },
+  // Snap posisi akhir saat grid support "naik kelas" jadi manual (dipanggil dari end()). HANYA
+  // snap sumbu yang BOLEH bergerak (sama axis lock dgn lockSupportAxis) -- sumbu terkunci (mis. X
+  // untuk support horizontal) datang dari scanX/scanY (perpotongan polygon presisi, BUKAN
+  // kelipatan grid), snap di situ menggeser support sepanjang badannya sendiri (ubah panjang,
+  // bisa lepas dari tepi frame) -- itu bug harga nyata, bukan kosmetik.
+  snapPromotedSupport(id, a, b, grid) {
+    const horiz = id.startsWith('Sh_');
+    const snap = v => Math.round(v / grid) * grid;
+    return horiz
+      ? { a: { x: a.x, y: snap(a.y) }, b: { x: b.x, y: snap(b.y) } }
+      : { a: { x: snap(a.x), y: a.y }, b: { x: snap(b.x), y: b.y } };
+  },
   // Nomor S{n} KHUSUS support manual (id "Sm_..."), independen dari support grid otomatis.
   // SATU sumber angka dipakai render() (label kanvas), openMatMenu() (label menu Ganti Material),
   // dan renderSupportPanel() (panel daftar) — jangan hitung ulang beda-beda di tiap tempat, itu
@@ -394,7 +406,6 @@ class DenahEditor {
   <span class="de-mini" data-role="tiangMenuCancel">Batal</span>
 </div>
 <div class="de-supportmenu" data-role="supportMenu">
-  <span class="de-mini" data-role="supportMenuSertakan">Sertakan</span>
   <span class="de-mini" data-role="supportMenuKecualikan">Kecualikan</span>
   <span class="de-mini" data-role="supportMenuGanti">Ganti Material</span>
   <span class="de-mini" data-role="supportMenuHapus">Hapus</span>
@@ -481,10 +492,11 @@ class DenahEditor {
     this._q('[data-role=tiangMenuCancel]').onclick = () => this._closeTiangMenu();
 
     // Tombol menu Support — Hapus HANYA berlaku untuk manual (Sm_), grid tidak punya "Hapus"
-    // (cuma Sertakan/Kecualikan). Ganti Material reuse openMatMenu() yang sudah generic per-prefix.
-    this._q('[data-role=supportMenuSertakan]').onclick = () => {
-      if (this._supportMenuId) { this.pushUndo(); this.S.removed[this._supportMenuId] = false; this._closeSupportMenu(); this.render(); }
-    };
+    // (cuma Kecualikan). "Sertakan" DIHAPUS (finding review): support grid yang sudah dikecualikan
+    // tak lagi punya garis/hit-target tergambar (buildMembers.addSeg skip id yg ada di S.removed),
+    // jadi tombol itu TAK PERNAH bisa dijangkau tekan-tahan -- dead UI. Satu-satunya jalan balik dari
+    // "Kecualikan" yang salah pencet adalah Undo (limitation lama, bukan regresi baru).
+    // Ganti Material reuse openMatMenu() yang sudah generic per-prefix.
     this._q('[data-role=supportMenuKecualikan]').onclick = () => {
       if (this._supportMenuId) { this.pushUndo(); this.S.removed[this._supportMenuId] = true; this._closeSupportMenu(); this.render(); }
     };
@@ -495,7 +507,7 @@ class DenahEditor {
       if (this._supportMenuId && this._supportMenuId.startsWith('Sm_')) {
         this.pushUndo();
         const i = +this._supportMenuId.slice(3);
-        this.S.supportsManual.splice(i, 1);
+        this._spliceSupportManual(i);
         this._closeSupportMenu();
         this.render();
       }
@@ -999,7 +1011,7 @@ class DenahEditor {
       btn.onclick = () => {
         const i = +btn.dataset.i;
         this.pushUndo();
-        this.S.supportsManual.splice(i, 1);
+        this._spliceSupportManual(i);
         this.render();
       };
     });
@@ -1147,15 +1159,13 @@ class DenahEditor {
     this._tiangAddPt = null;
   }
 
-  // Menu tekan-tahan Support — SATU popup dipakai 2 konteks: grid otomatis (Sertakan/Kecualikan
-  // toggle + Ganti Material) dan manual/titik-ujungnya (Hapus + Ganti Material) — saling
-  // eksklusif, tombol tak relevan disembunyikan. Pola identik openTiangMenu di atas.
+  // Menu tekan-tahan Support — SATU popup dipakai 2 konteks: grid otomatis (Kecualikan + Ganti
+  // Material) dan manual/titik-ujungnya (Hapus + Ganti Material) — saling eksklusif, tombol tak
+  // relevan disembunyikan. Pola identik openTiangMenu di atas.
   openSupportMenu(evt, id) {
     this._supportMenuId = id;
     const isGrid = id.startsWith('Sh_') || id.startsWith('Sv_');
-    const excluded = !!this.S.removed[id];
-    this._q('[data-role=supportMenuSertakan]').style.display = (isGrid && excluded) ? '' : 'none';
-    this._q('[data-role=supportMenuKecualikan]').style.display = (isGrid && !excluded) ? '' : 'none';
+    this._q('[data-role=supportMenuKecualikan]').style.display = isGrid ? '' : 'none';
     this._q('[data-role=supportMenuHapus]').style.display = isGrid ? 'none' : '';
     this._showSupportMenuAt(evt);
   }
@@ -1173,6 +1183,21 @@ class DenahEditor {
   _closeSupportMenu() {
     this._q('[data-role=supportMenu]').classList.remove('show');
     this._supportMenuId = null;
+  }
+  // Hapus 1 entri supportsManual DAN remap key matOverride yang bergeser -- splice tanpa ini
+  // bikin override "Sm_{j}" utk j>i diam-diam nempel ke support LAIN (yang geser turun 1 index
+  // ke slot itu), salah material terbawa ke perhitungan biaya. SATU titik dipakai kedua tombol
+  // Hapus (panel & menu tekan-tahan) biar tak ada jalur kedua yang lupa remap ini.
+  _spliceSupportManual(i) {
+    this.S.supportsManual.splice(i, 1);
+    const mo = this.S.matOverride, out = {};
+    Object.keys(mo).forEach(k => {
+      if (!k.startsWith('Sm_')) { out[k] = mo[k]; return; }
+      const j = +k.slice(3);
+      if (j === i) return;
+      out[j > i ? 'Sm_' + (j - 1) : k] = mo[k];
+    });
+    this.S.matOverride = out;
   }
 
   // Panel input span/menjorok + Terapkan/Batal — cuma tampil selagi armed === 'addBox'.
@@ -1526,7 +1551,7 @@ class DenahEditor {
           // Support grid otomatis: sekarang BISA digeser (dikunci searah, lihat pointermove tipe
           // "supgrid" & DenahConv.lockSupportAxis) -- begitu dilepas dgn gerakan nyata, "naik
           // kelas" jadi entri supportsManual (lihat end()). Tahan diam 450ms tanpa gerak = menu
-          // Sertakan/Kecualikan + Ganti Material.
+          // Kecualikan + Ganti Material.
           const id = t.dataset.id;
           const mem = DenahConv.buildMembers(this.S);
           const m = mem.find(x => x.id === id);
@@ -1815,8 +1840,7 @@ class DenahEditor {
           // komentar + spec Keputusan #4) -- JANGAN simpan offset nempel ke ID itu. Konversi jadi
           // entri supportsManual sungguhan (ID stabil Sm_i), lalu kecualikan posisi grid asal
           // biar tak dobel tergambar.
-          const a = { x: this.snap(drag.curA.x), y: this.snap(drag.curA.y) };
-          const b = { x: this.snap(drag.curB.x), y: this.snap(drag.curB.y) };
+          const { a, b } = DenahConv.snapPromotedSupport(drag.id, drag.curA, drag.curB, this.S.grid);
           const newIdx = this.S.supportsManual.length;
           this.S.supportsManual.push({ a, b });
           if (this.S.matOverride[drag.id] != null) {
