@@ -242,10 +242,12 @@ class KaryawanController extends Controller
         $kategori = $svc->deteksiKategori($karyawan->jabatan);
         $baris    = $svc->susunUserSkill($karyawan->id, (array) $request->input('skill', []), $kategori, $rabSkill);
 
-        UserSkill::where('user_id', $karyawan->id)->delete();
-        if (!empty($baris)) {
-            UserSkill::insert(array_map(fn ($b) => $b + ['created_at' => now()], $baris));
-        }
+        DB::transaction(function () use ($karyawan, $baris) {
+            UserSkill::where('user_id', $karyawan->id)->delete();
+            if (!empty($baris)) {
+                UserSkill::insert(array_map(fn ($b) => $b + ['created_at' => now()], $baris));
+            }
+        });
 
         return redirect()->route('karyawan.show', $karyawan)
             ->with('success', 'Data karyawan berhasil diperbarui.');
