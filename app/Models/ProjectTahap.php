@@ -35,6 +35,11 @@ class ProjectTahap extends Model
         return $this->belongsTo(Project::class, 'project_id');
     }
 
+    public function tahapMaster()
+    {
+        return $this->belongsTo(TahapMaster::class, 'tahap_master_id');
+    }
+
     public function pic()
     {
         return $this->hasMany(ProjectTahapPic::class, 'project_tahap_id');
