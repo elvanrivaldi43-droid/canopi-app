@@ -288,12 +288,29 @@
       "runner": "node",
       "requires_db": false,
       "manual": false
+    },
+    {
+      "path": "tests/swe/test_rekomendasi_pic_service.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
+      "path": "tests/swe/test_skill_karyawan_service.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
     }
   ],
   "excluded": [
     {
       "path": "tests/bootstrap.php",
       "reason": "Helper/bootstrap manual; bukan executable test standalone.",
+      "manual": true
+    },
+    {
+      "path": "tests/rangka/preview_server.php",
+      "reason": "Local preview helper for DenahEditor development — not a test",
       "manual": true
     }
   ]
