@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
+use App\Services\SkillKaryawanService;
+use App\Models\UserSkill;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -156,7 +159,21 @@ class KaryawanController extends Controller
         $banks     = $this->banks;
         $tunjangan = \App\Models\TunjanganMaster::where('aktif', true)->get();
         $karyawan->load('tunjangan');
-        return view('karyawan.edit', compact('karyawan','levels','tunjangan','banks'));
+
+        $svc          = new SkillKaryawanService();
+        $rabSkill     = DB::table('rab_skill')->where('is_active', true)->orderBy('urutan')->orderBy('nama')->get();
+        $userSkillIds = UserSkill::where('user_id', $karyawan->id)->pluck('rab_skill_id')->all();
+        $kategori     = $svc->deteksiKategori($karyawan->jabatan ?? '');
+
+        // Karyawan yang belum pernah disimpan skill-nya (baru dibuat, atau dibuat
+        // sebelum Fase 2 ada) -> tampilkan PREVIEW skill otomatis kategori dia biar
+        // form pertama kali dibuka sudah kecentang wajar, bukan kosong melompong.
+        // Ini cuma tampilan, belum tersimpan sampai form di-submit.
+        if (empty($userSkillIds)) {
+            $userSkillIds = $svc->skillOtomatisUntukKategori($kategori, $rabSkill);
+        }
+
+        return view('karyawan.edit', compact('karyawan', 'levels', 'tunjangan', 'banks', 'rabSkill', 'userSkillIds', 'kategori'));
     }
 
     public function update(Request $request, User $karyawan)
@@ -216,6 +233,18 @@ class KaryawanController extends Controller
                     }
                 }
             }
+        }
+
+        // Skill disinkronkan SETELAH $karyawan->update() di atas, biar deteksi
+        // kategori pakai jabatan yang BARU (kalau jabatan ikut diubah di form ini).
+        $svc      = new SkillKaryawanService();
+        $rabSkill = DB::table('rab_skill')->where('is_active', true)->get();
+        $kategori = $svc->deteksiKategori($karyawan->jabatan);
+        $baris    = $svc->susunUserSkill($karyawan->id, (array) $request->input('skill', []), $kategori, $rabSkill);
+
+        UserSkill::where('user_id', $karyawan->id)->delete();
+        if (!empty($baris)) {
+            UserSkill::insert(array_map(fn ($b) => $b + ['created_at' => now()], $baris));
         }
 
         return redirect()->route('karyawan.show', $karyawan)
