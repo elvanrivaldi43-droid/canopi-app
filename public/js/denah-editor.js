@@ -488,8 +488,15 @@ class DenahEditor {
       this.renderBoxPanel();
     };
 
-    this._q('[data-role=inArah]').onchange = e => { this.S.arah = e.target.value; this.render(); };
-    this._q('[data-role=inKotak]').oninput = e => { this.S.kotak = Math.max(1, +e.target.value) || this.S.kotak; this.S.autoKotak = false; this.render(); };
+    this._q('[data-role=inArah]').onchange = e => { this.S.arah = e.target.value; this._syncSupportRows(); this.render(); };
+    this._q('[data-role=inIdeal]').oninput = e => { this.S.idealKotak = Math.max(1, +e.target.value) || 100; this.updSaranHint(); };
+    // Per-sumbu: mode dropdown ganti field yang tampil (cm vs kolom) + tulis ke model + render.
+    this._q('[data-role=modeH]').onchange = e => { this.S.modeH = e.target.value; this._syncSupportRows(); this.render(); };
+    this._q('[data-role=modeV]').onchange = e => { this.S.modeV = e.target.value; this._syncSupportRows(); this.render(); };
+    this._q('[data-role=inKotakH]').oninput = e => { this.S.modeH = 'cm'; this.S.kotakH = Math.max(1, +e.target.value) || this.S.kotakH; this.render(); };
+    this._q('[data-role=inKotakV]').oninput = e => { this.S.modeV = 'cm'; this.S.kotakV = Math.max(1, +e.target.value) || this.S.kotakV; this.render(); };
+    this._q('[data-role=inKolomH]').oninput = e => { this.S.modeH = 'kolom'; this.S.kolomH = Math.max(1, Math.floor(+e.target.value)) || this.S.kolomH; this.render(); };
+    this._q('[data-role=inKolomV]').oninput = e => { this.S.modeV = 'kolom'; this.S.kolomV = Math.max(1, Math.floor(+e.target.value)) || this.S.kolomV; this.render(); };
     this._q('[data-role=inGrid]').onchange = e => { this.S.grid = +e.target.value; this.render(); };
     this._q('[data-role=inT]').oninput = e => { this.S.tinggi = +e.target.value || 300; this.render(); };
     this._q('[data-role=inL]').oninput = () => this.updSaranHint();
@@ -787,32 +794,57 @@ class DenahEditor {
   }
   syncInputs() {
     this._q('[data-role=inArah]').value = this.S.arah;
-    this._q('[data-role=inKotak]').value = this.S.kotak;
+    this._q('[data-role=inIdeal]').value = this.S.idealKotak != null ? this.S.idealKotak : 100;
+    // Denah lama tanpa kotakH/kotakV -> tampilkan S.kotak sebagai nilai efektif (yang lagi tergambar).
+    this._q('[data-role=modeH]').value = this.S.modeH || 'cm';
+    this._q('[data-role=modeV]').value = this.S.modeV || 'cm';
+    this._q('[data-role=inKotakH]').value = this.S.kotakH != null ? this.S.kotakH : this.S.kotak;
+    this._q('[data-role=inKotakV]').value = this.S.kotakV != null ? this.S.kotakV : this.S.kotak;
+    this._q('[data-role=inKolomH]').value = this.S.kolomH != null ? this.S.kolomH : '';
+    this._q('[data-role=inKolomV]').value = this.S.kolomV != null ? this.S.kolomV : '';
     this._q('[data-role=inGrid]').value = this.S.grid;
     this._q('[data-role=inT]').value = this.S.tinggi;
     this._q('[data-role=matFrame]').value = this.S.matDefault.frame;
     this._q('[data-role=matSupport]').value = this.S.matDefault.support;
     this._q('[data-role=matTiang]').value = this.S.matDefault.tiang;
+    this._syncSupportRows();
     this.syncLP();
   }
 
-  // ---- Kotak saran (pakai DenahConv.saranKotak — Task 1) ----
-  saranKotak() {
-    const L = +(this._q('[data-role=inL]').value) || 0;
-    if (L <= 0) return this.S.kotak;
-    return DenahConv.saranKotak(L, this.S.target);
+  // Tampil/sembunyikan baris setelan per-sumbu (Spacing Per-Sumbu, 21 Ags):
+  //  - arah '2' -> dua baris; 'h' -> horizontal saja; 'v' -> vertikal saja (yang lain disembunyikan).
+  //  - tiap baris: mode 'cm' tampilkan input Kotak, mode 'kolom' tampilkan input Jumlah kolom.
+  _syncSupportRows() {
+    const arah = this.S.arah;
+    this._q('[data-role=rowSupH]').style.display = (arah === 'h' || arah === '2') ? '' : 'none';
+    this._q('[data-role=rowSupV]').style.display = (arah === 'v' || arah === '2') ? '' : 'none';
+    const modeH = this.S.modeH || 'cm', modeV = this.S.modeV || 'cm';
+    this._q('[data-role=lblKotakH]').style.display = modeH === 'cm' ? '' : 'none';
+    this._q('[data-role=lblKolomH]').style.display = modeH === 'kolom' ? '' : 'none';
+    this._q('[data-role=lblKotakV]').style.display = modeV === 'cm' ? '' : 'none';
+    this._q('[data-role=lblKolomV]').style.display = modeV === 'kolom' ? '' : 'none';
   }
+
+  // ---- Saran spacing per-sumbu (Spacing Per-Sumbu, 21 Ags) ----
+  // Ideal per kotak diambil dari S.idealKotak (default 100). Dihitung TERPISAH:
+  //  - Horizontal (garis Sh_, melangkah sepanjang Y) pakai span Y = Panjang.
+  //  - Vertikal   (garis Sv_, melangkah sepanjang X) pakai span X = Lebar.
+  _idealKotak() { return this.S.idealKotak > 0 ? this.S.idealKotak : 100; }
   applySaran() {
-    this.S.autoKotak = true;
-    this.S.kotak = this.saranKotak();
-    this._q('[data-role=inKotak]').value = this.S.kotak;
-    this.updSaranHint();
+    const bb = DenahConv._bbox(this.S.verts);
+    const spanY = bb.y1 - bb.y0, spanX = bb.x1 - bb.x0;
+    const ideal = this._idealKotak();
+    if (spanY > 0) { this.S.modeH = 'cm'; this.S.kotakH = DenahConv.saranKotak(spanY, ideal); }
+    if (spanX > 0) { this.S.modeV = 'cm'; this.S.kotakV = DenahConv.saranKotak(spanX, ideal); }
+    this.syncInputs();
     this.render();
   }
   updSaranHint() {
-    const sug = this.saranKotak();
-    const L = +(this._q('[data-role=inL]').value) || 0;
-    this._q('[data-role=saranHint]').textContent = `saran ~${this.S.target}cm → ${sug}cm (${Math.max(1, Math.round(L / this.S.target))} bagian simetris)`;
+    const bb = DenahConv._bbox(this.S.verts);
+    const spanY = bb.y1 - bb.y0, spanX = bb.x1 - bb.x0, ideal = this._idealKotak();
+    const kH = spanY > 0 ? DenahConv.saranKotak(spanY, ideal) : 0;
+    const kV = spanX > 0 ? DenahConv.saranKotak(spanX, ideal) : 0;
+    this._q('[data-role=saranHint]').textContent = `saran ~${ideal}cm -> H ${kH}cm, V ${kV}cm`;
   }
 
   // sinkron Lebar/Panjang = bbox
@@ -837,7 +869,7 @@ class DenahEditor {
     this.S.verts = this.S.verts.map(sc);
     this.S.tiang = (this.S.tiang || []).map(sc);
     this.S.supportsManual = (this.S.supportsManual || []).map(m => ({ a: sc(m.a), b: sc(m.b) }));
-    if (this.S.autoKotak) this.S.kotak = DenahConv.saranKotak(L, this.S.target);
+    // Auto-recompute spacing saat resize DIHAPUS -- spacing sekarang eksplisit per-sumbu via input/saran, tidak lagi auto-ikut resize. Ini keputusan sadar: mode 'kolom' tetap rata otomatis walau ukuran berubah, mode 'cm' tetap nilai yang diketik user.
     this.render();
   }
 
