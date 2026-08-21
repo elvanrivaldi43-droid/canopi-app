@@ -39,10 +39,14 @@ class ProduktivitasController extends Controller
         $tersimpan = 0;
 
         // ---- SKILL ----
+        $rolesValid = ['tukang', 'kenek', 'tukang_kenek', 'manual'];
         foreach ((array) $request->input('skill', []) as $row) {
             $nama = trim($row['nama'] ?? '');
             if ($nama === '') continue;
+            $defaultRole = $row['default_role'] ?? 'manual';
+            if (!in_array($defaultRole, $rolesValid, true)) $defaultRole = 'manual';
             $data = [
+                'default_role'       => $defaultRole,
                 'upah_tukang_harian' => $num($row['upah_tukang_harian'] ?? null),
                 'upah_kenek_harian'  => $num($row['upah_kenek_harian'] ?? null),
                 'is_active'          => !empty($row['is_active']) ? 1 : 0,

@@ -55,6 +55,7 @@ table.pk input:focus, table.pk select:focus { border-color:#fbbf24; }
         <table class="pk" id="tblSkill">
             <thead><tr>
                 <th style="min-width:150px">Nama Skill</th>
+                <th>Kategori</th>
                 <th>Upah Tukang / hari</th>
                 <th>Upah Kenek / hari</th>
                 <th>Aktif</th><th></th>
@@ -63,6 +64,14 @@ table.pk input:focus, table.pk select:focus { border-color:#fbbf24; }
             @foreach($skills as $s)
                 <tr data-id="{{ $s->id }}">
                     <td><input class="f-nama" value="{{ $s->nama }}"></td>
+                    <td>
+                        <select class="f-role">
+                            <option value="manual" {{ $s->default_role==='manual'?'selected':'' }}>Manual saja</option>
+                            <option value="tukang" {{ $s->default_role==='tukang'?'selected':'' }}>Tukang</option>
+                            <option value="kenek" {{ $s->default_role==='kenek'?'selected':'' }}>Kenek</option>
+                            <option value="tukang_kenek" {{ $s->default_role==='tukang_kenek'?'selected':'' }}>Tukang & Kenek</option>
+                        </select>
+                    </td>
                     <td class="num pk-rp"><input type="number" class="f-ut" value="{{ $s->upah_tukang_harian !== null ? (int)$s->upah_tukang_harian : '' }}" placeholder="kosong"></td>
                     <td class="num pk-rp"><input type="number" class="f-uk" value="{{ $s->upah_kenek_harian !== null ? (int)$s->upah_kenek_harian : '' }}" placeholder="kosong"></td>
                     <td><input type="checkbox" class="f-aktif chk" {{ $s->is_active?'checked':'' }}></td>
@@ -189,6 +198,12 @@ function opts(list, sel){ return list.map(n=>`<option value="${n}" ${n===sel?'se
 function addSkill(){
     const tr=document.createElement('tr'); tr.dataset.id='new_'+Date.now();
     tr.innerHTML=`<td><input class="f-nama" placeholder="nama skill"></td>
+        <td><select class="f-role">
+            <option value="manual" selected>Manual saja</option>
+            <option value="tukang">Tukang</option>
+            <option value="kenek">Kenek</option>
+            <option value="tukang_kenek">Tukang & Kenek</option>
+        </select></td>
         <td class="num pk-rp"><input type="number" class="f-ut" placeholder="kosong"></td>
         <td class="num pk-rp"><input type="number" class="f-uk" placeholder="kosong"></td>
         <td><input type="checkbox" class="f-aktif chk" checked></td>
@@ -225,7 +240,7 @@ function addKondisi(){
 function val(tr,cls){ const el=tr.querySelector(cls); return el?el.value:''; }
 function kumpulSkill(){
     return [...document.querySelectorAll('#tblSkill tbody tr')].map(tr=>({
-        id:tr.dataset.id, nama:val(tr,'.f-nama'),
+        id:tr.dataset.id, nama:val(tr,'.f-nama'), default_role:val(tr,'.f-role'),
         upah_tukang_harian:val(tr,'.f-ut'), upah_kenek_harian:val(tr,'.f-uk'),
         is_active:tr.querySelector('.f-aktif').checked?1:0,
     })).filter(x=>x.nama.trim()!=='');

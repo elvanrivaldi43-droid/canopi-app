@@ -327,10 +327,38 @@ class ProjectController extends Controller
         $timTukang  = $isInst ? $resolveTim($rabJenisKerja?->jml_tukang_inst, $rabJenisKerja?->jml_tukang) : ($rabJenisKerja?->jml_tukang !== null ? (int) $rabJenisKerja->jml_tukang : null);
         $timKenek   = $isInst ? $resolveTim($rabJenisKerja?->jml_kenek_inst, $rabJenisKerja?->jml_kenek)   : ($rabJenisKerja?->jml_kenek  !== null ? (int) $rabJenisKerja->jml_kenek  : null);
 
+        // Data jenis kerja ini sendiri belum lengkap di Kelola Produktivitas — beda
+        // penyebab dari "user belum isi qty/target", jangan disamakan pesannya.
+        if (!$produktivitas || $produktivitas <= 0) {
+            return response()->json([
+                'jumlah_tukang_disarankan' => null,
+                'jumlah_kenek_disarankan'  => null,
+                'kandidat'                 => [],
+                'pesan'                    => 'Produktivitas jenis kerja ini belum diisi di halaman Kelola Produktivitas — saran jumlah tidak bisa dihitung.',
+            ]);
+        }
+        if ($timTukang === null && $timKenek === null) {
+            return response()->json([
+                'jumlah_tukang_disarankan' => null,
+                'jumlah_kenek_disarankan'  => null,
+                'kandidat'                 => [],
+                'pesan'                    => 'Jumlah tukang/kenek default jenis kerja ini belum diisi di halaman Kelola Produktivitas — saran jumlah tidak bisa dihitung.',
+            ]);
+        }
+
         $qty        = $request->qty !== null ? (float) $request->qty : null;
         $targetHari = $request->tanggal_selesai_target
             ? (int) now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($request->tanggal_selesai_target)->startOfDay(), false)
             : null;
+
+        if ($request->tanggal_selesai_target && $targetHari <= 0) {
+            return response()->json([
+                'jumlah_tukang_disarankan' => null,
+                'jumlah_kenek_disarankan'  => null,
+                'kandidat'                 => [],
+                'pesan'                    => 'Tanggal target sudah lewat atau hari ini — pilih tanggal di masa depan.',
+            ]);
+        }
 
         $jumlahTukang = $svc->hitungJumlahDisarankan($qty, $produktivitas ? (float) $produktivitas : null, $timTukang !== null ? (int) $timTukang : null, $targetHari);
         $jumlahKenek  = $svc->hitungJumlahDisarankan($qty, $produktivitas ? (float) $produktivitas : null, $timKenek  !== null ? (int) $timKenek  : null, $targetHari);
