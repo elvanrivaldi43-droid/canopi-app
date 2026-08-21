@@ -320,8 +320,12 @@ class ProjectController extends Controller
 
         $isInst        = $tahapMaster->tipe === 'inst';
         $produktivitas = $isInst ? $rabJenisKerja?->produktivitas_inst : $rabJenisKerja?->produktivitas_per_hari;
-        $timTukang     = $isInst ? $rabJenisKerja?->jml_tukang_inst    : $rabJenisKerja?->jml_tukang;
-        $timKenek      = $isInst ? $rabJenisKerja?->jml_kenek_inst     : $rabJenisKerja?->jml_kenek;
+
+        // Tim inst adalah override opsional — kalau kosong/0, fallback ke tim fab
+        // (pola sama seperti CuttingController.php:468-469).
+        $resolveTim = fn ($inst, $fab) => ((int) ($inst ?? 0)) > 0 ? (int) $inst : ($fab !== null ? (int) $fab : null);
+        $timTukang  = $isInst ? $resolveTim($rabJenisKerja?->jml_tukang_inst, $rabJenisKerja?->jml_tukang) : ($rabJenisKerja?->jml_tukang !== null ? (int) $rabJenisKerja->jml_tukang : null);
+        $timKenek   = $isInst ? $resolveTim($rabJenisKerja?->jml_kenek_inst, $rabJenisKerja?->jml_kenek)   : ($rabJenisKerja?->jml_kenek  !== null ? (int) $rabJenisKerja->jml_kenek  : null);
 
         $qty        = $request->qty !== null ? (float) $request->qty : null;
         $targetHari = $request->tanggal_selesai_target
