@@ -217,7 +217,11 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    dipakai ke customer asli sampai kalibrasi tuntas. PA-DUTA 4x8 masih kurang foto
    bar #12 untuk menutup validasi target 9 batang. Luas referensi yang benar sekitar
    40 m², bukan bounding-box 51 m².
-2. **DenahEditor:** backlog setelah redesign Tambah Tiang adalah pola
+2. **DenahEditor:** ~~Redesign Tambah Tiang~~ — **SELESAI & LIVE 21 Agustus 2026**
+   sebagai "measurement-first tiang numerik + ghost preview" (panel tiang numerik
+   tambah/edit/hapus/fokus + Undo/Redo/autosave, ghost preview crosshair sebelum
+   commit, origin koordinat kiri-depan; `public/js/denah-editor.js`, test
+   `tests/rangka/test_tiang_numerik.mjs`). Backlog lanjutan yang masih aktif: pola
    drag=pindah/tekan-tahan=menu untuk Support/Frame, Kelompok C saran-kotak-2-arah,
    dan investigasi tombol “Lanjut → Finalisasi” di HP hanya jika ada reproduksi
    video. Jangan menambal bug HP tanpa bukti.
