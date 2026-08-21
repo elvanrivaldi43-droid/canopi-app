@@ -14,6 +14,7 @@ use App\Models\ProjectTahap;
 use App\Models\ProjectTahapPic;
 use App\Models\User;
 use App\Services\TelegramService;
+use App\Services\RekomendasiPicService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -291,6 +292,80 @@ class ProjectController extends Controller
         });
 
         return back()->with('success', 'Tahap "' . $projectTahap->nama_tahap . '" dimulai.');
+    }
+
+    // ============================================================
+    // SWE FASE 2 — HITUNG SARAN PIC (read-only, tidak mengubah apapun —
+    // mulaiTahap() di atas TIDAK disentuh sama sekali)
+    // ============================================================
+    public function saranPic(Request $request, ProjectTahap $projectTahap)
+    {
+        $request->validate([
+            'qty'                    => 'nullable|numeric|min:0',
+            'tanggal_selesai_target' => 'nullable|date',
+        ]);
+
+        $tahapMaster = $projectTahap->tahapMaster;
+        if (!$tahapMaster || !$tahapMaster->rab_jenis_kerja_id) {
+            return response()->json([
+                'jumlah_tukang_disarankan' => null,
+                'jumlah_kenek_disarankan'  => null,
+                'kandidat'                 => [],
+                'pesan'                    => 'Tahap ini tidak tertaut ke jenis kerja RAB, saran jumlah tidak bisa dihitung. Pilih PIC manual.',
+            ]);
+        }
+
+        $rabJenisKerja = DB::table('rab_jenis_kerja')->where('id', $tahapMaster->rab_jenis_kerja_id)->first();
+        $svc           = new RekomendasiPicService();
+
+        $isInst        = $tahapMaster->tipe === 'inst';
+        $produktivitas = $isInst ? $rabJenisKerja?->produktivitas_inst : $rabJenisKerja?->produktivitas_per_hari;
+        $timTukang     = $isInst ? $rabJenisKerja?->jml_tukang_inst    : $rabJenisKerja?->jml_tukang;
+        $timKenek      = $isInst ? $rabJenisKerja?->jml_kenek_inst     : $rabJenisKerja?->jml_kenek;
+
+        $qty        = $request->qty !== null ? (float) $request->qty : null;
+        $targetHari = $request->tanggal_selesai_target
+            ? (int) now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($request->tanggal_selesai_target)->startOfDay(), false)
+            : null;
+
+        $jumlahTukang = $svc->hitungJumlahDisarankan($qty, $produktivitas ? (float) $produktivitas : null, $timTukang !== null ? (int) $timTukang : null, $targetHari);
+        $jumlahKenek  = $svc->hitungJumlahDisarankan($qty, $produktivitas ? (float) $produktivitas : null, $timKenek  !== null ? (int) $timKenek  : null, $targetHari);
+
+        // Skill yang jadi acuan cocok/tidak: exact match nama (dropdown skill_default
+        // sudah menjamin nilainya valid, tidak perlu fuzzy/case-insensitive).
+        $skillId = $rabJenisKerja?->skill_default
+            ? DB::table('rab_skill')->where('nama', $rabJenisKerja->skill_default)->value('id')
+            : null;
+
+        $karyawan = User::whereIn('level', [3, 5, 6])->where('status', 'aktif')->orderBy('name')->get();
+
+        $userSkillMap = DB::table('user_skill')
+            ->whereIn('user_id', $karyawan->pluck('id'))
+            ->get()
+            ->groupBy('user_id');
+
+        $sibukUserIds = ProjectTahapPic::whereHas('projectTahap', fn ($q) => $q->where('status', 'sedang'))
+            ->pluck('user_id')
+            ->unique();
+
+        $kandidat = $karyawan->map(function (User $k) use ($skillId, $userSkillMap, $sibukUserIds) {
+            $skillIdsKaryawan = ($userSkillMap[$k->id] ?? collect())->pluck('rab_skill_id')->all();
+            return [
+                'user_id' => $k->id,
+                'name'    => $k->name,
+                'cocok'   => $skillId !== null && in_array($skillId, $skillIdsKaryawan, true),
+                'sibuk'   => $sibukUserIds->contains($k->id),
+            ];
+        })->all();
+
+        $kandidat = $svc->urutkanKandidat($kandidat);
+
+        return response()->json([
+            'jumlah_tukang_disarankan' => $jumlahTukang,
+            'jumlah_kenek_disarankan'  => $jumlahKenek,
+            'kandidat'                 => $kandidat,
+            'pesan'                    => null,
+        ]);
     }
 
     // ============================================================

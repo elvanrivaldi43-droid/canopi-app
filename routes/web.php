@@ -399,6 +399,9 @@ Route::middleware(['auth', 'level:1,2,3'])->group(function () {
     Route::post('/project-tahap/{projectTahap}/mulai',   [ProjectController::class, 'mulaiTahap'])->name('projects.tahap.mulai');
     Route::post('/project-tahap/{projectTahap}/selesai', [ProjectController::class, 'selesaiTahap'])->name('projects.tahap.selesai');
 
+    // Rekomendasi PIC (SWE Fase 2) — read-only, TIDAK mengubah project_tahap/project_tahap_pic
+    Route::post('/project-tahap/{projectTahap}/saran-pic', [ProjectController::class, 'saranPic'])->name('projects.tahap.saran-pic');
+
     // Material aktual (Admin input)
     Route::post('/projects/{project}/material', [ProjectController::class, 'storeMaterial'])->name('projects.material.store');
     Route::delete('/project-material/{material}', [ProjectController::class, 'destroyMaterial'])->name('projects.material.destroy');
