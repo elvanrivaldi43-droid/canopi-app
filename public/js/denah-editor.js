@@ -1028,9 +1028,16 @@ class DenahEditor {
     const m = mem.find(x => x.id === id);
     let label = id;
     if (m) {
-      // frame/tiang: m.nama sudah "F3"/"T2". support: nomor dihitung ulang sesuai urutan render
-      // (nama mentah cuma "S" generik, bukan bernomor).
-      const code = m.jenis === 'support' ? 'S' + (mem.filter(x => x.jenis === 'support').findIndex(x => x.id === id) + 1) : m.nama;
+      // frame/tiang: m.nama sudah "F3"/"T2". support MANUAL: nomor dari DenahConv.numberSupportsManual
+      // (SATU sumber sama dgn label kanvas & panel, lihat Task 1/3). Support GRID: tak dinomori
+      // lagi (ID-nya tak stabil lintas render), cukup ditandai "grid" biar user tahu ini bukan
+      // support yang bisa di-Fokus dari panel.
+      let code;
+      if (m.jenis === 'support') {
+        code = id.startsWith('Sm_') ? 'S' + DenahConv.numberSupportsManual(mem)[id] : 'grid';
+      } else {
+        code = m.nama;
+      }
       label = `${jenisNama[m.jenis]} ${code} · ${m.panjang}cm`;
     }
     this._q('[data-role=matMenuLabel]').textContent = label;
