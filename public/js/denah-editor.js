@@ -373,6 +373,7 @@ class DenahEditor {
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
   <div class="de-card de-tiang-panel" style="display:none;margin-top:10px;padding:10px" data-role="tiangPanel"></div>
+  <div class="de-card de-tiang-panel" style="display:none;margin-top:10px;padding:10px" data-role="supportPanel"></div>
   <div class="de-canvas-wrap" data-role="canvasWrap">
     <div class="de-canvas"></div>
     <span class="de-zoom-reset" data-role="btnZoomReset">Reset</span>
@@ -949,6 +950,50 @@ class DenahEditor {
     };
   }
 
+  // Panel daftar Support manual (Redesign Support, 21 Agustus) -- meniru renderTiangPanel di atas,
+  // TANPA input X/Y (geser di canvas sudah cukup, lihat spec Keputusan #6). Support grid otomatis
+  // SENGAJA tak masuk sini -- belum jadi entri manual, tak addressable/tak stabil (Keputusan #5).
+  renderSupportPanel(mem) {
+    const panel = this._q('[data-role=supportPanel]');
+    if (!panel) return;
+    panel.style.display = this.mode === 'support' ? '' : 'none';
+    if (this.mode !== 'support') { panel.innerHTML = ''; return; }
+    const supNum = DenahConv.numberSupportsManual(mem);
+    const manualMem = mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_'));
+    const rows = manualMem.map(m => {
+      const i = +m.id.slice(3);
+      return `<div class="de-tiang-item" data-srow="${i}">
+        <div class="de-tiang-head">
+          <b style="font-size:12px">S${supNum[m.id]}</b>
+          <div class="de-tiang-actions"><span class="de-mini" data-role="sFokus" data-i="${i}">Fokus</span><span class="de-mini" data-role="sHapus" data-i="${i}">Hapus</span></div>
+        </div>
+      </div>`;
+    }).join('');
+    panel.innerHTML =
+      '<b style="font-size:12px;color:#334155">Daftar Support Manual</b>' +
+      (rows || '<div style="font-size:12px;color:#94a3b8;margin-top:4px">Belum ada support manual. Geser support grid atau pakai "+ Support manual" untuk menambah.</div>');
+
+    panel.querySelectorAll('[data-role=sFokus]').forEach(btn => {
+      btn.onclick = () => {
+        const i = +btn.dataset.i;
+        const line = this.el.querySelector('#sm' + i);
+        if (!line) return;
+        this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const prevStroke = line.getAttribute('stroke'), prevW = line.getAttribute('stroke-width');
+        line.setAttribute('stroke', '#facc15'); line.setAttribute('stroke-width', '6');
+        setTimeout(() => { if (line.isConnected) { line.setAttribute('stroke', prevStroke); line.setAttribute('stroke-width', prevW); } }, 900);
+      };
+    });
+    panel.querySelectorAll('[data-role=sHapus]').forEach(btn => {
+      btn.onclick = () => {
+        const i = +btn.dataset.i;
+        this.pushUndo();
+        this.S.supportsManual.splice(i, 1);
+        this.render();
+      };
+    });
+  }
+
   // Preview Task 3: gambar langsung ke SVG tanpa render() agar state, Undo dan onChange tak tersentuh.
   updateTiangPreview(xEl, yEl, showMsg) {
     const dx = DenahConv.parseCmValue(xEl.value), dy = DenahConv.parseCmValue(yEl.value);
@@ -1281,6 +1326,7 @@ class DenahEditor {
     this.renderSides(mem);
     this.renderBoxPanel();
     this.renderTiangPanel(mem);
+    this.renderSupportPanel(mem);
     this._changed();
   }
 
