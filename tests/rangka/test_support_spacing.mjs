@@ -49,5 +49,40 @@ check('hi <= lo -> [] (span 0/negatif, tak ada garis)',
 check('hi < lo -> []',
   DenahConv.posisiSupport(300, 100, 'kolom', null, 3, 100), []);
 
+// ── buildMembers: backward-compat (model lama tanpa field per-sumbu) ──
+// Kotak persegi 600x450, arah '2', kotak 100 -- HARUS sama persis perilaku lama.
+const modelLama = {
+  verts: [{ x: 0, y: 0 }, { x: 600, y: 0 }, { x: 600, y: 450 }, { x: 0, y: 450 }],
+  kotak: 100, arah: '2', supportsManual: [], removed: {}, tiang: [], tinggi: 300,
+  matDefault: { frame: 'X', support: 'X', tiang: 'X' }, matOverride: {},
+};
+const supLama = DenahConv.buildMembers(modelLama).filter(m => m.jenis === 'support');
+// Horizontal Sh_ (langkah Y 0..450, K=100): garis di y=100,200,300,400 -> 4 baris.
+// Vertikal Sv_ (langkah X 0..600, K=100): garis di x=100,200,300,400,500 -> 5 baris.
+check('backward-compat: jumlah Sh_ (450/100 langkah lama) = 4',
+  supLama.filter(m => m.id.startsWith('Sh_')).length, 4);
+check('backward-compat: jumlah Sv_ (600/100 langkah lama) = 5',
+  supLama.filter(m => m.id.startsWith('Sv_')).length, 5);
+// id pertama Sh_ harus tetap 'Sh_0_0' (kunci S.removed bergantung ini)
+check('backward-compat: id Sh_ pertama tetap Sh_0_0',
+  supLama.filter(m => m.id.startsWith('Sh_'))[0].id, 'Sh_0_0');
+
+// ── buildMembers: mode kolom per-sumbu ──
+// Sisi Y (Panjang 450) mode kolom 5 -> 4 garis Sh_ (ruas 90). Sisi X (Lebar 600) mode kolom 6 -> 5 garis Sv_.
+const modelBaru = {
+  verts: [{ x: 0, y: 0 }, { x: 600, y: 0 }, { x: 600, y: 450 }, { x: 0, y: 450 }],
+  kotak: 100, arah: '2',
+  modeH: 'kolom', kolomH: 5, modeV: 'kolom', kolomV: 6,
+  supportsManual: [], removed: {}, tiang: [], tinggi: 300,
+  matDefault: { frame: 'X', support: 'X', tiang: 'X' }, matOverride: {},
+};
+const supBaru = DenahConv.buildMembers(modelBaru).filter(m => m.jenis === 'support');
+check('per-sumbu: Sh_ kolomH=5 -> 4 garis', supBaru.filter(m => m.id.startsWith('Sh_')).length, 4);
+check('per-sumbu: Sv_ kolomV=6 -> 5 garis', supBaru.filter(m => m.id.startsWith('Sv_')).length, 5);
+// Ruas Sh_ semua 90 (450/5): panjang tiap Sh_ TIDAK diuji (itu lebar span X), tapi posisi Y-nya kelipatan 90.
+// Cek via geom.a.y garis Sh_ pertama = 90.
+check('per-sumbu: Sh_ pertama di y=90 (450/5 rata)',
+  supBaru.filter(m => m.id.startsWith('Sh_'))[0].geom.a.y, 90);
+
 if (fail) { console.log('\n=== ADA YANG GAGAL ==='); process.exit(1); }
 console.log('\n=== SEMUA TES LULUS ===');

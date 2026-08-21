@@ -163,12 +163,18 @@ const DenahConv = {
       const mat = (S.matOverride && S.matOverride[id]) || S.matDefault.support;
       mem.push({ id, nama: 'S', jenis: 'support', panjang: Math.round(dist(a, b)), material: mat, geom: { a, b } });
     };
-    if (S.arah === 'h' || S.arah === '2') { let li = 0;
-      for (let Y = bb.y0 + K; Y < bb.y1 - 1; Y += K, li++) { const xs = scanX(V, Y);
-        for (let s = 0; s + 1 < xs.length; s += 2) addSeg('Sh_' + li + '_' + s, { x: xs[s], y: Y }, { x: xs[s + 1], y: Y }); } }
-    if (S.arah === 'v' || S.arah === '2') { let li = 0;
-      for (let X = bb.x0 + K; X < bb.x1 - 1; X += K, li++) { const ys = scanY(V, X);
-        for (let s = 0; s + 1 < ys.length; s += 2) addSeg('Sv_' + li + '_' + s, { x: X, y: ys[s] }, { x: X, y: ys[s + 1] }); } }
+    // Posisi garis per-sumbu (Spacing Per-Sumbu, 21 Ags). K lama jadi kotakFallback -- denah lama
+    // tanpa modeH/kotakH tetap ke jalur 'cm' + fallback, hasil PERSIS sama (id Sh_/Sv_ tak bergeser).
+    if (S.arah === 'h' || S.arah === '2') {
+      const posH = DenahConv.posisiSupport(bb.y0, bb.y1, S.modeH || 'cm', S.kotakH, S.kolomH, K);
+      posH.forEach((Y, li) => { const xs = scanX(V, Y);
+        for (let s = 0; s + 1 < xs.length; s += 2) addSeg('Sh_' + li + '_' + s, { x: xs[s], y: Y }, { x: xs[s + 1], y: Y }); });
+    }
+    if (S.arah === 'v' || S.arah === '2') {
+      const posV = DenahConv.posisiSupport(bb.x0, bb.x1, S.modeV || 'cm', S.kotakV, S.kolomV, K);
+      posV.forEach((X, li) => { const ys = scanY(V, X);
+        for (let s = 0; s + 1 < ys.length; s += 2) addSeg('Sv_' + li + '_' + s, { x: X, y: ys[s] }, { x: X, y: ys[s + 1] }); });
+    }
     (S.supportsManual || []).forEach((m, i) => {
       const id = 'Sm_' + i, mat = (S.matOverride && S.matOverride[id]) || S.matDefault.support;
       mem.push({ id, nama: 'S', jenis: 'support', panjang: Math.round(dist(m.a, m.b)), material: mat, geom: { a: m.a, b: m.b } });
