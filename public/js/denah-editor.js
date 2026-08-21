@@ -495,8 +495,8 @@ class DenahEditor {
     this._q('[data-role=modeV]').onchange = e => { this.S.modeV = e.target.value; this._syncSupportRows(); this.render(); };
     this._q('[data-role=inKotakH]').oninput = e => { this.S.modeH = 'cm'; this.S.kotakH = Math.max(1, +e.target.value) || this.S.kotakH; this.render(); };
     this._q('[data-role=inKotakV]').oninput = e => { this.S.modeV = 'cm'; this.S.kotakV = Math.max(1, +e.target.value) || this.S.kotakV; this.render(); };
-    this._q('[data-role=inKolomH]').oninput = e => { this.S.modeH = 'kolom'; this.S.kolomH = Math.max(1, Math.floor(+e.target.value)) || this.S.kolomH; this.render(); };
-    this._q('[data-role=inKolomV]').oninput = e => { this.S.modeV = 'kolom'; this.S.kolomV = Math.max(1, Math.floor(+e.target.value)) || this.S.kolomV; this.render(); };
+    this._q('[data-role=inKolomH]').oninput = e => { this.S.modeH = 'kolom'; this.S.kolomH = Math.min(200, Math.max(1, Math.floor(+e.target.value))) || this.S.kolomH; this.render(); };
+    this._q('[data-role=inKolomV]').oninput = e => { this.S.modeV = 'kolom'; this.S.kolomV = Math.min(200, Math.max(1, Math.floor(+e.target.value))) || this.S.kolomV; this.render(); };
     this._q('[data-role=inGrid]').onchange = e => { this.S.grid = +e.target.value; this.render(); };
     this._q('[data-role=inT]').oninput = e => { this.S.tinggi = +e.target.value || 300; this.render(); };
     this._q('[data-role=inL]').oninput = () => this.updSaranHint();
