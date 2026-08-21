@@ -373,9 +373,21 @@ class DenahEditor {
         <label>Arah support
           <select data-role="inArah"><option value="2">Grid 2 arah</option><option value="h">1 arah horizontal (melintang)</option><option value="v">1 arah vertikal (membujur)</option></select>
         </label>
-        <label>Kotak support (cm)<input type="number" data-role="inKotak" value="100" step="5" min="1"></label>
+        <label>Ideal per kotak (cm)<input type="number" data-role="inIdeal" value="100" step="5" min="1"></label>
         <span class="de-mini" data-role="btnSaran">Pakai saran</span>
         <span class="de-hint" data-role="saranHint"></span>
+      </div>
+      <div class="de-row" data-role="rowSupH" style="margin-top:8px">
+        <span style="font-size:12px;color:#334155;min-width:64px">Horizontal</span>
+        <label>Mode<select data-role="modeH"><option value="cm">cm per kotak</option><option value="kolom">jumlah kolom</option></select></label>
+        <label data-role="lblKotakH">Kotak (cm)<input type="number" data-role="inKotakH" step="5" min="1"></label>
+        <label data-role="lblKolomH" style="display:none">Jumlah kolom<input type="number" data-role="inKolomH" step="1" min="1"></label>
+      </div>
+      <div class="de-row" data-role="rowSupV" style="margin-top:6px">
+        <span style="font-size:12px;color:#334155;min-width:64px">Vertikal</span>
+        <label>Mode<select data-role="modeV"><option value="cm">cm per kotak</option><option value="kolom">jumlah kolom</option></select></label>
+        <label data-role="lblKotakV">Kotak (cm)<input type="number" data-role="inKotakV" step="5" min="1"></label>
+        <label data-role="lblKolomV" style="display:none">Jumlah kolom<input type="number" data-role="inKolomV" step="1" min="1"></label>
       </div>
       <div class="de-row" style="margin-top:8px">
         <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
