@@ -192,14 +192,19 @@
                         <input type="text" name="satuan" placeholder="m2" style="width:100%; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:8px; color:#f1f5f9; margin-bottom:8px;">
 
                         <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:3px;">Target Selesai (opsional)</label>
-                        <input type="date" name="tanggal_selesai_target" style="width:100%; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:8px; color:#f1f5f9; margin-bottom:8px;">
+                        <input type="date" name="tanggal_selesai_target" id="target{{ $tahap->id }}" style="width:100%; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:8px; color:#f1f5f9; margin-bottom:8px;">
+
+                        <button type="button" onclick="hitungSaranPic({{ $tahap->id }})"
+                            style="background:#334155; color:#e2e8f0; padding:6px 12px; border-radius:6px; border:none; font-size:11px; font-weight:600; cursor:pointer; margin-bottom:8px;">Hitung Saran</button>
+                        <div id="saran{{ $tahap->id }}" style="font-size:11px; color:#94a3b8; margin-bottom:8px;"></div>
 
                         <label style="font-size:11px; color:#94a3b8; display:block; margin-bottom:3px;">PIC (pilih manual, minimal 1)</label>
                         @foreach($karyawan as $k)
-                        <div style="display:flex; align-items:center; gap:6px; padding:4px 0;">
+                        <div data-user-id="{{ $k->id }}" style="display:flex; align-items:center; gap:6px; padding:4px 0;">
                             <input type="checkbox" name="pic[{{ $loop->index }}][user_id]" value="{{ $k->id }}" id="pic{{ $tahap->id }}_{{ $k->id }}"
                                 onchange="document.getElementById('rp{{ $tahap->id }}_{{ $k->id }}').style.display=this.checked?'inline-block':'none'">
                             <label for="pic{{ $tahap->id }}_{{ $k->id }}" style="font-size:12px; color:#e2e8f0;">{{ $k->name }}</label>
+                            <span class="badge-cocok" style="font-size:10px;"></span>
                             <select name="pic[{{ $loop->index }}][peran]" id="rp{{ $tahap->id }}_{{ $k->id }}" style="display:none; font-size:11px; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#f1f5f9;">
                                 <option value="tukang">Tukang</option>
                                 <option value="kenek">Kenek</option>
@@ -621,6 +626,45 @@ function pilihMaterial(id, nama, satuan, harga) {
     document.getElementById('hiddenSatuan').value = satuan;
     document.getElementById('inputHarga').value = harga;
     list.style.display = 'none';
+}
+
+function hitungSaranPic(tahapId) {
+    const qty    = document.querySelector(`#mulaiTahap${tahapId} input[name="qty"]`).value;
+    const target = document.getElementById(`target${tahapId}`).value;
+    const hasilEl = document.getElementById(`saran${tahapId}`);
+    hasilEl.textContent = 'Menghitung...';
+
+    fetch(`/project-tahap/${tahapId}/saran-pic`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+        },
+        body: JSON.stringify({ qty: qty || null, tanggal_selesai_target: target || null }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.pesan) {
+            hasilEl.textContent = data.pesan;
+            return;
+        }
+        const t = data.jumlah_tukang_disarankan;
+        const k = data.jumlah_kenek_disarankan;
+        hasilEl.textContent = (t !== null && k !== null)
+            ? `Disarankan: ${t} tukang, ${k} kenek`
+            : 'Isi Qty & Target Selesai dulu buat hitung jumlah orang.';
+
+        const container = document.getElementById(`mulaiTahap${tahapId}`);
+        data.kandidat.forEach(kand => {
+            const row = container.querySelector(`[data-user-id="${kand.user_id}"]`);
+            if (!row) return;
+            const badge = row.querySelector('.badge-cocok');
+            if (kand.cocok && !kand.sibuk) { badge.textContent = '✓ cocok'; badge.style.color = '#6ee7b7'; }
+            else if (kand.cocok && kand.sibuk) { badge.textContent = '✓ cocok, sibuk'; badge.style.color = '#fbbf24'; }
+            else { badge.textContent = 'skill gak cocok'; badge.style.color = '#64748b'; }
+        });
+    })
+    .catch(() => { hasilEl.textContent = 'Gagal menghitung saran, coba lagi.'; });
 }
 </script>
 @endsection
