@@ -274,6 +274,37 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    bagian 4-B & 5. Plan Fase 2 (referensi detail + daftar file yang
    berubah): `docs/superpowers/plans/2026-08-21-swe-fase2-skill-rekomendasi-pic.md`.
 
+8. **DenahEditor — Spacing Support Per-Sumbu — SEDANG DIKERJAKAN (dieksekusi via
+   subagent-driven-development), BELUM SELESAI, BELUM di-push.** Kalau lanjut
+   sesi baru, **JANGAN brainstorming ulang** — spec & plan sudah disetujui
+   Elvan, tinggal lanjut eksekusi dari titik terhenti:
+   - **Baca dulu ledger:**
+     `.superpowers/sdd/2026-08-21-denah-support-spacing-per-sumbu/progress.md`
+     — itu sumber kebenaran progres tiap task (jangan asumsi dari commit log saja).
+   - **Status per 21 Agustus 2026 (sesi terputus karena `/clear`):** Task 1/5
+     selesai & direview bersih (commit `c548afa`). **Task 2/5 sudah
+     diimplementasikan & di-commit (`cb328bd`) TAPI BELUM DIREVIEW** — sesi
+     terputus persis sebelum reviewer di-dispatch. **Langkah pertama sesi
+     baru:** generate review package (base `c548afa08761c1bfe50f30af3dcdcfd59f7dde53`,
+     head `cb328bdc3ed57db67d681f9c1bd627cc3b8fc513`) lalu dispatch task
+     reviewer untuk Task 2 — JANGAN anggap Task 2 sudah approved, dan JANGAN
+     lanjut ke Task 3 sebelum Task 2 lolos review (task ini backward-compat
+     kritis: salah dikit bisa geser id `Sh_`/`Sv_` denah lama yang sudah
+     tersimpan production).
+   - Task 3-5 belum dikerjakan sama sekali.
+   - Spec: `docs/superpowers/specs/2026-08-21-denah-support-spacing-per-sumbu-design.md`.
+     Plan: `docs/superpowers/plans/2026-08-21-denah-support-spacing-per-sumbu.md`.
+   - **Ada beberapa commit lokal yang belum di-push** (dari `535884d` s.d.
+     `cb328bd`, termasuk fix label overlap Support yang sudah selesai duluan
+     & plan/spec fitur ini) — Elvan sudah minta "gabung sekalian" jadi
+     **JANGAN push sebagian dulu**, tunggu sampai seluruh plan spacing
+     per-sumbu ini (Task 1-5 + final review) beneran kelar.
+   - **Jangan bingung** dengan redesign Support pola drag/tahan+panel (item
+     terpisah, sudah SELESAI & LIVE duluan, lihat commit `fd19895` dst.) —
+     fitur INI (spacing per-sumbu) murni soal jarak antar garis support
+     (mode cm vs jumlah kolom, independen horizontal/vertikal), bukan pola
+     interaksinya.
+
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 
 - iOS Safari: `position:fixed` dapat rusak bila bersarang di `.page-content`
