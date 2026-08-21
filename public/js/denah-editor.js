@@ -94,6 +94,26 @@ const collectAlignCandidates = (S, exclude) => {
 };
 
 const DenahConv = {
+  denahOrigin(S) { const bb = bbox(S.verts); return { x: bb.x0, y: bb.y1 }; },
+  tiangFromOffset(S, dx, dy) { const o = this.denahOrigin(S); return { x: o.x + dx, y: o.y - dy }; },
+  tiangToOffset(S, point) { const o = this.denahOrigin(S); return { dx: point.x - o.x, dy: o.y - point.y }; },
+  tiangPreviewState(S, dx, dy, bounds) {
+    const raw = this.tiangFromOffset(S, dx, dy);
+    const point = {
+      x: Math.max(bounds.x0, Math.min(bounds.x1, raw.x)),
+      y: Math.max(bounds.y0, Math.min(bounds.y1, raw.y)),
+    };
+    return { raw, point, clamped: point.x !== raw.x || point.y !== raw.y };
+  },
+  // Angka input panel tiang numerik (Task 2): koma -> titik, trim spasi, tolak kosong/parsial/non-finite.
+  // Commit dipanggil saat blur/Enter/change (bukan per keystroke) — lihat renderTiangPanel().
+  parseCmValue(raw) {
+    if (raw == null) return null;
+    const s = String(raw).trim();
+    if (!s) return null;
+    const n = Number(s.replace(',', '.'));
+    return Number.isFinite(n) ? n : null;
+  },
   buildMembers(S) {
     // K harus > 0: kotak<=0 (mis. input negatif / model tersimpan rusak) bikin loop scanline tak berhenti → freeze tab.
     const mem = [], V = S.verts, bb = bbox(V), K = (S.kotak > 0 ? S.kotak : 100), rem = S.removed || {};
@@ -195,6 +215,7 @@ class DenahEditor {
     this.SC = 1;
     this.PAD = 44;
     this.zoomScale = 1; this.zoomTx = 0; this.zoomTy = 0;
+    this.tiangPreview = null; // visual-only; tidak pernah masuk model/Undo/autosave
     this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
     this.el.innerHTML = DenahEditor.shellHTML();
@@ -256,6 +277,14 @@ class DenahEditor {
 .de-matmenu .de-mrow{display:flex;gap:6px;margin-top:6px}
 .de-tiangmenu{position:fixed;z-index:9999;display:none;flex-direction:column;gap:4px;background:#fff;border:1px solid #334155;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:6px}
 .de-tiangmenu.show{display:flex}
+.de-tiang-panel{scroll-margin-top:56px}
+.de-tiang-item{padding:6px 0;border-bottom:1px solid #e2e8f0}
+.de-tiang-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px}
+.de-tiang-actions{display:flex;gap:4px}
+.de-tiang-actions .de-mini,.de-tiang-apply{min-height:30px;padding:4px 8px;font-size:11px}
+.de-tiang-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:end}
+.de-tiang-fields>label{min-width:0;font-size:11px;display:flex;flex-direction:column;gap:2px}
+.de-tiang-fields input{width:100%!important;min-width:0;box-sizing:border-box}
 </style>
 <div class="de-card">
   <div class="de-ribbon">
@@ -318,6 +347,7 @@ class DenahEditor {
   </div>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
+  <div class="de-card de-tiang-panel" style="display:none;margin-top:10px;padding:10px" data-role="tiangPanel"></div>
   <div class="de-canvas-wrap" data-role="canvasWrap">
     <div class="de-canvas"></div>
     <span class="de-zoom-reset" data-role="btnZoomReset">Reset</span>
@@ -358,6 +388,10 @@ class DenahEditor {
       this.armed = null; this.addSupportPt = null; this.boxPreview = null;
       this.setHint();
       this.render();
+      if (this.mode === 'tiang') requestAnimationFrame(() => {
+        const panel = this._q('[data-role=tiangPanel]');
+        if (panel) panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      });
     });
     this._q('[data-role=btnAddV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'addV'; this.boxPreview = null; this.setHint('Klik sisi frame untuk sisipkan sudut baru.'); this.renderBoxPanel(); };
     this._q('[data-role=btnDelV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'delV'; this.boxPreview = null; this.setHint('Klik sudut untuk menghapus (min 3 sudut).'); this.renderBoxPanel(); };
@@ -609,7 +643,7 @@ class DenahEditor {
       bentuk: 'Mode Bentuk: seret bulatan sudut. Ketuk sisi frame untuk ketik panjang cm. "+ Sudut"/"− Sudut" untuk L/lekuk.',
       besi: 'Mode Ganti besi: klik batang/tiang di denah → pilih besi (atau balik ke default).',
       support: 'Mode Support: klik garis support untuk hapus/kembalikan. "Tambah manual" untuk gawang/WF melintang.',
-      tiang: 'Mode Tiang: tekan-tahan tempat kosong untuk menu Tambah Tiang. Seret tiang yang sudah ada untuk pindah, tekan-tahan untuk menu Ganti Besi/Hapus.',
+      tiang: 'Mode Tiang: isi posisi X/Y dari sudut kiri-depan. Bagian bawah gambar adalah depan; Y bertambah menuju belakang. Seret tiang untuk koreksi ringan.',
     };
     this._q('[data-role=hint]').textContent = extra || HINTS[this.mode];
   }
@@ -756,6 +790,176 @@ class DenahEditor {
     panel.querySelectorAll('input').forEach(inp => inp.onchange = e => this.setSideLength(+e.target.dataset.side, e.target.value));
   }
 
+  // Panel daftar tiang numerik (Task 2) — jalur input angka X/Y selain drag/tekan-tahan di kanvas.
+  // Label T{n} SELALU dari urutan this.S.tiang, sama persis label SVG (id="tl{i}", lihat render()).
+  // Commit (tambah/edit) HANYA saat change/Enter (bukan oninput per-digit) — pushUndo() satu kali,
+  // lalu clampTiang(tiangFromOffset(...)) persis pola tiangMenuTambah/drag tiang yang sudah ada.
+  renderTiangPanel(mem) {
+    const panel = this._q('[data-role=tiangPanel]');
+    panel.style.display = this.mode === 'tiang' ? '' : 'none';
+    if (this.mode !== 'tiang') { panel.innerHTML = ''; return; }
+    const tiangMem = mem.filter(m => m.jenis === 'tiang');
+    const rows = tiangMem.map((m, i) => {
+      const off = DenahConv.tiangToOffset(this.S, m.geom.p);
+      return `<div class="de-tiang-item" data-trow="${i}">
+        <div class="de-tiang-head">
+          <b style="font-size:12px">T${i + 1}</b>
+          <div class="de-tiang-actions"><span class="de-mini" data-role="tFokus" data-i="${i}">Fokus</span><span class="de-mini" data-role="tHapus" data-i="${i}">Hapus</span></div>
+        </div>
+        <div class="de-tiang-fields">
+          <label>X dari kiri<input type="text" inputmode="decimal" data-role="tx" data-i="${i}" value="${off.dx}"></label>
+          <label>Y dari depan<input type="text" inputmode="decimal" data-role="ty" data-i="${i}" value="${off.dy}"></label>
+          <span class="de-mini de-tiang-apply" data-role="tApply" data-i="${i}">Terapkan</span>
+        </div>
+      </div>`;
+    }).join('');
+    panel.innerHTML =
+      '<b style="font-size:12px;color:#334155">Posisi Tiang (cm dari kiri-depan)</b>' +
+      '<div data-role="tiangPanelMsg" style="font-size:11px;color:#dc2626;margin:3px 0"></div>' +
+      (rows || '<div style="font-size:12px;color:#94a3b8;margin-top:4px">Belum ada tiang.</div>') +
+      `<div class="de-tiang-item" style="border-bottom:0">
+        <div class="de-tiang-head"><b style="font-size:12px">+ Tiang baru</b></div>
+        <div class="de-tiang-fields">
+          <label>X dari kiri<input type="text" inputmode="decimal" data-role="tAddX"></label>
+          <label>Y dari depan<input type="text" inputmode="decimal" data-role="tAddY"></label>
+          <div class="de-tiang-actions"><span class="de-mini de-tiang-apply" data-role="tTambah">Tambah</span><span class="de-mini" data-role="tPreviewBatal">Batal</span></div>
+        </div>
+      </div>`;
+
+    const msgEl = () => this._q('[data-role=tiangPanelMsg]');
+    const showMsg = (txt) => { const el = msgEl(); if (el) el.textContent = txt; };
+
+    panel.querySelectorAll('[data-role=tApply]').forEach(btn => {
+      const commitRow = () => {
+        const i = +btn.dataset.i;
+        const row = panel.querySelector(`[data-trow="${i}"]`);
+        const xEl = row.querySelector('[data-role=tx]'), yEl = row.querySelector('[data-role=ty]');
+        const dx = DenahConv.parseCmValue(xEl.value), dy = DenahConv.parseCmValue(yEl.value);
+        if (dx == null || dy == null) {
+          showMsg(`T${i + 1}: X/Y harus angka (koma/titik boleh), tidak boleh kosong.`);
+          const off = DenahConv.tiangToOffset(this.S, this.S.tiang[i]);
+          xEl.value = off.dx; yEl.value = off.dy;
+          return;
+        }
+        showMsg('');
+        this.pushUndo();
+        this.S.tiang[i] = this.clampTiang(DenahConv.tiangFromOffset(this.S, dx, dy));
+        this.render();
+      };
+      btn.onclick = commitRow;
+      const row = panel.querySelector(`[data-trow="${btn.dataset.i}"]`);
+      row.querySelectorAll('[data-role=tx],[data-role=ty]').forEach(inp => {
+        inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); commitRow(); } };
+      });
+    });
+    panel.querySelectorAll('[data-role=tFokus]').forEach(btn => {
+      btn.onclick = () => {
+        const i = +btn.dataset.i;
+        const tc = this.el.querySelector('#tc' + i);
+        if (!tc) return;
+        this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
+        const prevStroke = tc.getAttribute('stroke'), prevW = tc.getAttribute('stroke-width');
+        tc.setAttribute('stroke', '#facc15'); tc.setAttribute('stroke-width', '4');
+        setTimeout(() => { if (tc.isConnected) { tc.setAttribute('stroke', prevStroke); tc.setAttribute('stroke-width', prevW); } }, 900);
+      };
+    });
+    panel.querySelectorAll('[data-role=tHapus]').forEach(btn => {
+      btn.onclick = () => {
+        const i = +btn.dataset.i;
+        this.pushUndo();
+        this.S.tiang.splice(i, 1);
+        this.render();
+      };
+    });
+    const xAdd = this._q('[data-role=tAddX]'), yAdd = this._q('[data-role=tAddY]');
+    const updatePreview = () => this.updateTiangPreview(xAdd, yAdd, showMsg);
+    xAdd.oninput = updatePreview;
+    yAdd.oninput = updatePreview;
+    this._q('[data-role=tPreviewBatal]').onclick = () => {
+      xAdd.value = ''; yAdd.value = ''; showMsg('');
+      this.clearTiangPreview();
+    };
+    this._q('[data-role=tTambah]').onclick = () => {
+      const dx = DenahConv.parseCmValue(xAdd.value), dy = DenahConv.parseCmValue(yAdd.value);
+      if (dx == null || dy == null) {
+        showMsg('Isi X/Y dengan angka (koma/titik boleh) sebelum menambah tiang.');
+        return;
+      }
+      showMsg('');
+      this.clearTiangPreview();
+      this.pushUndo();
+      this.S.tiang.push(this.clampTiang(DenahConv.tiangFromOffset(this.S, dx, dy)));
+      this.render();
+    };
+  }
+
+  // Preview Task 3: gambar langsung ke SVG tanpa render() agar state, Undo dan onChange tak tersentuh.
+  updateTiangPreview(xEl, yEl, showMsg) {
+    const dx = DenahConv.parseCmValue(xEl.value), dy = DenahConv.parseCmValue(yEl.value);
+    if (dx == null || dy == null) {
+      this.clearTiangPreview();
+      if (xEl.value.trim() || yEl.value.trim()) showMsg('Isi X dan Y dengan angka untuk melihat preview.');
+      else showMsg('');
+      return;
+    }
+    const inset = 8;
+    const minC = -(this.PAD / this.SC) + inset;
+    this.tiangPreview = {
+      ...DenahConv.tiangPreviewState(this.S, dx, dy, {
+        x0: minC, y0: minC,
+        x1: (this.domW || 400) - inset,
+        y1: (this.domH || 400) - inset,
+      }),
+      dx, dy,
+    };
+    showMsg(this.tiangPreview.clamped ? 'Posisi di luar area gambar; preview ditampilkan di batas terdekat.' : 'Preview aktif — tekan Tambah untuk menyimpan.');
+    this.drawTiangPreview();
+  }
+
+  clearTiangPreview() {
+    this.tiangPreview = null;
+    const old = this.el.querySelector('[data-tiang-preview]');
+    if (old) old.remove();
+  }
+
+  drawTiangPreview() {
+    const svg = this._q('.de-canvas svg');
+    if (!svg) return;
+    const old = svg.querySelector('[data-tiang-preview]');
+    if (old) old.remove();
+    if (!this.tiangPreview) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('data-tiang-preview', '1');
+    g.setAttribute('style', 'pointer-events:none');
+    const px = this.PAD + this.tiangPreview.point.x * this.SC;
+    const py = this.PAD + this.tiangPreview.point.y * this.SC;
+    const line = (x1, y1, x2, y2) => {
+      const el = document.createElementNS(NS, 'line');
+      [['x1', x1], ['y1', y1], ['x2', x2], ['y2', y2]].forEach(([k, v]) => el.setAttribute(k, v));
+      el.setAttribute('stroke', '#22d3ee'); el.setAttribute('stroke-width', '2'); el.setAttribute('stroke-dasharray', '4,3');
+      return el;
+    };
+    g.appendChild(line(px - 14, py, px + 14, py));
+    g.appendChild(line(px, py - 14, px, py + 14));
+    const circle = document.createElementNS(NS, 'circle');
+    circle.setAttribute('cx', px); circle.setAttribute('cy', py); circle.setAttribute('r', '8');
+    circle.setAttribute('fill', 'rgba(34,211,238,.22)'); circle.setAttribute('stroke', '#22d3ee'); circle.setAttribute('stroke-width', '2');
+    g.appendChild(circle);
+    const label = document.createElementNS(NS, 'text');
+    const viewBox = (svg.getAttribute('viewBox') || '').trim().split(/\s+/).map(Number);
+    const svgW = viewBox[2] || 0;
+    const labelAtRight = svgW > 0 && px > svgW - 150;
+    label.setAttribute('x', labelAtRight ? px - 12 : px + 12);
+    label.setAttribute('text-anchor', labelAtRight ? 'end' : 'start');
+    label.setAttribute('y', Math.max(14, py - 12));
+    label.setAttribute('fill', '#67e8f9'); label.setAttribute('font-size', '12'); label.setAttribute('font-weight', '700');
+    label.setAttribute('paint-order', 'stroke'); label.setAttribute('stroke', '#0f2740'); label.setAttribute('stroke-width', '3');
+    label.textContent = `Preview X${this.tiangPreview.dx} Y${this.tiangPreview.dy}`;
+    g.appendChild(label);
+    svg.appendChild(g);
+  }
+
   openMatMenu(evt, id) {
     this.menuId = id;
     const cur = this.S.matOverride[id] || '';
@@ -892,6 +1096,8 @@ class DenahEditor {
 
   // ---- Render SVG ----
   render() {
+    // Render berarti state/kanvas berubah; draft visual lama tidak boleh tersisa atau tersimpan.
+    this.tiangPreview = null;
     const S = this.S;
     const mem = DenahConv.buildMembers(S);
     const cmap = colorMap(mem);
@@ -953,7 +1159,7 @@ class DenahEditor {
     // belakangan menang tampil di atas), keliatan cuma 1 titik & susah dibedain/ditemuin lagi.
     mem.filter(m => m.jenis === 'tiang').forEach((m, i) => { const c = cmap[m.material]; const p = m.geom.p;
       s += `<circle id="tc${i}" cx="${X(p.x)}" cy="${Y(p.y)}" r="6" fill="${c}" stroke="#0f2740" stroke-width="1.5" data-id="${m.id}" class="hit"><title>Tiang ${m.material} • ${m.panjang}cm</title></circle>`;
-      s += `<text id="tl${i}" x="${X(p.x) + 9}" y="${Y(p.y) + 4}" fill="#fbbf24" font-size="10" paint-order="stroke" stroke="#0f2740" stroke-width="3">T${i + 1}</text>`; });
+      s += `<text id="tl${i}" x="${X(p.x) + 10}" y="${Y(p.y) + 5}" fill="#fbbf24" font-size="13" font-weight="700" paint-order="stroke" stroke="#0f2740" stroke-width="4">T${i + 1}</text>`; });
     if (this.armed === 'addBox' && this.boxPreview.sisiIdx != null) {
       const pv = this.computeBoxPreviewVerts();
       const pts = [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' ');
@@ -975,6 +1181,7 @@ class DenahEditor {
     this._q('[data-role=luas]').textContent = (shoelace(S.verts) / 10000).toFixed(2) + ' m²';
     this.renderSides(mem);
     this.renderBoxPanel();
+    this.renderTiangPanel(mem);
     this._changed();
   }
 
