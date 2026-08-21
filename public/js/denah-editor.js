@@ -340,6 +340,9 @@ class DenahEditor {
         <span class="de-mini" data-role="btnSaran">Pakai saran</span>
         <span class="de-hint" data-role="saranHint"></span>
       </div>
+      <div class="de-row" style="margin-top:8px">
+        <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
+      </div>
     </div>
     <div class="de-ribbon-panel" data-panel="besi">
       <div class="de-matbar">
@@ -352,12 +355,10 @@ class DenahEditor {
       <div class="de-tools">
         <span class="de-tool on" data-mode="bentuk">Bentuk</span>
         <span class="de-tool" data-mode="besi">Ganti besi</span>
-        <span class="de-tool" data-mode="support">Support</span>
         <span class="de-tool" data-mode="tiang">Tiang</span>
         <span class="de-mini" data-role="btnAddV">+ Sudut</span>
         <span class="de-mini" data-role="btnDelV">− Sudut</span>
         <span class="de-mini" data-role="btnAddBox">+ Tambah Kotak</span>
-        <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
       </div>
     </div>
     <div class="de-ribbon-panel" data-panel="sisi">
@@ -534,6 +535,16 @@ class DenahEditor {
       t.classList.add('on');
       strip.classList.add('open');
       openTab = name;
+      // Tab Support = satu-satunya jalan masuk mode edit support sekarang (tombol mode "Support"
+      // dihapus dari tab Mode, spec Keputusan #8-9, 21 Agustus). Tab LAIN tidak menyetel mode
+      // (tetap decoupled seperti sebelumnya) -- cuma Support yang baru dikopel begini.
+      if (name === 'support' && this.mode !== 'support') {
+        this._qa('.de-tool').forEach(el2 => el2.classList.remove('on'));
+        this.mode = 'support';
+        this.armed = null; this.addSupportPt = null; this.boxPreview = null;
+        this.setHint();
+        this.render();
+      }
     });
     this._docPointerDownRibbon = (e) => {
       const ribbon = this._q('.de-ribbon');
