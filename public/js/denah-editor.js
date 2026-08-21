@@ -1307,7 +1307,13 @@ class DenahEditor {
       // Label S{n} KHUSUS manual (nomor independen dari grid, lihat DenahConv.numberSupportsManual).
       // Grid support tidak diberi nomor lagi (id-nya tak stabil lintas render, lihat Task 1).
       const label = manual ? `S${supNum[m.id]} · ${m.panjang}` : `${m.panjang}`;
-      s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${X(mx)}" y="${Y(my) - 4}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">${label}</text>`; });
+      // Support horizontal & vertikal yang berpotongan deket tengah kotak dulu labelnya numpuk
+      // (dua-duanya persis di titik tengah garis masing-masing). Vertikal digeser ke kanan garis
+      // (bukan lagi persis di tengah) biar gak ketiban label horizontal yang lewat situ.
+      const isHoriz = Math.abs(m.geom.a.y - m.geom.b.y) < Math.abs(m.geom.a.x - m.geom.b.x);
+      const lx = isHoriz ? X(mx) : X(mx) + 8;
+      const ly = isHoriz ? Y(my) - 4 : Y(my);
+      s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${lx}" y="${ly}" fill="#93c5fd" font-size="9" text-anchor="${isHoriz ? 'middle' : 'start'}" paint-order="stroke" stroke="#0f2740" stroke-width="3">${label}</text>`; });
     if (this.mode === 'support') mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
       ['a', 'b'].forEach(end => { const p = m.geom[end], cx = X(p.x), cy = Y(p.y);
         s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;

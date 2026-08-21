@@ -221,9 +221,22 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    sebagai "measurement-first tiang numerik + ghost preview" (panel tiang numerik
    tambah/edit/hapus/fokus + Undo/Redo/autosave, ghost preview crosshair sebelum
    commit, origin koordinat kiri-depan; `public/js/denah-editor.js`, test
-   `tests/rangka/test_tiang_numerik.mjs`). Backlog lanjutan yang masih aktif: pola
-   drag=pindah/tekan-tahan=menu untuk Support/Frame, Kelompok C saran-kotak-2-arah,
-   dan investigasi tombol “Lanjut → Finalisasi” di HP hanya jika ada reproduksi
+   `tests/rangka/test_tiang_numerik.mjs`).
+   ~~Redesign Support~~ — **SELESAI & LIVE 21 Agustus 2026** (dikerjakan via
+   subagent-driven-development, 7 task + final review + 1 fix wave), **sudah
+   divalidasi manual oleh Bos langsung di web/HP (checklist 3 kelompok: grid,
+   manual, undo+regresi Frame/Tiang — semua normal).** Pola drag=pindah/
+   tahan=menu (persis pola Tiang) sekarang berlaku juga untuk garis support
+   manual, titik ujungnya, dan support grid otomatis (yang terakhir ini
+   sekarang bisa digeser dikunci searah, lalu naik-kelas jadi entri manual).
+   Panel daftar Support baru (S1/S2 + Fokus/Hapus), kontrol Support
+   dikonsolidasi ke 1 tab (buka tab = otomatis aktifkan mode). Detail:
+   `docs/superpowers/specs/2026-08-21-denah-support-drag-panel-design.md`,
+   `docs/superpowers/plans/2026-08-21-denah-support-drag-panel.md`.
+   Backlog lanjutan yang masih aktif: pola drag=pindah/tekan-tahan=menu untuk
+   **Frame** (belum disentuh sesi ini — vertex masih drag lama, sisi masih
+   input panjang angka, belum ada menu), Kelompok C saran-kotak-2-arah, dan
+   investigasi tombol “Lanjut → Finalisasi” di HP hanya jika ada reproduksi
    video. Jangan menambal bug HP tanpa bukti.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
