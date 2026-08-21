@@ -282,6 +282,12 @@
       "runner": "php",
       "requires_db": false,
       "manual": false
+    },
+    {
+      "path": "tests/rangka/test_tiang_numerik.mjs",
+      "runner": "node",
+      "requires_db": false,
+      "manual": false
     }
   ],
   "excluded": [
