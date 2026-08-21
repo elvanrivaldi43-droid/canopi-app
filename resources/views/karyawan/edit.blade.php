@@ -123,6 +123,32 @@
                 @error('jabatan')<div style="font-size:11px;color:#F87171;margin-top:4px;">{{ $message }}</div>@enderror
             </div>
 
+            {{-- Skill (untuk rekomendasi PIC SWE) --}}
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px; color:#94a3b8; display:block; margin-bottom:4px;">Skill (untuk rekomendasi PIC SWE)</label>
+
+                @if($kategori === null)
+                <div style="background:#78350f22; border:1px solid #b45309; border-radius:6px; padding:8px 10px; margin-bottom:8px; font-size:12px; color:#fbbf24;">
+                    Kategori lapangan tidak terdeteksi dari jabatan "{{ $karyawan->jabatan }}" — skill standar TIDAK nempel otomatis. Centang manual di bawah kalau perlu.
+                </div>
+                @endif
+
+                @forelse($rabSkill as $s)
+                <div style="display:flex; align-items:center; gap:6px; padding:3px 0;">
+                    <input type="checkbox" name="skill[]" value="{{ $s->id }}" id="skill{{ $s->id }}"
+                        {{ in_array($s->id, $userSkillIds) ? 'checked' : '' }}>
+                    <label for="skill{{ $s->id }}" style="font-size:12px; color:#e2e8f0;">
+                        {{ $s->nama }}
+                        @if(in_array($s->default_role, ['tukang','kenek','tukang_kenek']))
+                        <span style="font-size:10px; color:#64748b;">(otomatis {{ str_replace('_', '/', $s->default_role) }})</span>
+                        @endif
+                    </label>
+                </div>
+                @empty
+                <div style="font-size:12px; color:#64748b;">Belum ada skill di master data. Isi dulu di halaman Kelola Produktivitas.</div>
+                @endforelse
+            </div>
+
             {{-- Tanggal Masuk --}}
             <div style="margin-bottom:16px;">
                 <label style="display:block;font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:6px;">Tanggal Masuk Kerja <span style="color:#EF4444;">*</span></label>
