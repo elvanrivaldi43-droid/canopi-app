@@ -272,8 +272,42 @@ Pekerjaan memakai satu writer per worktree dan tidak memakai continuation Claude
    `UPDATE` sebelum hasil SELECT nama + tiga tanggal diperiksa Bos.
 6. Foto absen lokal lama dan `foto-absen-bersih.php` baru boleh dipensiunkan
    setelah retensi/migrasi data lama benar-benar selesai.
-7. **SWE Fase 2 (skill karyawan + rekomendasi PIC otomatis) belum dikerjakan.**
-   Spec penuh: `docs/superpowers/specs/2026-08-16-swe-smart-work-engine-design.md`
+7. **SWE Fase 2 (skill karyawan + rekomendasi PIC otomatis) — brainstorming
+   SEDANG JALAN per 21 Agustus 2026, BELUM ditulis ke spec file, BELUM
+   disetujui Elvan.** Kalau lanjut sesi baru, **jangan brainstorming ulang
+   dari nol** — pakai keputusan yang sudah dibahas ini, cukup presentasikan
+   ulang & minta approve:
+   - `rab_skill` dapat kolom baru `default_role` (Tukang/Kenek/Tukang&Kenek/
+     Manual saja), diatur Owner di halaman Kelola Produktivitas yang sudah
+     ada (bukan halaman baru).
+   - Tabel baru `user_skill` (user_id, rab_skill_id, sumber: default_role
+     atau manual).
+   - Halaman Karyawan (form edit yang sudah ada) dapat tambahan kecil:
+     checklist skill aktif, yang otomatis kecentang (dari jabatan) ditandai
+     beda dari yang manual.
+   - `rab_jenis_kerja.skill_default` (sekarang teks bebas, rawan typo)
+     diubah jadi **dropdown** pilih dari daftar `rab_skill` — data lama yang
+     belum cocok gak dianggap error, cuma rekomendasinya kosong sampai
+     Owner buka & simpan ulang pakai dropdown baru.
+   - Rekomendasi PIC ("Cari PIC") dihitung LIVE di layar (tanpa reload,
+     mirip kalkulator RAB), pakai field qty+tanggal target yang SUDAH ADA
+     di panel "Mulai Tahap" Fase 1 — bukan field baru. `target_hari` =
+     selisih hari ini ke tanggal target. Formula jumlah orang: sama persis
+     yang sudah dikunci di spec bagian 4-B (ceil dari tim default × rasio
+     estimasi/target, minimal 1).
+   - Ketersediaan karyawan ("lagi sibuk atau nggak") dicek dari status
+     `project_tahap_pic`-nya masih "Sedang Berjalan" di tahap MANAPUN —
+     BUKAN overlap tanggal (tanggal target sering kosong di Fase 1, gak
+     bisa diandalkan).
+   - Sifatnya tetap SARAN (badge ✅/🔴), bukan gembok — endpoint
+     `mulaiTahap()` yang sudah ada dari Fase 1 TIDAK PERLU diubah sama
+     sekali, cuma tampilan checklist-nya yang diperkaya lewat endpoint
+     kalkulasi baru (read-only, mirip pola `/rab-blok/hitung`).
+   - **Belum dibahas/diputuskan:** urutan tampilan daftar kandidat PIC,
+     detail UI tombol "Hitung Saran", dan batas scope resmi Fase 2 (bagian
+     terakhir sebelum spec ditulis).
+
+   Spec penuh (semua fase): `docs/superpowers/specs/2026-08-16-swe-smart-work-engine-design.md`
    bagian 6. Plan Fase 1 (sudah selesai, referensi pola):
    `docs/superpowers/plans/2026-08-16-swe-fase1-tahap-produksi.md`.
 
