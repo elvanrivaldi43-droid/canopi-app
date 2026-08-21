@@ -300,6 +300,8 @@ class DenahEditor {
 .de-matmenu .de-mrow{display:flex;gap:6px;margin-top:6px}
 .de-tiangmenu{position:fixed;z-index:9999;display:none;flex-direction:column;gap:4px;background:#fff;border:1px solid #334155;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:6px}
 .de-tiangmenu.show{display:flex}
+.de-supportmenu{position:fixed;z-index:9999;display:none;flex-direction:column;gap:4px;background:#fff;border:1px solid #334155;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:6px}
+.de-supportmenu.show{display:flex}
 .de-tiang-panel{scroll-margin-top:56px}
 .de-tiang-item{padding:6px 0;border-bottom:1px solid #e2e8f0}
 .de-tiang-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px}
@@ -388,6 +390,13 @@ class DenahEditor {
   <span class="de-mini" data-role="tiangMenuGanti">Ganti Besi</span>
   <span class="de-mini" data-role="tiangMenuHapus">Hapus</span>
   <span class="de-mini" data-role="tiangMenuCancel">Batal</span>
+</div>
+<div class="de-supportmenu" data-role="supportMenu">
+  <span class="de-mini" data-role="supportMenuSertakan">Sertakan</span>
+  <span class="de-mini" data-role="supportMenuKecualikan">Kecualikan</span>
+  <span class="de-mini" data-role="supportMenuGanti">Ganti Material</span>
+  <span class="de-mini" data-role="supportMenuHapus">Hapus</span>
+  <span class="de-mini" data-role="supportMenuCancel">Batal</span>
 </div>`;
   }
 
@@ -469,12 +478,36 @@ class DenahEditor {
     };
     this._q('[data-role=tiangMenuCancel]').onclick = () => this._closeTiangMenu();
 
+    // Tombol menu Support — Hapus HANYA berlaku untuk manual (Sm_), grid tidak punya "Hapus"
+    // (cuma Sertakan/Kecualikan). Ganti Material reuse openMatMenu() yang sudah generic per-prefix.
+    this._q('[data-role=supportMenuSertakan]').onclick = () => {
+      if (this._supportMenuId) { this.pushUndo(); this.S.removed[this._supportMenuId] = false; this._closeSupportMenu(); this.render(); }
+    };
+    this._q('[data-role=supportMenuKecualikan]').onclick = () => {
+      if (this._supportMenuId) { this.pushUndo(); this.S.removed[this._supportMenuId] = true; this._closeSupportMenu(); this.render(); }
+    };
+    this._q('[data-role=supportMenuGanti]').onclick = e => {
+      if (this._supportMenuId) { const id = this._supportMenuId; this._closeSupportMenu(); this.openMatMenu(e, id); }
+    };
+    this._q('[data-role=supportMenuHapus]').onclick = () => {
+      if (this._supportMenuId && this._supportMenuId.startsWith('Sm_')) {
+        this.pushUndo();
+        const i = +this._supportMenuId.slice(3);
+        this.S.supportsManual.splice(i, 1);
+        this._closeSupportMenu();
+        this.render();
+      }
+    };
+    this._q('[data-role=supportMenuCancel]').onclick = () => this._closeSupportMenu();
+
     this._docPointerDown = (e) => {
       const menu = this._q('[data-role=matMenu]');
       const tmenu = this._q('[data-role=tiangMenu]');
+      const smenu = this._q('[data-role=supportMenu]');
       const canvas = this._q('.de-canvas');
       if (menu && menu.style.display === 'block' && !menu.contains(e.target) && !(canvas && canvas.contains(e.target))) menu.style.display = 'none';
       if (tmenu && tmenu.classList.contains('show') && !tmenu.contains(e.target) && !(canvas && canvas.contains(e.target))) this._closeTiangMenu();
+      if (smenu && smenu.classList.contains('show') && !smenu.contains(e.target) && !(canvas && canvas.contains(e.target))) this._closeSupportMenu();
     };
     document.addEventListener('pointerdown', this._docPointerDown);
   }
@@ -1049,6 +1082,34 @@ class DenahEditor {
     this._q('[data-role=tiangMenu]').classList.remove('show');
     this._tiangMenuIdx = null;
     this._tiangAddPt = null;
+  }
+
+  // Menu tekan-tahan Support — SATU popup dipakai 2 konteks: grid otomatis (Sertakan/Kecualikan
+  // toggle + Ganti Material) dan manual/titik-ujungnya (Hapus + Ganti Material) — saling
+  // eksklusif, tombol tak relevan disembunyikan. Pola identik openTiangMenu di atas.
+  openSupportMenu(evt, id) {
+    this._supportMenuId = id;
+    const isGrid = id.startsWith('Sh_') || id.startsWith('Sv_');
+    const excluded = !!this.S.removed[id];
+    this._q('[data-role=supportMenuSertakan]').style.display = (isGrid && excluded) ? '' : 'none';
+    this._q('[data-role=supportMenuKecualikan]').style.display = (isGrid && !excluded) ? '' : 'none';
+    this._q('[data-role=supportMenuHapus]').style.display = isGrid ? 'none' : '';
+    this._showSupportMenuAt(evt);
+  }
+  // Posisi clamp-ke-viewport sama persis openMatMenu()/_showTiangMenuAt() di atas.
+  _showSupportMenuAt(evt) {
+    const menu = this._q('[data-role=supportMenu]');
+    menu.style.left = '0px'; menu.style.top = '0px'; menu.classList.add('show');
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    let left = evt.clientX + 6, top = evt.clientY + 6;
+    if (left + mw > window.innerWidth) left = Math.max(6, evt.clientX - mw - 6);
+    if (top + mh > window.innerHeight) top = Math.max(6, evt.clientY - mh - 6);
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+  }
+  _closeSupportMenu() {
+    this._q('[data-role=supportMenu]').classList.remove('show');
+    this._supportMenuId = null;
   }
 
   // Panel input span/menjorok + Terapkan/Batal — cuma tampil selagi armed === 'addBox'.
