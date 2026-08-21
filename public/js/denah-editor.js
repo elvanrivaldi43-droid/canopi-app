@@ -698,7 +698,7 @@ class DenahEditor {
     const HINTS = {
       bentuk: 'Mode Bentuk: seret bulatan sudut. Ketuk sisi frame untuk ketik panjang cm. "+ Sudut"/"− Sudut" untuk L/lekuk.',
       besi: 'Mode Ganti besi: klik batang/tiang di denah → pilih besi (atau balik ke default).',
-      support: 'Mode Support: klik garis support untuk hapus/kembalikan. "Tambah manual" untuk gawang/WF melintang.',
+      support: 'Mode Support: geser garis untuk pindah, tekan-tahan ~0,5 detik untuk menu (hapus/kecualikan/ganti besi). "Tambah manual" untuk gawang/WF melintang.',
       tiang: 'Mode Tiang: isi posisi X/Y dari sudut kiri-depan. Bagian bawah gambar adalah depan; Y bertambah menuju belakang. Seret tiang untuk koreksi ringan.',
     };
     this._q('[data-role=hint]').textContent = extra || HINTS[this.mode];
