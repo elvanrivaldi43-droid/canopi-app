@@ -51,7 +51,7 @@ Edit kode → git commit → git push ke GitHub
 → Selesai ±1-2 menit
 ```
 
-Auto-deploy aman dipakai normal (insiden repo lama 9-11 Juli 2026 sudah tuntas diperbaiki — detail di arsip). **Tetap disiplin:** `git pull` dulu sebelum mulai kerja di sesi/device manapun.
+**Insiden 9-11 Juli 2026 (SUDAH SELESAI diperbaiki):** Repo GitHub sempat berisi source code lama, push pertama menimpa banyak file dengan versi lama → web down total. Sudah diperbaiki tuntas 11 Juli — repo sekarang = cerminan persis server production. Auto-deploy aman dipakai normal. **Tetap disiplin:** `git pull` dulu sebelum mulai kerja di sesi/device manapun.
 
 File diagnostik di server (boleh dipakai, jangan hapus): `bersih-bersih.php`, `lihat-log.php`.
 
@@ -183,33 +183,73 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 ## 📌 STATUS TERKINI (update tiap akhir sesi kerja)
 
 > **Arsip kronologi lengkap:** `docs/history/CLAUDE_STATUS_ARCHIVE_2026-08-15.md`
-> (s.d. 15 Agustus) dan `docs/history/CLAUDE_STATUS_ARCHIVE_2026-08-21.md`
-> (s.d. 21 Agustus, termasuk kronologi lengkap Deterministic Guardrail — run ID,
-> SHA komit tiap tahap, hasil GREEN/NEGATIVE branch terisolasi). Kalau tugas
-> menyangkut insiden/fitur lama, cari detailnya di arsip; jangan memuat seluruh
-> arsip untuk pekerjaan yang tidak berkaitan.
+> adalah salinan byte-for-byte `CLAUDE.md` sebelum perampingan (SHA-256
+> `119523e3bbb6ca6ee9fd5ccbd218d9051a1a67e0eee227de21a78df649467455`).
+> Kalau tugas menyangkut insiden/fitur lama, cari detailnya di arsip tersebut;
+> jangan memuat seluruh arsip untuk pekerjaan yang tidak berkaitan.
 
-### Kondisi production per 21 Agustus 2026
+### Kondisi production per 15 Agustus 2026
 
-- Repo GitHub = sumber deploy production; auto-deploy FTP dari `main`, dijaga
-  **Deterministic Guardrail** (`verify.yml` + `scripts/canopi-check` jalan
-  sebelum tiap FTP deploy) — **CLOSED** (selesai antara 15-21 Agustus 2026,
-  tanggal pasti & kronologi lengkap di arsip 21 Agustus).
-- **LIVE:** Telegram karyawan + kode absen per-karyawan (atomik, personal,
-  tak terkirim ganda), jadwal libur per-karyawan, jam masuk/pulang
-  per-karyawan, validasi silang izin↔libur, libur nasional, checkpoint
-  Lapor Progress/Kembali Kerja, Kerja Hari Libur + hardening payroll/security
-  (aktivasi=hari kerja biasa tanpa pengganti, potongan/lembur tak dobel, KPI
-  maks 100%, koreksi nominal Owner-only). Penjadwal cron pindah ke crontab
-  VPS per 17 Agustus (log permanen `/root/cron-logs/`) — detail di memory
-  `cron-scheduling-vps`.
-- Media baru pakai Cloudflare R2 via `https://media.kanopitangerang.co.id`
-  (jangan kembali ke `r2.dev`); foto lama tetap di lokasi asal.
-- Masa kerja Kasbon: urutan `tanggal_bergabung → tgl_masuk_kerja → created_at`,
-  tanpa backfill otomatis.
-- **SWE Fase 1 (Fondasi Tahap Produksi) LIVE 16 Agustus**, **Fase 2 (Skill
-  Karyawan + Rekomendasi PIC) LIVE 21 Agustus** — checklist testing yang
-  masih perlu dijalankan Bos ada di Utang aktif #7 di bawah.
+- Repo GitHub = sumber deploy production; auto-deploy FTP dari `main` normal.
+- Telegram karyawan + kode absen per-karyawan **LIVE**. Kode bersifat atomik,
+  personal, tidak terkirim ganda, dan tidak berlaku setelah ada
+  sakit/izin/cuti/dinas luar. **Penjadwal pindah dari cron-job.org ke crontab
+  VPS per 17 Agustus 2026** (log permanen di `/root/cron-logs/`, bukan lagi
+  retensi 1 hari) — detail di memory `cron-scheduling-vps`.
+- Jadwal libur per-karyawan, jam masuk/pulang per-karyawan, validasi silang
+  izin↔libur, libur nasional, serta checkpoint Lapor Progress/Kembali Kerja
+  **LIVE**.
+- Media baru memakai Cloudflare R2. URL production adalah
+  `https://media.kanopitangerang.co.id`; jangan kembali memakai `r2.dev` untuk
+  upload baru. Foto lama tetap di lokasi asalnya.
+- Kerja Hari Libur + final hardening payroll/security **LIVE**: aktivasi
+  membatalkan libur tanpa pengganti dan menjadi hari kerja biasa; potongan dan
+  lembur tidak dihitung ganda; KPI maksimal 100%; koreksi nominal dan pengelolaan
+  payroll seluruh karyawan Owner-only; slip pribadi memakai ownership check;
+  Admin tidak dapat mengubah field sensitif atau menaikkan role ke Owner.
+- Masa kerja Kasbon memakai urutan
+  `tanggal_bergabung → tgl_masuk_kerja → created_at`. Tidak ada backfill otomatis.
+  Audit tiga tanggal bersifat read-only dan backfill tetap memerlukan daftar nama
+  + persetujuan Bos terpisah.
+- **SWE Fase 1 (Fondasi Tahap Produksi) LIVE per 16 Agustus 2026:** tahap produksi
+  (potong/las/cat/kirim/instal) otomatis tergenerasi dari template saat RAB deal
+  jadi project; halaman `/tahap-master` + `/template-tahap` (Owner); mulai/selesai
+  tahap dengan PIC dipilih manual (rekomendasi skill otomatis = Fase 2, belum
+  dikerjakan). SQL production sudah dijalankan Bos, sudah push+deploy.
+
+### Pekerjaan aktif — Deterministic Guardrail
+
+Bos memilih workflow **Direct/Single-session Claude + Deterministic Guardrail**:
+satu task, satu worktree, satu writer, verifikasi mekanis oleh Hermes, dan maksimal
+satu reviewer read-only hanya untuk payroll/auth/SQL/cron/arsitektur berisiko.
+
+Plan Fondasi Tahap 1 dan Verification Gate V2 disimpan lokal di `.hermes/plans/`.
+Pekerjaan memakai satu writer per worktree dan tidak memakai continuation Claude.
+
+- Fondasi manifest + `scripts/canopi-check` tersedia di remote `main` melalui
+  `20c5f3d`; dua workflow FTP saat rilis fondasi gagal karena
+  `Timeout (control socket)`, tetapi production tetap sehat (`/login` 200).
+- Hermes Deploy Watchdog aktif sebagai cron script-only setiap 5 menit
+  (`no_agent`, tanpa token LLM) dan hanya melapor bila workflow `main` baru selesai.
+- Verification workflow dibuat dengan RED→GREEN di `feature/verification-gate`
+  (`d7e5432`), tanpa FTP, secret production, DB, migration, atau `.env`.
+- Gate lokal final setelah integrasi: 45 tes, 209 file PHP, 226 route,
+  119 Blade — PASS.
+- Bukti GitHub branch terisolasi:
+  - GREEN awal: run `31894530711` — success.
+  - NEGATIVE manifest drift: run `31894619793` — failure sesuai desain,
+    deploy count 0.
+  - Probe dihapus dan pulih GREEN: run `31894714432` — success.
+- Selama pembuktian branch terisolasi, final tree probe identik dengan branch GREEN
+  dan `origin/main` tetap `20c5f3d` sampai izin rilis diberikan.
+- Task 5 sudah **LIVE di `main`**: `deploy.yml` memanggil reusable `verify`
+  dan job FTP memakai `needs: verify`. Blok runtime FTP/cache lama terkunci
+  byte-identik dengan SHA-256 `a11c7864f04f4bc1e6c3475f211aa051f24bef5f4e9ababa5076e941f55ffde2`.
+- Release gate commit `cd6bdca`: GitHub Actions run `31895509235` sukses;
+  `verify / Verification Guardrail` success (44 detik), lalu `Deploy via FTP`
+  success (24 detik). Smoke production: `/login` 200 dan `/` 302.
+- Deterministic Guardrail + verification-before-deploy **CLOSED**. Tahap terpisah
+  yang belum dilakukan: MariaDB test lokal, preview VPS, atau feature flag.
 
 ### Utang aktif / resume point
 
