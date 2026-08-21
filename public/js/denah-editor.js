@@ -114,6 +114,29 @@ const DenahConv = {
     const n = Number(s.replace(',', '.'));
     return Number.isFinite(n) ? n : null;
   },
+  // Kunci arah geser support grid (Redesign Support, 21 Agustus): support horizontal (id "Sh_...",
+  // a.y===b.y) cuma boleh naik-turun; support vertikal (id "Sv_...", a.x===b.x) cuma boleh
+  // kiri-kanan. Alasan: hasil geser HARUS tetap horizontal/vertikal (masuk akal secara struktur
+  // rangka), tidak boleh miring diagonal.
+  lockSupportAxis(id, startA, startB, dx, dy) {
+    const horizontal = id.startsWith('Sh_');
+    const ddx = horizontal ? 0 : dx;
+    const ddy = horizontal ? dy : 0;
+    return {
+      a: { x: startA.x + ddx, y: startA.y + ddy },
+      b: { x: startB.x + ddx, y: startB.y + ddy },
+    };
+  },
+  // Nomor S{n} KHUSUS support manual (id "Sm_..."), independen dari support grid otomatis.
+  // SATU sumber angka dipakai render() (label kanvas), openMatMenu() (label menu Ganti Material),
+  // dan renderSupportPanel() (panel daftar) — jangan hitung ulang beda-beda di tiap tempat, itu
+  // akar masalah lama: S{n} kanvas dulu gabungan grid+manual, jadi beda dari nomor panel.
+  numberSupportsManual(mem) {
+    let n = 0;
+    const map = {};
+    mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { n++; map[m.id] = n; });
+    return map;
+  },
   buildMembers(S) {
     // K harus > 0: kotak<=0 (mis. input negatif / model tersimpan rusak) bikin loop scanline tak berhenti → freeze tab.
     const mem = [], V = S.verts, bb = bbox(V), K = (S.kotak > 0 ? S.kotak : 100), rem = S.removed || {};
