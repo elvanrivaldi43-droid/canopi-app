@@ -181,6 +181,25 @@ const DenahConv = {
   },
   luasM2(S) { return Math.round(shoelace(S.verts) / 10000 * 100) / 100; },
   saranKotak(lebar, target) { const n = Math.max(1, Math.round(lebar / target)); return Math.round(lebar / n); },
+  // Posisi garis support internal sepanjang 1 sumbu (lo..hi). Dua mode (Spacing Per-Sumbu, 21 Ags):
+  //  - 'kolom': N kolom = N ruas sama besar = N-1 garis di jarak span/N. Bagi rata PERSIS, tanpa sisa.
+  //  - 'cm'   : langkah kotak cm dari lo (algoritma LAMA, backward-compat) -- boleh sisa ruas terakhir.
+  // kotakFallback dipakai kalau kotak kosong/<=0 (denah lama tanpa kotakH) atau kolom tak valid.
+  // Semua jalur di-guard biar tak pernah bagi-nol / loop tak berhenti (span<=0, kotak<=0, kolom<1, NaN).
+  posisiSupport(lo, hi, mode, kotak, kolom, kotakFallback) {
+    const span = hi - lo;
+    if (!(span > 0)) return [];
+    const out = [];
+    if (mode === 'kolom' && Number.isFinite(kolom) && kolom >= 1) {
+      const K = span / kolom;
+      for (let i = 1; i < kolom; i++) out.push(lo + K * i);
+      return out;
+    }
+    // mode 'cm' (atau kolom tak valid -> fallback ke cm)
+    const K = (kotak > 0 ? kotak : (kotakFallback > 0 ? kotakFallback : 100));
+    for (let v = lo + K; v < hi - 1; v += K) out.push(v);
+    return out;
+  },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
   // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
