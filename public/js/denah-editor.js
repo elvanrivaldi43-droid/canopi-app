@@ -1206,12 +1206,20 @@ class DenahEditor {
     s += `<rect x="${PAD}" y="${PAD}" width="${domW * this.SC}" height="${domH * this.SC}" fill="url(#${gid})"/>`;
     // support (grup — diredupkan saat seret sudut). Support manual dapat titik ujung yang bisa digeser.
     s += '<g id="supLayer">';
-    mem.filter(m => m.jenis === 'support').forEach((m, i) => { const c = cmap[m.material]; const manual = m.id.startsWith('Sm_');
+    const supNum = DenahConv.numberSupportsManual(mem);
+    mem.filter(m => m.jenis === 'support').forEach(m => { const c = cmap[m.material]; const manual = m.id.startsWith('Sm_');
       const mx = (m.geom.a.x + m.geom.b.x) / 2, my = (m.geom.a.y + m.geom.b.y) / 2;
-      // garis tampak (tanpa event) + garis transparan lebar (target ketuk) + label S{n}·panjang
-      s += `<line ${manual ? `id="sm${m.id.slice(3)}"` : ''} x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="${c}" stroke-width="${manual ? 3 : 2}"><title>${m.material} • ${m.panjang}cm</title></line>`;
+      // garis tampak (tanpa event) + garis transparan lebar (target ketuk) + label. id garis tampak
+      // SELALU ada (bukan cuma manual seperti dulu) -- grid support butuh id stabil-per-render
+      // "sg_{id}" biar drag-preview (Task 3) bisa update atribut x1/y1/x2/y2-nya langsung tanpa
+      // render ulang, sama pola dgn manual (sm{i}).
+      const lineId = manual ? 'sm' + m.id.slice(3) : 'sg_' + m.id;
+      s += `<line id="${lineId}" x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="${c}" stroke-width="${manual ? 3 : 2}"><title>${m.material} • ${m.panjang}cm</title></line>`;
       s += `<line x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="transparent" stroke-width="14" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
-      s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${X(mx)}" y="${Y(my) - 4}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">S${i + 1} · ${m.panjang}</text>`; });
+      // Label S{n} KHUSUS manual (nomor independen dari grid, lihat DenahConv.numberSupportsManual).
+      // Grid support tidak diberi nomor lagi (id-nya tak stabil lintas render, lihat Task 1).
+      const label = manual ? `S${supNum[m.id]} · ${m.panjang}` : `${m.panjang}`;
+      s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${X(mx)}" y="${Y(my) - 4}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">${label}</text>`; });
     if (this.mode === 'support') mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
       ['a', 'b'].forEach(end => { const p = m.geom[end], cx = X(p.x), cy = Y(p.y);
         s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;
@@ -1407,11 +1415,25 @@ class DenahEditor {
           }, 450);
         }
       } else if (this.mode === 'support') {
+        // Redesign Support (21 Agustus): SEMUA sub-elemen pakai pola Tiang -- tap cepat tanpa
+        // gerak = no-op, geser = pindah, tahan diam 450ms = menu. pushUndo() TIDAK di sini
+        // (banyak gestur berakhir tanpa mutasi) -- dipindah ke pointermove persis saat gerakan
+        // nyata pertama terdeteksi, sama pola persis Tiang.
         if (t.dataset.sm != null) {
-          this.pushUndo();
+          // Titik ujung support manual: menu-nya SAMA dengan badan garis (Hapus = hapus seluruh
+          // garis) -- struktur data {a,b} tak terpisahkan, tak ada konsep "hapus 1 titik saja"
+          // (lihat spec Keputusan #2).
           const i = +t.dataset.sm, end = t.dataset.end;
-          drag = { type: 'sup', i, end, hit: t, h: el.querySelector('#smh' + i + end), line: el.querySelector('#sm' + i) };
-          el.setPointerCapture(e.pointerId); e.preventDefault(); return;
+          const myDrag = { type: 'sup', i, end, startPt: cm, moved: false,
+            hit: t, h: el.querySelector('#smh' + i + end), line: el.querySelector('#sm' + i) };
+          drag = myDrag;
+          el.setPointerCapture(e.pointerId); e.preventDefault();
+          myDrag.longPressTimer = setTimeout(() => {
+            if (drag !== myDrag || myDrag.moved) return;
+            this.openSupportMenu(e, 'Sm_' + i);
+            drag = null;
+          }, 450);
+          return;
         }
         if (this.armed === 'addSupport') {
           if (!this.addSupportPt) { this.addSupportPt = { x: this.snap(cm.x), y: this.snap(cm.y) }; this.setHint('Titik ke-2 support…'); }
@@ -1421,21 +1443,39 @@ class DenahEditor {
         if (t.dataset.id && t.dataset.id.startsWith('Sm_')) {
           const i = +t.dataset.id.slice(3);
           const m = this.S.supportsManual[i];
-          this.pushUndo();
-          // Tunggu ada gerakan dulu sebelum diputuskan drag-pindah-garis-utuh atau tap-hapus
-          // (perilaku lama) — sama pola dgn tiang di Task 3.
-          drag = { type: 'supline', i, startPt: cm, moved: false,
+          const myDrag = { type: 'supline', i, startPt: cm, moved: false,
             startA: { ...m.a }, startB: { ...m.b },
             line: el.querySelector('#sm' + i), hit: t, lbl: el.querySelector('#smlbl' + i),
             ha: el.querySelector('#smh' + i + 'a'), hb: el.querySelector('#smh' + i + 'b'),
             hita: el.querySelector('[data-sm="' + i + '"][data-end="a"]'),
             hitb: el.querySelector('[data-sm="' + i + '"][data-end="b"]') };
-          el.setPointerCapture(e.pointerId); e.preventDefault(); return;
+          drag = myDrag;
+          el.setPointerCapture(e.pointerId); e.preventDefault();
+          myDrag.longPressTimer = setTimeout(() => {
+            if (drag !== myDrag || myDrag.moved) return;
+            this.openSupportMenu(e, 'Sm_' + i);
+            drag = null;
+          }, 450);
+          return;
         }
         if (t.dataset.id && t.dataset.id.startsWith('S')) {
-          this.pushUndo(); const id = t.dataset.id;
-          this.S.removed[id] = !this.S.removed[id];
-          this.render();
+          // Support grid otomatis: sekarang BISA digeser (dikunci searah, lihat pointermove tipe
+          // "supgrid" & DenahConv.lockSupportAxis) -- begitu dilepas dgn gerakan nyata, "naik
+          // kelas" jadi entri supportsManual (lihat end()). Tahan diam 450ms tanpa gerak = menu
+          // Sertakan/Kecualikan + Ganti Material.
+          const id = t.dataset.id;
+          const mem = DenahConv.buildMembers(this.S);
+          const m = mem.find(x => x.id === id);
+          if (!m) return;
+          const myDrag = { type: 'supgrid', id, startPt: cm, moved: false,
+            startA: { ...m.geom.a }, startB: { ...m.geom.b }, hit: t };
+          drag = myDrag;
+          el.setPointerCapture(e.pointerId); e.preventDefault();
+          myDrag.longPressTimer = setTimeout(() => {
+            if (drag !== myDrag || myDrag.moved) return;
+            this.openSupportMenu(e, id);
+            drag = null;
+          }, 450);
         }
       } else if (this.mode === 'besi') {
         if (t.dataset.id) this.openMatMenu(e, t.dataset.id);
@@ -1466,6 +1506,12 @@ class DenahEditor {
             elx.textContent = 'F' + (i + 1) + ' · ' + (Math.round(dist(a, b) * 10) / 10); };
           upLbl(drag.tPrev, (vi - 1 + n) % n); upLbl(drag.tThis, vi); this.syncLP();
         } else if (drag.type === 'sup') {
+          if (!drag.moved && dist(cm, drag.startPt) > 4) {
+            drag.moved = true;
+            if (drag.longPressTimer) { clearTimeout(drag.longPressTimer); drag.longPressTimer = null; }
+            this.pushUndo();
+          }
+          if (!drag.moved) return;
           const otherEnd = drag.end === 'a' ? 'b' : 'a';
           const anchor = this.S.supportsManual[drag.i][otherEnd];
           const TH = (this.S.grid || 20) * 1.2;
@@ -1519,7 +1565,11 @@ class DenahEditor {
             drag = null;
           }
         } else if (drag.type === 'supline') {
-          if (!drag.moved && dist(cm, drag.startPt) > 4) drag.moved = true;
+          if (!drag.moved && dist(cm, drag.startPt) > 4) {
+            drag.moved = true;
+            if (drag.longPressTimer) { clearTimeout(drag.longPressTimer); drag.longPressTimer = null; }
+            this.pushUndo();
+          }
           if (!drag.moved) return;
           const dx = cm.x - drag.startPt.x, dy = cm.y - drag.startPt.y;
           const midStart = { x: (drag.startA.x + drag.startB.x) / 2 + dx, y: (drag.startA.y + drag.startB.y) / 2 + dy };
@@ -1570,6 +1620,20 @@ class DenahEditor {
           });
           if (drag.poly) drag.poly.setAttribute('points', drag.vertIdx.map(vi => `${X(this.S.verts[vi].x)},${Y(this.S.verts[vi].y)}`).join(' '));
           this._updateAlignGuides(snap.guides, snap);
+        } else if (drag.type === 'supgrid') {
+          if (!drag.moved && dist(cm, drag.startPt) > 4) {
+            drag.moved = true;
+            if (drag.longPressTimer) { clearTimeout(drag.longPressTimer); drag.longPressTimer = null; }
+            this.pushUndo();
+          }
+          if (!drag.moved) return;
+          const dx = cm.x - drag.startPt.x, dy = cm.y - drag.startPt.y;
+          const locked = DenahConv.lockSupportAxis(drag.id, drag.startA, drag.startB, dx, dy);
+          drag.curA = locked.a; drag.curB = locked.b;
+          const ax = X(locked.a.x), ay = Y(locked.a.y), bx = X(locked.b.x), by = Y(locked.b.y);
+          const line = el.querySelector('#sg_' + drag.id);
+          if (line) { line.setAttribute('x1', ax); line.setAttribute('y1', ay); line.setAttribute('x2', bx); line.setAttribute('y2', by); }
+          if (drag.hit) { drag.hit.setAttribute('x1', ax); drag.hit.setAttribute('y1', ay); drag.hit.setAttribute('x2', bx); drag.hit.setAttribute('y2', by); }
         }
       }
     });
@@ -1596,17 +1660,22 @@ class DenahEditor {
         };
       }
       else if (drag.type === 'sup') {
-        // Snap grid biasa BISA menggeser lagi titik yang barusan pas ortho-snap-kan ke anchor
-        // (anchor sering tak persis kelipatan grid — datang dari resize/"Ukur Sisi" presisi yang
-        // sengaja tak di-snap). Kalau sumbu itu SUDAH persis sama anchor (ortho-snap aktif pas
-        // drag), pertahankan persis — jangan di-snap-grid lagi, biar tak jadi bengkok pas dilepas.
-        const otherEnd = drag.end === 'a' ? 'b' : 'a';
-        const anchor = this.S.supportsManual[drag.i][otherEnd];
-        const p = this.S.supportsManual[drag.i][drag.end];
-        this.S.supportsManual[drag.i][drag.end] = {
-          x: p.x === anchor.x ? p.x : this.snap(p.x),
-          y: p.y === anchor.y ? p.y : this.snap(p.y),
-        };
+        if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
+        if (drag.moved) {
+          // Snap grid biasa BISA menggeser lagi titik yang barusan pas ortho-snap-kan ke anchor
+          // (anchor sering tak persis kelipatan grid — datang dari resize/"Ukur Sisi" presisi yang
+          // sengaja tak di-snap). Kalau sumbu itu SUDAH persis sama anchor (ortho-snap aktif pas
+          // drag), pertahankan persis — jangan di-snap-grid lagi, biar tak jadi bengkok pas dilepas.
+          const otherEnd = drag.end === 'a' ? 'b' : 'a';
+          const anchor = this.S.supportsManual[drag.i][otherEnd];
+          const p = this.S.supportsManual[drag.i][drag.end];
+          this.S.supportsManual[drag.i][drag.end] = {
+            x: p.x === anchor.x ? p.x : this.snap(p.x),
+            y: p.y === anchor.y ? p.y : this.snap(p.y),
+          };
+        }
+        // !moved dan menu belum sempat kebuka (dilepas cepat < 450ms) -> tak ada aksi, titik
+        // tetap di tempat semula. Sama pola persis Tiang -- tak lagi ambigu drag vs menu.
       }
       else if (drag.type === 'box') { this.boxPreview.offset = this.snap(this.boxPreview.offset); }
       else if (drag.type === 'tiang') {
@@ -1628,9 +1697,8 @@ class DenahEditor {
         this._hideAlignGuides();
       }
       else if (drag.type === 'supline') {
-        if (!drag.moved) {
-          this.S.supportsManual.splice(drag.i, 1);
-        } else {
+        if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
+        if (drag.moved) {
           const m = this.S.supportsManual[drag.i];
           const gx = (this._lastGuides || []).find(g => g.axis === 'x');
           const gy = (this._lastGuides || []).find(g => g.axis === 'y');
@@ -1675,6 +1743,25 @@ class DenahEditor {
           drag.vertIdx.forEach(vi => { const p = this.S.verts[vi]; this.S.verts[vi] = { x: p.x + shiftX, y: p.y + shiftY }; });
         }
         this._hideAlignGuides();
+      }
+      else if (drag.type === 'supgrid') {
+        if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
+        if (drag.moved && drag.curA && drag.curB) {
+          // "Naik kelas": ID grid tak stabil lintas render (lihat DenahConv.lockSupportAxis
+          // komentar + spec Keputusan #4) -- JANGAN simpan offset nempel ke ID itu. Konversi jadi
+          // entri supportsManual sungguhan (ID stabil Sm_i), lalu kecualikan posisi grid asal
+          // biar tak dobel tergambar.
+          const a = { x: this.snap(drag.curA.x), y: this.snap(drag.curA.y) };
+          const b = { x: this.snap(drag.curB.x), y: this.snap(drag.curB.y) };
+          const newIdx = this.S.supportsManual.length;
+          this.S.supportsManual.push({ a, b });
+          if (this.S.matOverride[drag.id] != null) {
+            this.S.matOverride['Sm_' + newIdx] = this.S.matOverride[drag.id];
+            delete this.S.matOverride[drag.id];
+          }
+          this.S.removed[drag.id] = true;
+        }
+        // !moved dan menu belum sempat kebuka (dilepas cepat < 450ms) -> tak ada aksi sama sekali.
       }
       drag = null; this.render(); };
     el.addEventListener('pointerup', end);
