@@ -340,6 +340,19 @@ class DenahEditor {
     this.tiangPreview = null; // visual-only; tidak pernah masuk model/Undo/autosave
     this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
+    // Blok pinch-zoom HALAMAN (WebKit/iOS event gesturestart) selama ada editor di halaman --
+    // pasangan body{touch-action:manipulation} di shell CSS (blok double-tap-zoom). Viewport meta
+    // halaman memang sudah minta user-scalable=no tapi iOS SENGAJA ngabaikan itu; enforce di sini.
+    // Zoom kanvas TIDAK terganggu (pakai pointer events sendiri, bukan native page zoom).
+    // Sekali per halaman (guard static), sengaja tanpa removal: intent-nya page-scoped, dan
+    // destroy() per-instance gak boleh nyabut penjaga selagi instance lain masih hidup.
+    if (!DenahEditor._pageZoomGuard) {
+      DenahEditor._pageZoomGuard = true;
+      const stopGesture = (e) => e.preventDefault();
+      document.addEventListener('gesturestart', stopGesture);
+      document.addEventListener('gesturechange', stopGesture);
+    }
+
     this.el.innerHTML = DenahEditor.shellHTML();
     this._fillMatSelects();
     this._wireControls();
@@ -390,6 +403,12 @@ class DenahEditor {
 .de-ico{width:18px;height:18px;display:block;flex:0 0 auto}
 .de-card.de-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;overflow-y:auto;border-radius:0;margin:0;box-shadow:none}
 .de-fullscreen-exit{display:none;flex:0 0 auto;min-height:40px;box-sizing:border-box;padding:0 18px;margin-left:6px;border-radius:8px;background:#f59e0b;color:#1e293b;border:none;font-size:13px;font-weight:700;cursor:pointer;align-items:center;justify-content:center}
+/* Halaman ber-editor: matikan double-tap-zoom halaman iOS (jebakan "tersesat" 22 Ags: zoom
+   HALAMAN nyangkut, pinch di kanvas ketelan sistem zoom kanvas jadi gak bisa pinch-out balik,
+   tombol center/reset cuma reset zoom KANVAS). Kanvas punya zoom sendiri + mode Perbesar Layar;
+   zoom halaman di sini gak ada gunanya, cuma jadi jebakan. Pinch halaman diblok terpisah via
+   gesturestart (lihat constructor). */
+body{touch-action:manipulation}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
