@@ -1,5 +1,14 @@
 (function () {
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+// Titik terdekat di ruas garis a-b dari titik p (diklem ke ujung ruas). Dipakai "+ Sudut": titik
+// baru harus NEMPEL ke garis sisi, bukan persis di posisi jari nempel (tap yg meleset dikit dari
+// garis dulu bikin bentuk nyeleneh -- "paruh burung", laporan Elvan 22 Ags).
+const closestOnSegment = (p, a, b) => {
+  const ex = b.x - a.x, ey = b.y - a.y, len2 = ex * ex + ey * ey;
+  if (len2 < 1e-9) return { x: a.x, y: a.y };
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * ex + (p.y - a.y) * ey) / len2));
+  return { x: a.x + ex * t, y: a.y + ey * t };
+};
 const bbox = (v) => {
   const xs = v.map(p => p.x), ys = v.map(p => p.y);
   return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
@@ -288,7 +297,7 @@ const DenahConv = {
   shiftBoxesDelete(boxes, at) {
     return (boxes || []).filter(bx => !bx.verts.includes(at)).map(bx => ({ verts: bx.verts.map(i => i > at ? i - 1 : i) }));
   },
-  _dist: dist, _bbox: bbox, _orthoSnapToPoint: orthoSnapToPoint,
+  _dist: dist, _bbox: bbox, _orthoSnapToPoint: orthoSnapToPoint, _closestOnSegment: closestOnSegment,
   findAlignSnap, collectAlignCandidates,
 };
 
@@ -1655,8 +1664,9 @@ class DenahEditor {
           this.setHint(this.S.verts.length > 3 ? 'Mode Hapus Sudut aktif — klik sudut lain, atau tap "− Sudut" untuk berhenti.' : 'Minimum 3 sudut. Tap "− Sudut" untuk berhenti.');
           this.render(); return; }
         if (this.armed === 'addV' && t.dataset.id && t.dataset.id.startsWith('F')) {
-          this.pushUndo(); const i = +t.dataset.id.slice(1);
-          this.S.verts.splice(i + 1, 0, { x: this.snap(cm.x), y: this.snap(cm.y) });
+          this.pushUndo(); const i = +t.dataset.id.slice(1), nv = this.S.verts.length;
+          const onLine = closestOnSegment(cm, this.S.verts[i], this.S.verts[(i + 1) % nv]);
+          this.S.verts.splice(i + 1, 0, { x: this.snap(onLine.x), y: this.snap(onLine.y) });
           this.S.combinedBoxes = DenahConv.shiftBoxesInsert(this.S.combinedBoxes, i + 1, 1);
           // STICKY: armed TIDAK di-reset -- tetap mode tambah sudut biar bisa tap sisi lain lagi.
           this.setHint('Mode Tambah Sudut aktif — klik sisi lain, atau tap "+ Sudut" untuk berhenti.');
