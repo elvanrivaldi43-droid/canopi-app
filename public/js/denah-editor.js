@@ -305,7 +305,6 @@ class DenahEditor {
 .de-row>label{font-size:12px;display:flex;flex-direction:column;gap:3px}
 .de-card input[type=number],.de-card input[type=text]{width:78px;padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px}
 .de-card select{padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;background:#fff}
-.de-tools{display:flex;flex-wrap:wrap;gap:10px;margin:2px 0}
 .de-tool{padding:10px 14px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #334155;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;user-select:none}
 .de-tool.on{background:#1e293b;color:#fff}
 .de-mini{padding:9px 13px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:12px;cursor:pointer}
@@ -334,8 +333,6 @@ class DenahEditor {
 .de-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:#475569}
 .de-legend b{font-weight:600}
 .de-sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:middle}
-.de-matbar{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
-.de-matbar label{font-size:12px;display:flex;flex-direction:column;gap:3px}
 .de-matmenu{position:fixed;z-index:9999;display:none;background:#fff;border:1px solid #334155;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:8px}
 .de-matmenu select{width:150px}
 .de-matmenu .de-mrow{display:flex;gap:6px;margin-top:6px}
