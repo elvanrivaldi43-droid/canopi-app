@@ -6,6 +6,9 @@
 /storage/framework/views/*
 /storage/logs/*
 !.gitkeep
+# Penanda vite dev-server lokal (npm run dev) -- kalau ke-commit, production ikut nyari
+# dev-server yang gak ada (insiden 11 Juli, ketemu lagi 22 Agustus)
+/public/hot
 # Harness preview lokal Perancang Rangka (dev only, tak ikut deploy)
 tests/rangka/preview_server.php
 tests/rangka/denah_editor_harness.html
