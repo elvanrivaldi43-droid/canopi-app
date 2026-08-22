@@ -322,7 +322,8 @@ class DenahEditor {
 .de-ribbon-strip.open{border-color:#334155;padding:10px 12px;max-height:45vh;overflow-y:auto}
 .de-ribbon-panel{display:none}
 .de-ribbon-panel.on{display:block}
-.de-quickbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;align-items:center}
+.de-quickbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center}
+.de-quickbar .de-mini,.de-quickbar .de-tool{padding:9px 10px}
 .de-ico{width:18px;height:18px;display:block;flex:0 0 auto}
 .de-card.de-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;overflow-y:auto;border-radius:0;margin:0;box-shadow:none}
 .de-fullscreen-exit{display:none;flex:0 0 auto;min-height:40px;box-sizing:border-box;padding:0 18px;margin-left:6px;border-radius:8px;background:#f59e0b;color:#1e293b;border:none;font-size:13px;font-weight:700;cursor:pointer;align-items:center;justify-content:center}
@@ -420,7 +421,7 @@ class DenahEditor {
     <span class="de-mini" data-role="btnFullscreen" title="Perbesar Layar" aria-label="Perbesar Layar"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H4a1 1 0 0 0-1 1v4M16 3h4a1 1 0 0 1 1 1v4M8 21H4a1 1 0 0 1-1-1v-4M16 21h4a1 1 0 0 0 1-1v-4"/></svg></span>
   </div>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
-  <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
+  <div class="de-hint" data-role="hint"></div>
   <div class="de-card de-tiang-panel" style="display:none;margin-top:10px;padding:10px" data-role="tiangPanel"></div>
   <div class="de-card de-tiang-panel" style="display:none;margin-top:10px;padding:10px" data-role="supportPanel"></div>
   <div class="de-canvas-wrap" data-role="canvasWrap">
@@ -765,13 +766,9 @@ class DenahEditor {
   }
 
   setHint(extra) {
-    const HINTS = {
-      bentuk: 'Mode Bentuk: seret bulatan sudut. Ketuk sisi frame untuk ketik panjang cm. "+ Sudut"/"− Sudut" untuk L/lekuk.',
-      besi: 'Mode Ganti besi: klik batang/tiang di denah → pilih besi (atau balik ke default).',
-      support: 'Mode Support: geser garis untuk pindah, tekan-tahan ~0,5 detik untuk menu (hapus/kecualikan/ganti besi). "Tambah manual" untuk gawang/WF melintang.',
-      tiang: 'Mode Tiang: isi posisi X/Y dari sudut kiri-depan. Bagian bawah gambar adalah depan; Y bertambah menuju belakang. Seret tiang untuk koreksi ringan.',
-    };
-    this._q('[data-role=hint]').textContent = extra || HINTS[this.mode];
+    // Hanya tampilkan petunjuk aksi sesaat (mis. "Klik sisi untuk sisipkan sudut"); tanpa aksi
+    // aktif dibiarkan kosong biar tak makan tempat (deskripsi mode panjang dihapus 22 Ags).
+    this._q('[data-role=hint]').textContent = extra || '';
   }
 
   // ---- Undo ----
