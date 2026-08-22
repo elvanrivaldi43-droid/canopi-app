@@ -361,6 +361,7 @@ class DenahEditor {
 .de-tool{padding:10px 14px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #334155;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;user-select:none}
 .de-tool.on{background:#1e293b;color:#fff}
 .de-mini{padding:9px 13px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:12px;cursor:pointer}
+.de-mini.on{background:#1e293b;color:#fff;border-color:#1e293b}
 .de-hint{font-size:12px;color:#64748b;margin:6px 2px;min-height:16px}
 .de-sup-axis{align-items:flex-end;gap:8px}
 .de-sup-axname{font-size:12px;font-weight:600;color:#334155;min-width:66px;padding-bottom:7px}
@@ -530,6 +531,13 @@ class DenahEditor {
     });
   }
 
+  // Sinkron tanda visual "on" tombol + Sudut / − Sudut ke state this.armed (dipakai mode sticky).
+  _syncVertBtns() {
+    const a = this._q('[data-role=btnAddV]'), d = this._q('[data-role=btnDelV]');
+    if (a) a.classList.toggle('on', this.armed === 'addV');
+    if (d) d.classList.toggle('on', this.armed === 'delV');
+  }
+
   _wireControls() {
     this._qa('.de-tool').forEach(elx => elx.onclick = () => {
       this._qa('.de-tool').forEach(t => t.classList.remove('on'));
@@ -537,14 +545,27 @@ class DenahEditor {
       this.mode = elx.dataset.mode;
       this.armed = null; this.addSupportPt = null; this.boxPreview = null;
       this.setHint();
-      this.render();
+      this.render();   // render() sinkron tanda +Sudut/-Sudut (titik tunggal)
       if (this.mode === 'tiang') requestAnimationFrame(() => {
         const panel = this._q('[data-role=tiangPanel]');
         if (panel) panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
       });
     });
-    this._q('[data-role=btnAddV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'addV'; this.boxPreview = null; this.setHint('Klik sisi frame untuk sisipkan sudut baru.'); this.renderBoxPanel(); };
-    this._q('[data-role=btnDelV]').onclick = () => { if (this.mode !== 'bentuk') return; this.armed = 'delV'; this.boxPreview = null; this.setHint('Klik sudut untuk menghapus (min 3 sudut).'); this.renderBoxPanel(); };
+    // + Sudut / − Sudut = mode STICKY yang bisa di-toggle: tap sekali nyala & TETAP nyala,
+    // jadi bisa klik sisi/sudut berkali-kali tanpa bolak-balik pencet tombol (permintaan Elvan
+    // 22 Ags). Tap tombol yang sama lagi = matiin. Pindah tab juga matiin (via _wireControls).
+    this._q('[data-role=btnAddV]').onclick = () => {
+      if (this.mode !== 'bentuk') return;
+      this.armed = (this.armed === 'addV') ? null : 'addV'; this.boxPreview = null;
+      this.setHint(this.armed === 'addV' ? 'Mode Tambah Sudut aktif — klik sisi frame berkali-kali. Tap "+ Sudut" lagi untuk berhenti.' : '');
+      this._syncVertBtns(); this.renderBoxPanel();
+    };
+    this._q('[data-role=btnDelV]').onclick = () => {
+      if (this.mode !== 'bentuk') return;
+      this.armed = (this.armed === 'delV') ? null : 'delV'; this.boxPreview = null;
+      this.setHint(this.armed === 'delV' ? 'Mode Hapus Sudut aktif — klik sudut berkali-kali (min 3 sudut). Tap "− Sudut" lagi untuk berhenti.' : '');
+      this._syncVertBtns(); this.renderBoxPanel();
+    };
     this._q('[data-role=btnUndo]').onclick = () => this.undo();
     this._q('[data-role=btnRedo]').onclick = () => this.redo();
     this._q('[data-role=btnAddSupport]').onclick = () => { if (this.mode !== 'support') return; this.armed = 'addSupport'; this.addSupportPt = null; this.setHint('Klik titik ke-1 support…'); };
@@ -553,6 +574,7 @@ class DenahEditor {
       this.armed = 'addBox';
       this.boxPreview = { sisiIdx: null, offset: 0, span: 100, depthMag: 100, depthSign: 1 };
       this.setHint('Ketuk sisi lurus tempat kotak mau nempel.');
+      this._syncVertBtns();  // Tambah Kotak nggak lewat render() -> matikan tanda +Sudut/-Sudut manual
       this.renderBoxPanel();
     };
 
@@ -666,7 +688,7 @@ class DenahEditor {
         this.mode = tabMode;
         this.armed = null; this.addSupportPt = null; this.boxPreview = null;
         this.setHint();
-        this.render();
+        this.render();   // render() sinkron tanda +Sudut/-Sudut (titik tunggal)
         if (tabMode === 'tiang') requestAnimationFrame(() => {
           const panel = this._q('[data-role=tiangPanel]');
           if (panel) panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -873,7 +895,11 @@ class DenahEditor {
   // membuang riwayat redo lama, sama seperti undo/redo di editor pada umumnya.
   pushUndo() { this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift(); this.redoStack = []; }
   undo() {
-    this.armed = null; this.boxPreview = null;
+    // +Sudut/-Sudut = penanda alat UI (bukan bagian data), sengaja DIPERTAHANKAN lintas undo/redo
+    // biar bisa lanjut hapus/tambah sudut tanpa pencet tombol lagi. addBox/addSupport tetap dimatikan
+    // karena nyimpan preview posisi yg bisa basi setelah gambar berubah.
+    if (this.armed !== 'addV' && this.armed !== 'delV') this.armed = null;
+    this.boxPreview = null; this.addSupportPt = null;
     if (!this.undoStack.length) { this.setHint('Tak ada langkah untuk di-undo'); return; }
     this.redoStack.push(JSON.stringify(this.S)); if (this.redoStack.length > 40) this.redoStack.shift();
     Object.assign(this.S, JSON.parse(this.undoStack.pop()));
@@ -881,7 +907,8 @@ class DenahEditor {
     this.render();
   }
   redo() {
-    this.armed = null; this.boxPreview = null;
+    if (this.armed !== 'addV' && this.armed !== 'delV') this.armed = null;  // lihat catatan di undo()
+    this.boxPreview = null; this.addSupportPt = null;
     if (!this.redoStack.length) { this.setHint('Tak ada langkah untuk di-redo'); return; }
     this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift();
     Object.assign(this.S, JSON.parse(this.redoStack.pop()));
@@ -1437,6 +1464,10 @@ class DenahEditor {
   render() {
     // Render berarti state/kanvas berubah; draft visual lama tidak boleh tersisa atau tersimpan.
     this.tiangPreview = null;
+    // Titik sinkron TUNGGAL tanda visual +Sudut/-Sudut ke this.armed. Ditaruh di sini biar SEMUA
+    // jalur yg mengubah armed lalu render() (undo/redo, reset, Tambah Kotak, Ganti besi, pindah
+    // tab) otomatis konsisten -- tak perlu nambal tiap handler satu-satu (rawan kelewat).
+    this._syncVertBtns();
     const S = this.S;
     const mem = DenahConv.buildMembers(S);
     const cmap = colorMap(mem);
@@ -1616,12 +1647,16 @@ class DenahEditor {
             this.S.verts.splice(vi, 1);
             this.S.combinedBoxes = DenahConv.shiftBoxesDelete(this.S.combinedBoxes, vi);
           }
-          this.armed = null; this.setHint(); this.render(); return; }
+          // STICKY: armed TIDAK di-reset -- tetap mode hapus sudut biar bisa tap sudut lain lagi.
+          this.setHint(this.S.verts.length > 3 ? 'Mode Hapus Sudut aktif — klik sudut lain, atau tap "− Sudut" untuk berhenti.' : 'Minimum 3 sudut. Tap "− Sudut" untuk berhenti.');
+          this.render(); return; }
         if (this.armed === 'addV' && t.dataset.id && t.dataset.id.startsWith('F')) {
           this.pushUndo(); const i = +t.dataset.id.slice(1);
           this.S.verts.splice(i + 1, 0, { x: this.snap(cm.x), y: this.snap(cm.y) });
           this.S.combinedBoxes = DenahConv.shiftBoxesInsert(this.S.combinedBoxes, i + 1, 1);
-          this.armed = null; this.setHint(); this.render(); return; }
+          // STICKY: armed TIDAK di-reset -- tetap mode tambah sudut biar bisa tap sisi lain lagi.
+          this.setHint('Mode Tambah Sudut aktif — klik sisi lain, atau tap "+ Sudut" untuk berhenti.');
+          this.render(); return; }
         if (t.dataset.vert != null) {
           this.pushUndo();
           const vi = +t.dataset.vert, n = this.S.verts.length;
