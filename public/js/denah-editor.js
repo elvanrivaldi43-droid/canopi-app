@@ -332,6 +332,13 @@ class DenahEditor {
 .de-canvas svg{max-width:100%;touch-action:none;display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-zoom-reset{position:absolute;right:10px;bottom:10px;min-width:44px;min-height:44px;padding:0 14px;border-radius:22px;background:rgba(15,23,42,.85);color:#e2e8f0;border:1px solid #334155;font-size:13px;display:none;align-items:center;justify-content:center;cursor:pointer;user-select:none}
 .de-zoom-reset.show{display:flex}
+.de-pan{position:absolute;left:10px;bottom:10px;display:none;grid-template-columns:repeat(3,34px);grid-template-rows:repeat(3,34px);gap:3px;z-index:6;touch-action:none}
+.de-pan.show{display:grid}
+.de-pan-btn{display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.8);border:1px solid #334155;border-radius:8px;color:#e2e8f0;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
+.de-pan-btn[data-pan=up]{grid-column:2;grid-row:1}
+.de-pan-btn[data-pan=left]{grid-column:1;grid-row:2}
+.de-pan-btn[data-pan=right]{grid-column:3;grid-row:2}
+.de-pan-btn[data-pan=down]{grid-column:2;grid-row:3}
 .de-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:#475569}
 .de-legend b{font-weight:600}
 .de-sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:middle}
@@ -427,6 +434,12 @@ class DenahEditor {
   <div class="de-canvas-wrap" data-role="canvasWrap">
     <div class="de-canvas"></div>
     <span class="de-zoom-reset" data-role="btnZoomReset">Reset</span>
+    <div class="de-pan" data-role="panPad">
+      <span class="de-pan-btn" data-pan="up" aria-label="Geser atas"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span>
+      <span class="de-pan-btn" data-pan="left" aria-label="Geser kiri"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+      <span class="de-pan-btn" data-pan="right" aria-label="Geser kanan"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      <span class="de-pan-btn" data-pan="down" aria-label="Geser bawah"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+    </div>
   </div>
   <div class="de-legend" data-role="legend"></div>
   <div style="font-size:12px;color:#64748b;margin-top:4px">Luas denah: <b data-role="luas">–</b></div>
@@ -648,6 +661,7 @@ class DenahEditor {
   _wireZoom() {
     const wrap = this._q('[data-role=canvasWrap]');
     const resetBtn = this._q('[data-role=btnZoomReset]');
+    const panPad = this._q('[data-role=panPad]');
     const canvasEl = () => this._q('.de-canvas');
     const pointers = new Map();
     let pinch = null; // { startDist, startScale, startMidLocal, startTx, startTy }
@@ -657,6 +671,7 @@ class DenahEditor {
       const c = canvasEl();
       if (c) c.style.transform = `translate(${this.zoomTx}px, ${this.zoomTy}px) scale(${this.zoomScale})`;
       resetBtn.classList.toggle('show', Math.abs(this.zoomScale - 1) > 0.01 || Math.abs(this.zoomTx) > 0.5 || Math.abs(this.zoomTy) > 0.5);
+      if (panPad) panPad.classList.toggle('show', this.zoomScale > 1.01);
     };
     const resetZoom = () => {
       const c = canvasEl();
@@ -667,6 +682,20 @@ class DenahEditor {
     this._resetZoom = resetZoom;
     resetBtn.onclick = resetZoom;
 
+    // Tombol geser (dpad, muncul saat zoom-in) -- "nyetir" zoomTx/zoomTy yg sama dgn pinch pan.
+    // Arah = sisi yg ingin dilihat (tekan "kanan" -> konten kanan muncul). Tekan-tahan = geser terus.
+    const PAN_STEP = 55;
+    const panDelta = { up: [0, PAN_STEP], down: [0, -PAN_STEP], left: [PAN_STEP, 0], right: [-PAN_STEP, 0] };
+    this._qa('[data-pan]').forEach(btn => {
+      let timer = null;
+      const step = () => { if (this.zoomScale <= 1) return; const [dx, dy] = panDelta[btn.dataset.pan]; this.zoomTx += dx; this.zoomTy += dy; applyTransform(); };
+      const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+      btn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); step(); stop(); timer = setInterval(step, 90); });
+      btn.addEventListener('pointerup', stop);
+      btn.addEventListener('pointerleave', stop);
+      btn.addEventListener('pointercancel', stop);
+    });
+
     const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
     const mid2 = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
@@ -675,6 +704,8 @@ class DenahEditor {
       // ikut dihitung sebagai jari ke-2 -> pinch nyasar padahal cuma 1 tangan. Pinch cuma masuk
       // akal dari sentuhan/pena asli, bukan mouse.
       if (e.pointerType === 'mouse') return;
+      // Sentuhan di dpad geser bukan urusan pinch/zoom-reset -- diabaikan biar tak masuk peta pointer.
+      if (e.target.closest && e.target.closest('[data-pan]')) return;
       // Jaga-jaga: buang entry pointer basi (>2 detik) sebelum nambah yang baru -- andai ADA 1
       // pointerup/pointercancel yg somehow gak nyampe wrap (mis. race kondisi lain), entry lama
       // gak numpuk selamanya dan bikin tap tunggal BERIKUTNYA keitung "jari ke-2" (pinch palsu).
