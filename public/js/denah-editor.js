@@ -360,6 +360,12 @@ class DenahEditor {
     this.el.addEventListener('contextmenu', (e) => {
       if (!e.target.closest('input,select,textarea')) e.preventDefault();
     });
+    // Lapisan terdalam anti-seleksi: batalkan event selectstart-nya langsung. WebKit patuh ke
+    // ini bahkan di kasus dia ngabaikan CSS user-select:none (teks svg saat long-press zoom
+    // ekstrem). Input dikecualikan (seleksi saat ngetik/paste harus tetap jalan).
+    this.el.addEventListener('selectstart', (e) => {
+      if (!(e.target.closest && e.target.closest('input,select,textarea'))) e.preventDefault();
+    });
     this._fillMatSelects();
     this._wireControls();
     this._wireRibbon();
@@ -431,6 +437,11 @@ body,.page-content{overscroll-behavior-y:contain}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* Label ukuran/nama di svg = murni visual (tap sisi kerjanya lewat GARIS, bukan teksnya).
+   pointer-events:none bikin long-press di zoom ekstrem gak bisa "megang" teksnya sama sekali --
+   user-select:none saja TIDAK cukup: bug WebKit, teks svg kadang tetap terseleksi (Google bar
+   Salin/Terjemahkan, laporan Elvan 22 Ags malam). Bonus: tap di atas label tembus ke garis. */
+.de-canvas svg text{pointer-events:none}
 .de-zoom-reset{position:absolute;right:10px;bottom:10px;min-width:44px;min-height:44px;padding:0 14px;border-radius:22px;background:rgba(15,23,42,.85);color:#e2e8f0;border:1px solid #334155;font-size:13px;display:none;align-items:center;justify-content:center;cursor:pointer;user-select:none}
 .de-zoom-reset.show{display:flex}
 .de-pan{position:absolute;left:10px;bottom:10px;display:none;grid-template-columns:repeat(3,34px);grid-template-rows:repeat(3,34px);gap:3px;z-index:6;touch-action:none}
