@@ -1668,6 +1668,11 @@ body,.page-content{overscroll-behavior-y:contain}
     const PAD = this.PAD;
     const X = x => PAD + x * this.SC, Y = y => PAD + y * this.SC;
     el.addEventListener('pointerdown', e => {
+      // Snapshot model SEBELUM branching -- kalau gestur ini ternyata jari pertama pinch-zoom
+      // (jari ke-2 nyusul -> pointercancel), seluruh efek drag di-ROLLBACK ke sini, bukan
+      // dikomit (lihat handler cancel di bawah; laporan Elvan 22 Ags malam: support kegeser
+      // & grid "naik kelas" jadi manual gara2 jari pertama zoom).
+      this._preDragS = JSON.stringify(this.S);
       const t = e.target; const cm = this.toCm(e, el);
       if (this.mode === 'bentuk') {
         if (this.armed === 'addBox' && this.boxPreview.sisiIdx == null && t.dataset.id && t.dataset.id.startsWith('F')) {
@@ -2139,7 +2144,22 @@ body,.page-content{overscroll-behavior-y:contain}
       }
       drag = null; this.render(); };
     el.addEventListener('pointerup', end);
-    el.addEventListener('pointercancel', end);
+    // pointercancel BEDA dari pointerup: gestur DIBATALKAN (jari ke-2 pinch-zoom nyusul, atau
+    // browser ambil alih). Dulu disamakan dengan end() -> semua efek drag dikomit (support
+    // kegeser, grid kadung naik-kelas jadi manual). Sekarang: ROLLBACK penuh ke snapshot
+    // _preDragS yang diambil di pointerdown -- gestur batal = tak terjadi apa-apa (janji yang
+    // sama dgn redesign tiang 18 Juli). Entry undo yang kadung di-push saat drag mulai (isinya
+    // identik snapshot) ikut dicabut biar tak ada langkah undo kosong.
+    el.addEventListener('pointercancel', () => {
+      if (!drag) return;
+      if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
+      this._hideAlignGuides && this._hideAlignGuides();
+      if (this._preDragS) {
+        if (this.undoStack.length && this.undoStack[this.undoStack.length - 1] === this._preDragS) this.undoStack.pop();
+        Object.assign(this.S, JSON.parse(this._preDragS));
+      }
+      drag = null; this.syncInputs(); this.render();
+    });
   }
 
   // ---- API publik (dipakai Task 3) ----
