@@ -401,7 +401,11 @@ class DenahEditor {
 .de-sup-axname{font-size:12px;font-weight:600;color:#334155;min-width:66px;padding-bottom:7px}
 .de-sup-axis>label{flex:0 1 auto}
 .de-sup-cm{font-size:12px;font-weight:700;color:#0369a1;padding-bottom:7px;white-space:nowrap}
-.de-ribbon{position:sticky;top:0;z-index:15;margin-bottom:10px}
+/* Wrapper sticky ribbon+quickbar: dulu cuma .de-ribbon yang sticky, jadi pas scroll/zoom dalam
+   ikon quickbar (grid/undo/redo/fullscreen) ketinggalan di atas (laporan Elvan 22 Ags malam).
+   Pola sticky yang sama persis, cuma cakupannya diperluas -- bukan position:fixed (iOS-sensitif). */
+.de-sticky{position:sticky;top:0;z-index:15;background:#fff}
+.de-ribbon{position:relative;z-index:15;margin-bottom:10px}
 .de-ribbon-tabs{display:flex;border:1px solid #334155;border-radius:8px;overflow:hidden;background:#1e293b}
 .de-ribbon-tab{flex:1;text-align:center;padding:11px 4px;min-height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:12px;color:#cbd5e1;cursor:pointer;user-select:none;border-right:1px solid #334155}
 .de-ribbon-tab:nth-last-child(2){border-right:none}
@@ -472,6 +476,7 @@ body,.page-content{overscroll-behavior-y:contain}
 .de-tiang-fields input{width:100%!important;min-width:0;box-sizing:border-box}
 </style>
 <div class="de-card">
+  <div class="de-sticky">
   <div class="de-ribbon">
   <div class="de-ribbon-tabs">
     <span class="de-ribbon-tab" data-tab="rangka">Rangka</span>
@@ -539,6 +544,7 @@ body,.page-content{overscroll-behavior-y:contain}
     <span class="de-mini" data-role="btnUndo" title="Undo" aria-label="Undo"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg></span>
     <span class="de-mini" data-role="btnRedo" title="Redo" aria-label="Redo"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/></svg></span>
     <span class="de-mini" data-role="btnFullscreen" title="Perbesar Layar" aria-label="Perbesar Layar"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H4a1 1 0 0 0-1 1v4M16 3h4a1 1 0 0 1 1 1v4M8 21H4a1 1 0 0 1-1-1v-4M16 21h4a1 1 0 0 0 1-1v-4"/></svg></span>
+  </div>
   </div>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint"></div>
