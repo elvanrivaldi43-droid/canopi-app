@@ -336,6 +336,7 @@ class DenahEditor {
 .de-pan.show{display:grid}
 .de-pan-btn{display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.8);border:1px solid #334155;border-radius:8px;color:#e2e8f0;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none}
 .de-pan-btn[data-pan=up]{grid-column:2;grid-row:1}
+.de-pan-btn[data-pan=home]{grid-column:2;grid-row:2}
 .de-pan-btn[data-pan=left]{grid-column:1;grid-row:2}
 .de-pan-btn[data-pan=right]{grid-column:3;grid-row:2}
 .de-pan-btn[data-pan=down]{grid-column:2;grid-row:3}
@@ -436,6 +437,7 @@ class DenahEditor {
     <span class="de-zoom-reset" data-role="btnZoomReset">Reset</span>
     <div class="de-pan" data-role="panPad">
       <span class="de-pan-btn" data-pan="up" aria-label="Geser atas"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></span>
+      <span class="de-pan-btn" data-pan="home" aria-label="Balik ke tampilan penuh"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></span>
       <span class="de-pan-btn" data-pan="left" aria-label="Geser kiri"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
       <span class="de-pan-btn" data-pan="right" aria-label="Geser kanan"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
       <span class="de-pan-btn" data-pan="down" aria-label="Geser bawah"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
@@ -667,7 +669,17 @@ class DenahEditor {
     let pinch = null; // { startDist, startScale, startMidLocal, startTx, startTy }
     let lastTapTime = 0, lastTapX = 0, lastTapY = 0;
 
+    // Batasi geser (pan) supaya konten TAK PERNAH bisa keluar penuh dari layar -> gak bisa "tersesat".
+    // transform-origin 0 0: konten menempati [tx, tx + natW*scale]; jaga tetap menutup wrap [0, wrapW].
+    const clampPan = () => {
+      const c = canvasEl(); if (!c) return;
+      const scaledW = c.offsetWidth * this.zoomScale, scaledH = c.offsetHeight * this.zoomScale;
+      const minTx = Math.min(0, wrap.clientWidth - scaledW), minTy = Math.min(0, wrap.clientHeight - scaledH);
+      this.zoomTx = Math.max(minTx, Math.min(0, this.zoomTx));
+      this.zoomTy = Math.max(minTy, Math.min(0, this.zoomTy));
+    };
     const applyTransform = () => {
+      clampPan();
       const c = canvasEl();
       if (c) c.style.transform = `translate(${this.zoomTx}px, ${this.zoomTy}px) scale(${this.zoomScale})`;
       resetBtn.classList.toggle('show', Math.abs(this.zoomScale - 1) > 0.01 || Math.abs(this.zoomTx) > 0.5 || Math.abs(this.zoomTy) > 0.5);
@@ -687,6 +699,7 @@ class DenahEditor {
     const PAN_STEP = 55;
     const panDelta = { up: [0, PAN_STEP], down: [0, -PAN_STEP], left: [PAN_STEP, 0], right: [-PAN_STEP, 0] };
     this._qa('[data-pan]').forEach(btn => {
+      if (btn.dataset.pan === 'home') { btn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); resetZoom(); }); return; }
       let timer = null;
       const step = () => { if (this.zoomScale <= 1) return; const [dx, dy] = panDelta[btn.dataset.pan]; this.zoomTx += dx; this.zoomTy += dy; applyTransform(); };
       const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
