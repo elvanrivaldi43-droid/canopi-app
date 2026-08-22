@@ -1004,7 +1004,11 @@ class DenahEditor {
 
   resetBox() {
     this.armed = null; this.boxPreview = null;
-    this.undoStack = []; this.redoStack = [];
+    // Sebelumnya BUANG total this.undoStack/redoStack -- bug: bentuk sebelum reset jadi hilang
+    // permanen, Undo gak bisa balikin (laporan Elvan 22 Ags). Ganti pushUndo() (pola sama SEMUA
+    // mutasi lain di file ini): simpan state SEKARANG dulu sbg 1 langkah undo, baru reset --
+    // riwayat sebelum reset tetap ada, Undo bisa balik ke bentuk sebelum reset.
+    this.pushUndo();
     const L = +(this._q('[data-role=inL]').value) || 400;
     const P = +(this._q('[data-role=inP]').value) || 300;
     this.S.verts = [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: P }, { x: 0, y: P }];
