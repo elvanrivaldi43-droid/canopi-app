@@ -254,6 +254,15 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    aman iOS) — arahkan Bos ke situ untuk zoom berat. "Kelompok C saran-kotak-2-arah"
    SELESAI (terserap ke Spacing Per-Sumbu). Sisa lain: investigasi tombol
    "Lanjut → Finalisasi" di HP **hanya jika ada reproduksi video**.
+   ~~Kotak/lekukan nempel pas di sudut jadi "duri" sisi ekstra~~ — **SELESAI &
+   LIVE 22 Agustus 2026 (divalidasi Bos di HP).** Laporan Bos: kotak 100x100
+   ditempel pas pojok bikin sisi ganjil (F5 nyeleneh) alih-alih bentuk L bersih.
+   Akar masalah: `combineBox` gak pernah cek sudut lama jadi segaris kalau
+   kotak mentok di ujung sisi. Fix: `removeCollinear` buang vertex segaris,
+   `combineBoxWithMeta`+`reindexBoxes` jaga pembukuan `combinedBoxes` (drag-
+   kotak-utuh) tetap benar walau ada sudut lama yang kebuang. Test baru di
+   `tests/rangka/test_box_union.mjs` (kasus sudut awal/akhir + regresi notch
+   tengah-sisi).
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
@@ -321,6 +330,11 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
   push kode yang bergantung padanya; verifikasi kolom/index dari hasil nyata.
 - Smoke-test route bukan E2E bisnis. Jangan membuat slip, mengaktifkan karyawan,
   mengirim kode, atau menulis data production hanya untuk pengujian tanpa izin.
+- `public/hot` (penanda `npm run dev` lokal) sempat ke-commit 11 Juli & ikut
+  ter-deploy — `@vite()` production jadi ngarah ke dev-server lokal yang gak
+  ada (`http://[::1]:5173`). Ketemu & difix 22 Agustus, sudah masuk
+  `.gitignore`. Kalau abis `npm run dev` di lokal, cek `git status` sebelum
+  commit — file ini gampang kebawa gak sengaja.
 
 ### Aturan update status ke depan
 
