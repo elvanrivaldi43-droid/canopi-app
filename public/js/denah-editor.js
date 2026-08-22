@@ -354,6 +354,12 @@ class DenahEditor {
     }
 
     this.el.innerHTML = DenahEditor.shellHTML();
+    // Blok menu long-press (context menu Android, jalur Google Lens Chrome) di dalam editor --
+    // long-press di editor artinya gestur kita (menu tiang/support, dpad tahan), bukan menu
+    // browser. Input/select DIKECUALIKAN: menu paste di kolom angka harus tetap hidup.
+    this.el.addEventListener('contextmenu', (e) => {
+      if (!e.target.closest('input,select,textarea')) e.preventDefault();
+    });
     this._fillMatSelects();
     this._wireControls();
     this._wireRibbon();
@@ -416,6 +422,12 @@ body{touch-action:manipulation}
    iOS lama. */
 .de-card,.de-matmenu,.de-tiangmenu,.de-supportmenu{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-card input,.de-card select,.de-card textarea{-webkit-user-select:auto;user-select:auto}
+/* Cegah pull-to-refresh (tarik-bawah = reload halaman) nyamber di tengah ngedit -- Chrome
+   Android & iOS 16+. Scroll biasa tetap normal, cuma "mantul di ujung atas" yang gak lagi
+   jadi reload. */
+body,.page-content{overscroll-behavior-y:contain}
+/* Desktop: cegah drag-ghost gambar/svg pas geser elemen denah pakai mouse */
+.de-card img,.de-card svg{-webkit-user-drag:none}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
