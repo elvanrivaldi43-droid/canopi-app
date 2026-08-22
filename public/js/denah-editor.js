@@ -1391,10 +1391,13 @@ class DenahEditor {
       // Support horizontal & vertikal yang berpotongan deket tengah kotak dulu labelnya numpuk
       // (dua-duanya persis di titik tengah garis masing-masing). Vertikal digeser ke kanan garis
       // (bukan lagi persis di tengah) biar gak ketiban label horizontal yang lewat situ.
+      // Support horizontal: label mendatar sedikit di atas garis (spt sekarang). Support vertikal:
+      // teks diputar -90 (baca bawah->atas) biar ikut arah garis, digeser sedikit ke sisi garis.
       const isHoriz = Math.abs(m.geom.a.y - m.geom.b.y) < Math.abs(m.geom.a.x - m.geom.b.x);
-      const lx = isHoriz ? X(mx) : X(mx) + 8;
-      const ly = isHoriz ? Y(my) - 4 : Y(my);
-      s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${lx}" y="${ly}" fill="#93c5fd" font-size="9" text-anchor="${isHoriz ? 'middle' : 'start'}" paint-order="stroke" stroke="#0f2740" stroke-width="3">${label}</text>`; });
+      const lx = X(mx), ly = Y(my);
+      const rot = isHoriz ? '' : ` dy="-6" transform="rotate(-90 ${lx} ${ly})"`;
+      const ty = isHoriz ? ly - 4 : ly;
+      s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${lx}" y="${ty}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3"${rot}>${label}</text>`; });
     if (this.mode === 'support') mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
       ['a', 'b'].forEach(end => { const p = m.geom[end], cx = X(p.x), cy = Y(p.y);
         s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;
@@ -1764,7 +1767,10 @@ class DenahEditor {
           if (drag.hb) { drag.hb.setAttribute('cx', bx); drag.hb.setAttribute('cy', by); }
           if (drag.hita) { drag.hita.setAttribute('cx', ax); drag.hita.setAttribute('cy', ay); }
           if (drag.hitb) { drag.hitb.setAttribute('cx', bx); drag.hitb.setAttribute('cy', by); }
-          if (drag.lbl) { drag.lbl.setAttribute('x', X((a.x + b.x) / 2)); drag.lbl.setAttribute('y', Y((a.y + b.y) / 2) - 4); }
+          if (drag.lbl) { const lmx = X((a.x + b.x) / 2), lmy = Y((a.y + b.y) / 2), lvert = Math.abs(a.y - b.y) >= Math.abs(a.x - b.x);
+            drag.lbl.setAttribute('x', lmx); drag.lbl.setAttribute('y', lvert ? lmy : lmy - 4);
+            if (lvert) { drag.lbl.setAttribute('dy', '-6'); drag.lbl.setAttribute('transform', `rotate(-90 ${lmx} ${lmy})`); }
+            else { drag.lbl.removeAttribute('dy'); drag.lbl.removeAttribute('transform'); } }
           this._updateAlignGuides(snap.guides, snap);
         } else if (drag.type === 'boxgroup') {
           if (!drag.moved && dist(cm, drag.startPt) > 4) drag.moved = true;
