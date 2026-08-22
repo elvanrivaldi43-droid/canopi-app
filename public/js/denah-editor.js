@@ -355,21 +355,26 @@ class DenahEditor {
 <div class="de-card">
   <div class="de-ribbon">
   <div class="de-ribbon-tabs">
-    <span class="de-ribbon-tab" data-tab="ukuran">Ukuran</span>
+    <span class="de-ribbon-tab" data-tab="rangka">Rangka</span>
     <span class="de-ribbon-tab" data-tab="support">Support</span>
-    <span class="de-ribbon-tab" data-tab="besi">Besi</span>
-    <span class="de-ribbon-tab" data-tab="mode">Mode</span>
-    <span class="de-ribbon-tab" data-tab="sisi">Ukur Sisi</span>
+    <span class="de-ribbon-tab" data-tab="tiang">Tiang</span>
     <span class="de-fullscreen-exit" data-role="btnFullscreenExit">Selesai</span>
   </div>
   <div class="de-ribbon-strip" data-role="ribbonStrip">
-    <div class="de-ribbon-panel" data-panel="ukuran">
+    <div class="de-ribbon-panel" data-panel="rangka">
       <div class="de-row">
         <label>Lebar (cm)<input type="number" data-role="inL" value="400" step="10"></label>
         <label>Panjang (cm)<input type="number" data-role="inP" value="300" step="10"></label>
         <label>Tinggi tiang (cm)<input type="number" data-role="inT" value="300" step="10"></label>
+        <label>Besi frame<select data-role="matFrame"></select></label>
         <span class="de-mini" data-role="btnReset">Reset kotak dari Lebar×Panjang</span>
       </div>
+      <div class="de-row" style="margin-top:8px">
+        <span class="de-mini" data-role="btnAddV">+ Sudut</span>
+        <span class="de-mini" data-role="btnDelV">− Sudut</span>
+        <span class="de-mini" data-role="btnAddBox">+ Tambah Kotak</span>
+      </div>
+      <div class="de-legend" data-role="sisiPanel" style="margin-top:8px"></div>
     </div>
     <div class="de-ribbon-panel" data-panel="support">
       <div class="de-row">
@@ -395,27 +400,14 @@ class DenahEditor {
         <span class="de-sup-cm" data-role="hintV"></span>
       </div>
       <div class="de-row" style="margin-top:8px">
+        <label>Besi support<select data-role="matSupport"></select></label>
         <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
       </div>
     </div>
-    <div class="de-ribbon-panel" data-panel="besi">
-      <div class="de-matbar">
-        <label>Besi frame<select data-role="matFrame"></select></label>
-        <label>Besi support<select data-role="matSupport"></select></label>
+    <div class="de-ribbon-panel" data-panel="tiang">
+      <div class="de-row">
         <label>Besi tiang<select data-role="matTiang"></select></label>
       </div>
-    </div>
-    <div class="de-ribbon-panel" data-panel="mode">
-      <div class="de-tools">
-        <span class="de-tool on" data-mode="bentuk">Bentuk</span>
-        <span class="de-tool" data-mode="tiang">Tiang</span>
-        <span class="de-mini" data-role="btnAddV">+ Sudut</span>
-        <span class="de-mini" data-role="btnDelV">− Sudut</span>
-        <span class="de-mini" data-role="btnAddBox">+ Tambah Kotak</span>
-      </div>
-    </div>
-    <div class="de-ribbon-panel" data-panel="sisi">
-      <div class="de-legend" data-role="sisiPanel"></div>
     </div>
   </div>
   </div>
@@ -597,15 +589,18 @@ class DenahEditor {
       t.classList.add('on');
       strip.classList.add('open');
       openTab = name;
-      // Tab Support = satu-satunya jalan masuk mode edit support sekarang (tombol mode "Support"
-      // dihapus dari tab Mode, spec Keputusan #8-9, 21 Agustus). Tab LAIN tidak menyetel mode
-      // (tetap decoupled seperti sebelumnya) -- cuma Support yang baru dikopel begini.
-      if (name === 'support' && this.mode !== 'support') {
+      // Tiap tab = 1 mode (Ribbon 3 Tab, 22 Ags). Buka tab -> aktifkan mode-nya.
+      const tabMode = { rangka: 'bentuk', support: 'support', tiang: 'tiang' }[name];
+      if (tabMode && this.mode !== tabMode) {
         this._qa('.de-tool').forEach(el2 => el2.classList.remove('on'));
-        this.mode = 'support';
+        this.mode = tabMode;
         this.armed = null; this.addSupportPt = null; this.boxPreview = null;
         this.setHint();
         this.render();
+        if (tabMode === 'tiang') requestAnimationFrame(() => {
+          const panel = this._q('[data-role=tiangPanel]');
+          if (panel) panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
       }
     });
     this._docPointerDownRibbon = (e) => {
