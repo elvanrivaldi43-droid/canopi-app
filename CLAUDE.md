@@ -233,15 +233,27 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    dikonsolidasi ke 1 tab (buka tab = otomatis aktifkan mode). Detail:
    `docs/superpowers/specs/2026-08-21-denah-support-drag-panel-design.md`,
    `docs/superpowers/plans/2026-08-21-denah-support-drag-panel.md`.
-   Backlog lanjutan: **Frame** — dua masalah kegabung: (a) pola interaksi
-   masih lama (vertex drag gaya lama, sisi diubah lewat input angka, belum ada
-   pola drag=pindah/tekan-tahan=menu spt Tiang/Support), (b) menurut Elvan
-   tampilan frame di denah **"berceceran"** (perlu ditata — bahan brainstorming
-   sesi berikut, sedang MULAI dikerjakan). "Kelompok C saran-kotak-2-arah"
-   sudah SELESAI — terserap ke fitur Spacing Per-Sumbu (item 8, tombol "Pakai
-   saran" kini hitung H & V terpisah). Sisa lain: investigasi tombol
-   "Lanjut → Finalisasi" di HP **hanya jika ada reproduksi video** — jangan
-   menambal bug HP tanpa bukti.
+   ~~Ribbon "berceceran"~~ — **SELESAI & LIVE 22 Agustus 2026 (divalidasi Bos di HP).**
+   Ribbon dirapikan jadi **3 tab (Rangka/Support/Tiang), tiap tab = 1 mode**
+   (buka tab = aktif mode-nya); besi default nempel ke domain masing-masing;
+   tab Ukuran/Ukur Sisi/Besi/Mode dibubarkan; Snap grid + Ganti besi pindah ke
+   quickbar. Dikerjakan via subagent-driven-development (2 task + final review).
+   Spec `docs/superpowers/specs/2026-08-22-denah-rangka-tab-konsolidasi-design.md`,
+   plan `docs/superpowers/plans/2026-08-22-denah-ribbon-3-tab.md`. Plus polesan
+   yang juga LIVE: quickbar jadi ikon SVG 1 baris (+tooltip), Snap grid sampai
+   1cm (grid latar dijaga min ~8px), hint mode default dihilangkan (petunjuk
+   aksi sesaat tetap), panel Support disembunyikan saat kosong, **dpad geser
+   kanvas saat zoom-in** (tekan-tahan; tombol tengah=recenter) + **pan diberi
+   batas biar gambar tak bisa hilang/"tersesat"**.
+   Backlog **Frame yang MASIH tersisa**: (a) pola drag=pindah/tekan-tahan=menu
+   untuk sudut & sisi rangka (vertex masih drag lama, sisi masih input angka) —
+   BELUM dikerjakan; (b) **opsi B navigasi kanvas**: toolbar/tab nempel di mode
+   BIASA saat zoom (bukan cuma fullscreen), atau scroll native — ditunda, perlu
+   plan (nyentuh area zoom/iOS-sensitif). Catatan: mode **"Perbesar Layar"
+   (fullscreen)** sudah nge-pin toolbar+tab+Selesai saat zoom (reparent ke body,
+   aman iOS) — arahkan Bos ke situ untuk zoom berat. "Kelompok C saran-kotak-2-arah"
+   SELESAI (terserap ke Spacing Per-Sumbu). Sisa lain: investigasi tombol
+   "Lanjut → Finalisasi" di HP **hanya jika ada reproduksi video**.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
