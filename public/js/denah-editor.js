@@ -409,6 +409,13 @@ class DenahEditor {
    zoom halaman di sini gak ada gunanya, cuma jadi jebakan. Pinch halaman diblok terpisah via
    gesturestart (lihat constructor). */
 body{touch-action:manipulation}
+/* Lanjutan jebakan iOS yang sama: setelah double-tap-zoom mati, double-tap jatuh ke perilaku
+   default berikutnya = SELEKSI TEKS (blok biru nyangkut di tab/hint/label), dan di Chrome iOS
+   long-press bisa munculin Google Lens. Kanvas udah anti-seleksi dari dulu; ratakan ke seluruh
+   kartu editor. Input/select DIKECUALIKAN -- user-select:none di input bisa blok fokus/ketik di
+   iOS lama. */
+.de-card,.de-matmenu,.de-tiangmenu,.de-supportmenu{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.de-card input,.de-card select,.de-card textarea{-webkit-user-select:auto;user-select:auto}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-canvas{background:#0f2740;border-radius:10px;padding:6px;overflow:hidden;transform-origin:0 0}
 .de-canvas svg{max-width:100%;touch-action:none;display:block;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
