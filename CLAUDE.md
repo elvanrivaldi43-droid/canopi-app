@@ -233,11 +233,15 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    dikonsolidasi ke 1 tab (buka tab = otomatis aktifkan mode). Detail:
    `docs/superpowers/specs/2026-08-21-denah-support-drag-panel-design.md`,
    `docs/superpowers/plans/2026-08-21-denah-support-drag-panel.md`.
-   Backlog lanjutan yang masih aktif: pola drag=pindah/tekan-tahan=menu untuk
-   **Frame** (belum disentuh sesi ini — vertex masih drag lama, sisi masih
-   input panjang angka, belum ada menu), Kelompok C saran-kotak-2-arah, dan
-   investigasi tombol “Lanjut → Finalisasi” di HP hanya jika ada reproduksi
-   video. Jangan menambal bug HP tanpa bukti.
+   Backlog lanjutan: **Frame** — dua masalah kegabung: (a) pola interaksi
+   masih lama (vertex drag gaya lama, sisi diubah lewat input angka, belum ada
+   pola drag=pindah/tekan-tahan=menu spt Tiang/Support), (b) menurut Elvan
+   tampilan frame di denah **"berceceran"** (perlu ditata — bahan brainstorming
+   sesi berikut, sedang MULAI dikerjakan). "Kelompok C saran-kotak-2-arah"
+   sudah SELESAI — terserap ke fitur Spacing Per-Sumbu (item 8, tombol "Pakai
+   saran" kini hitung H & V terpisah). Sisa lain: investigasi tombol
+   "Lanjut → Finalisasi" di HP **hanya jika ada reproduksi video** — jangan
+   menambal bug HP tanpa bukti.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
@@ -274,50 +278,23 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    bagian 4-B & 5. Plan Fase 2 (referensi detail + daftar file yang
    berubah): `docs/superpowers/plans/2026-08-21-swe-fase2-skill-rekomendasi-pic.md`.
 
-8. **DenahEditor — Spacing Support Per-Sumbu — SELESAI DIKERJAKAN (dieksekusi via
-   subagent-driven-development), semua 5 task sudah direview bersih, final
-   whole-branch review juga sudah approve (dengan 2 fix kecil, sudah dieksekusi
-   & di-commit). Tinggal nunggu jadwal push, belum ada kerja coding tersisa
-   di fitur ini.**
-   - Ledger lengkap kalau butuh detail per-task:
-     `.superpowers/sdd/2026-08-21-denah-support-spacing-per-sumbu/progress.md`.
-   - **Status:** Task 1/5 s.d. Task 5/5 semua selesai & direview bersih.
-     Final review whole-branch nemu 2 temuan Important (kolom tanpa batas atas
-     bisa bikin app freeze di HP kalau diisi angka besar; status resume point
-     ini sendiri basi) — keduanya sudah diperbaiki: `kolomH`/`kolomV` di-klem
-     max 200 di handler JS (`public/js/denah-editor.js`), dan blok ini
-     diperbarui.
-   - **Backward-compat sudah diverifikasi empiris**, bukan cuma dibaca kode:
-     harness ekuivalensi bandingin output `buildMembers` lama vs baru lintas
-     25.200 variasi model gaya lama (3 keluarga bentuk, ukuran/origin
-     diacak, ketiga nilai `arah`, kasus tepi `kotak` termasuk 0/negatif/
-     NaN/pecahan) — nol selisih.
-   - Spec: `docs/superpowers/specs/2026-08-21-denah-support-spacing-per-sumbu-design.md`.
-     Plan: `docs/superpowers/plans/2026-08-21-denah-support-spacing-per-sumbu.md`.
-   - **Yang BELUM dilakukan:** checklist manual browser/HP (item A-D, sudah
-     ditulis, lihat laporan Task 5) belum dijalankan Elvan di device beneran.
-     Dua hal yang perlu diwanti-wanti saat cek (ditandai reviewer, biar gak
-     salah dilaporkan sebagai bug baru):
-     1. Undo TIDAK membatalkan perubahan spacing — ini perilaku lama dari
-        versi field tunggal, bukan regresi baru, cuma sekarang lebih gampang
-        ketemu karena ada 2 sumbu.
-     2. Ganti mode/nilai spacing bisa bikin garis support yang tadinya
-        "dihapus" muncul lagi, atau garis lain malah hilang — karena flag
-        "dihapus" dikunci ke index posisi, bukan identitas garis. Sekelas
-        sama perilaku field `kotak` tunggal yang lama, sekarang cuma lebih
-        gampang ke-trigger lewat dua sumbu.
-   - **Ada beberapa commit lokal yang belum di-push** (dari `535884d` s.d.
-     commit fix terakhir, termasuk fix label overlap Support yang sudah
-     selesai duluan & plan/spec fitur ini) — Elvan sudah minta "gabung
-     sekalian" jadi **JANGAN push sebagian dulu**. Fitur spacing per-sumbu
-     ini sendiri sekarang sudah kelar (Task 1-5 + final review + fix), jadi
-     kalau memang mau push gabungan itu, fitur ini sudah tidak jadi
-     penghalang — tapi keputusan push tetap nunggu Elvan.
-   - **Jangan bingung** dengan redesign Support pola drag/tahan+panel (item
-     terpisah, sudah SELESAI & LIVE duluan, lihat commit `fd19895` dst.) —
-     fitur INI (spacing per-sumbu) murni soal jarak antar garis support
-     (mode cm vs jumlah kolom, independen horizontal/vertikal), bukan pola
-     interaksinya.
+8. **DenahEditor — Spacing Support Per-Sumbu — SELESAI & LIVE (push + deploy
+   sukses 22 Agustus 2026).** Dikerjakan via subagent-driven-development
+   (Task 1-5 + final whole-branch review), backward-compat diverifikasi empiris
+   (harness ekuivalensi 25.200 variasi model lama, nol selisih vs `buildMembers`
+   lama). Plus 2 polesan lanjutan yang juga sudah LIVE: (a) tata letak panel
+   Support per-sumbu dirapikan + di mode "jumlah kolom" muncul hasil bagi rata
+   "= N cm/kotak" live; (b) label angka cm pada garis support **vertikal**
+   diputar -90 (ikut arah garis), horizontal tetap mendatar.
+   Spec/plan: `docs/superpowers/{specs,plans}/2026-08-21-denah-support-spacing-per-sumbu*`.
+   - **Dua perilaku yang perlu diwanti-wanti saat cek (bukan bug baru, jangan
+     salah lapor):** (1) Undo TIDAK membatalkan perubahan spacing (perilaku
+     lama field tunggal, cuma lebih gampang ketemu lewat 2 sumbu). (2) Ganti
+     mode/nilai spacing bisa bikin garis support yang tadinya "dihapus" muncul
+     lagi / garis lain hilang — flag "dihapus" dikunci ke index posisi, bukan
+     identitas garis (sekelas perilaku field `kotak` tunggal lama).
+   - Checklist manual A-D (laporan Task 5) belum tentu sudah dijalankan Elvan
+     tuntas di device; kalau ada anomali baru, cek ke sana dulu.
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 
