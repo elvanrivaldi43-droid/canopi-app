@@ -47,6 +47,56 @@ const isSimplePolygon = (v) => {
   }
   return true;
 };
+// Buang vertex yang segaris dengan 2 tetangganya (sudut ~180 derajat, termasuk "duri" arah
+// balik). Dipakai combineBox: kalau kotak nempel PAS di sudut existing, sudut lama itu jadi
+// segaris dengan ujung kotak baru + sisi berikutnya -> redundant, harus lenyap (bukan nambah
+// sisi 100cm palsu). Kalau kotak di tengah sisi (bukan sudut), tak ada titik yang jadi segaris,
+// jadi tak ada yang dibuang -> lekukan tetap 4 sisi penuh.
+const removeCollinear = (v) => {
+  const out = v.slice();
+  let changed = true;
+  while (changed && out.length > 3) {
+    changed = false;
+    for (let i = 0; i < out.length; i++) {
+      const n = out.length;
+      const prev = out[(i - 1 + n) % n], cur = out[i], next = out[(i + 1) % n];
+      const e1x = cur.x - prev.x, e1y = cur.y - prev.y, e2x = next.x - cur.x, e2y = next.y - cur.y;
+      const len1 = Math.hypot(e1x, e1y), len2 = Math.hypot(e2x, e2y);
+      if (len1 < 1e-6 || len2 < 1e-6) continue;
+      if (Math.abs(e1x * e2y - e1y * e2x) / (len1 * len2) < 1e-6) { out.splice(i, 1); changed = true; break; }
+    }
+  }
+  return out;
+};
+// Inti combineBox: hitung titik kotak baru, sisip ke `verts`, bersihkan titik segaris, lalu
+// validasi. Dipisah dari combineBox murni (return array) supaya applyBoxPreview bisa dapat
+// `boxIdx` (index vertex milik kotak, buat fitur drag-kotak-utuh) dan `reindex` (map index lama
+// -> index baru, -1 kalau sudut lama itu yang dibuang) tanpa duplikasi logika.
+const combineBoxCore = (verts, sisiIdx, offset, span, depth) => {
+  const n = verts.length;
+  const a = verts[sisiIdx], b = verts[(sisiIdx + 1) % n];
+  const ex = b.x - a.x, ey = b.y - a.y, len = Math.hypot(ex, ey);
+  if (!(len > 1e-6) || !(span > 0) || offset < -1e-6 || offset + span > len + 1e-6 || !depth) return null;
+  const ux = ex / len, uy = ey / len, nx = -uy, ny = ux;
+  const p1 = { x: a.x + ux * offset, y: a.y + uy * offset };
+  const p2 = { x: a.x + ux * (offset + span), y: a.y + uy * (offset + span) };
+  const p4 = { x: p1.x + nx * depth, y: p1.y + ny * depth };
+  const p3 = { x: p2.x + nx * depth, y: p2.y + ny * depth };
+  const seq = [];
+  if (offset > 1e-6) seq.push(p1);
+  seq.push(p4, p3);
+  if (offset + span < len - 1e-6) seq.push(p2);
+  const out = [...verts.slice(0, sisiIdx + 1), ...seq, ...verts.slice(sisiIdx + 1)];
+  const cleaned = removeCollinear(out);
+  if (!isSimplePolygon(cleaned)) return null;
+  const boxIdx = [], reindex = verts.map(() => -1);
+  cleaned.forEach((p, i) => {
+    if (seq.includes(p)) { boxIdx.push(i); return; }
+    const oldI = verts.indexOf(p);
+    if (oldI !== -1) reindex[oldI] = i;
+  });
+  return { verts: cleaned, boxIdx, reindex };
+};
 // Snap 1 titik ke sumbu X/Y titik acuan kalau jaraknya < threshold (dipakai ortho-snap
 // drag ujung support manual — garis jadi lurus tanpa harus pas manual, pola sama seperti
 // ortho-snap drag sudut poligon yang sudah ada di bindSvg()).
@@ -211,25 +261,24 @@ const DenahConv = {
   // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
   // memutuskan tandanya dari posisi drag — fungsi ini tak tahu & tak perlu tahu mana "luar"/"dalam".
   combineBox(verts, sisiIdx, offset, span, depth) {
-    const n = verts.length;
-    const a = verts[sisiIdx], b = verts[(sisiIdx + 1) % n];
-    const ex = b.x - a.x, ey = b.y - a.y, len = Math.hypot(ex, ey);
-    if (!(len > 1e-6) || !(span > 0) || offset < -1e-6 || offset + span > len + 1e-6 || !depth) return null;
-    const ux = ex / len, uy = ey / len, nx = -uy, ny = ux;
-    const p1 = { x: a.x + ux * offset, y: a.y + uy * offset };
-    const p2 = { x: a.x + ux * (offset + span), y: a.y + uy * (offset + span) };
-    const p4 = { x: p1.x + nx * depth, y: p1.y + ny * depth };
-    const p3 = { x: p2.x + nx * depth, y: p2.y + ny * depth };
-    const seq = [];
-    if (offset > 1e-6) seq.push(p1);
-    seq.push(p4, p3);
-    if (offset + span < len - 1e-6) seq.push(p2);
-    const out = [...verts.slice(0, sisiIdx + 1), ...seq, ...verts.slice(sisiIdx + 1)];
-    return isSimplePolygon(out) ? out : null;
+    const r = combineBoxCore(verts, sisiIdx, offset, span, depth);
+    return r ? r.verts : null;
   },
-  // Dipanggil setelah S.verts.splice(at, 0, ...count vertex baru...) (mode "+ Sudut" atau
-  // combineBox saat "+ Tambah Kotak"): index vertex combinedBoxes yg >= at ikut geser +count
-  // (vertex baru masuk SEBELUM index itu).
+  // Sama seperti combineBox, tapi juga ngasih boxIdx (index vertex milik kotak baru, di array
+  // hasil) dan reindex (index lama -> index baru / -1 kalau dibuang karena segaris). Dipakai
+  // applyBoxPreview buat update pembukuan combinedBoxes tanpa nebak-nebak arithmetic offset.
+  combineBoxWithMeta(verts, sisiIdx, offset, span, depth) {
+    return combineBoxCore(verts, sisiIdx, offset, span, depth);
+  },
+  // Remap index vertex di combinedBoxes lewat tabel `reindex` (dari combineBoxWithMeta). Entry
+  // yang salah satu vertex-nya kena buang (reindex -1) ikut dibuang, sama seperti shiftBoxesDelete.
+  reindexBoxes(boxes, reindex) {
+    return (boxes || []).map(bx => ({ verts: bx.verts.map(i => reindex[i]) })).filter(bx => !bx.verts.includes(-1));
+  },
+  // Dipanggil setelah S.verts.splice(at, 0, ...count vertex baru...) (mode "+ Sudut"): index
+  // vertex combinedBoxes yg >= at ikut geser +count (vertex baru masuk SEBELUM index itu).
+  // ("+ Tambah Kotak" pakai reindexBoxes lewat combineBoxWithMeta, bukan ini — bisa ada sudut
+  // lama yg DIBUANG, bukan cuma sisip.)
   shiftBoxesInsert(boxes, at, count) {
     return (boxes || []).map(bx => ({ verts: bx.verts.map(i => i >= at ? i + count : i) }));
   },
@@ -1359,25 +1408,21 @@ class DenahEditor {
     return { p1, p2, p3, p4 };
   }
 
-  // Terapkan: panggil combineBox murni (Task 1); kalau valid ganti S.verts, kalau tidak kasih hint & tetap di preview.
+  // Terapkan: panggil combineBoxWithMeta (Task 1 + fix titik segaris di sudut); kalau valid
+  // ganti S.verts, kalau tidak kasih hint & tetap di preview.
   applyBoxPreview() {
     const bp = this.boxPreview, verts = this.S.verts, n = verts.length;
     const a = verts[bp.sisiIdx], b = verts[(bp.sisiIdx + 1) % n];
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     const off = Math.max(0, Math.min(bp.offset, len - bp.span));
-    const result = DenahConv.combineBox(this.S.verts, bp.sisiIdx, off, bp.span, bp.depthMag * bp.depthSign);
+    const result = DenahConv.combineBoxWithMeta(this.S.verts, bp.sisiIdx, off, bp.span, bp.depthMag * bp.depthSign);
     if (!result) { this.setHint('Kotak tidak valid di posisi ini — geser lagi atau kecilkan ukurannya.'); return; }
     this.pushUndo();
-    // Catat vertex mana yg jadi 1 kotak (buat drag-kotak-utuh, Task 6) — jumlah vertex baru yg
-    // disisipkan sama persis logika `seq` di combineBox: offset>0 -> p1 baru, offset+span<len -> p2 baru,
-    // p4+p3 selalu ada.
-    const boxStart = bp.sisiIdx + 1;
-    let count = 2;
-    if (off > 1e-6) count++;
-    if (off + bp.span < len - 1e-6) count++;
-    this.S.combinedBoxes = DenahConv.shiftBoxesInsert(this.S.combinedBoxes, boxStart, count);
-    this.S.combinedBoxes.push({ verts: Array.from({ length: count }, (_, k) => boxStart + k) });
-    this.S.verts = result;
+    // boxIdx/reindex dari combineBoxWithMeta: kotak nempel pas di sudut existing bisa bikin
+    // sudut lama itu segaris (dibuang), jadi index-nya bukan cuma soal geser +count lagi.
+    this.S.combinedBoxes = DenahConv.reindexBoxes(this.S.combinedBoxes, result.reindex);
+    this.S.combinedBoxes.push({ verts: result.boxIdx });
+    this.S.verts = result.verts;
     this.armed = null; this.boxPreview = null;
     this.setHint();
     this.syncLP();

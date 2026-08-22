@@ -42,5 +42,34 @@ check('ditolak: depth=0 -> null', invalidDepthZero, null);
 const invalidNegOffset = DenahConv.combineBox(kotak, 0, -50, 200, 100);
 check('ditolak: offset negatif -> null', invalidNegOffset, null);
 
+// --- Kasus SUDUT: lekukan nempel PAS di ujung sisi kanan (idx 1, 700x400) -> sudut lama
+// (700,400) jadi segaris & harus lenyap, sisi bawah otomatis menyusut 700->600 (bukan nambah
+// sisi "duri" 100cm palsu). Laporan Elvan 22 Agustus: kotak 100x100 pas di pojok kanan-bawah
+// harusnya jadi L bersih 6 titik, bukan 7 titik dgn sisi F5 nyeleneh.
+const sudut = DenahConv.combineBox(kotak, 1, 300, 100, 100);
+check('sudut: 6 titik (sudut lama lenyap, bukan 7)', sudut && sudut.length, 6);
+check('sudut: (700,400) TIDAK ada lagi', sudut && sudut.some(p => p.x === 700 && p.y === 400), false);
+check('sudut: titik notch (600,400) ada (sisi bawah menyusut ke situ)', sudut && sudut.some(p => p.x === 600 && p.y === 400), true);
+check('sudut: luas jadi 27 m2 (28m2 - notch 1x1m)', sudut && DenahConv.luasM2({ verts: sudut }), 27);
+
+// --- Kasus SUDUT (ujung awal sisi, offset=0) -> sudut lama (700,0) lenyap juga ---
+const sudutAwal = DenahConv.combineBox(kotak, 1, 0, 100, 100);
+check('sudut awal: 6 titik', sudutAwal && sudutAwal.length, 6);
+check('sudut awal: (700,0) TIDAK ada lagi', sudutAwal && sudutAwal.some(p => p.x === 700 && p.y === 0), false);
+
+// --- Kasus TENGAH (bukan sudut) tetap 8 titik, tak ada yg dibuang (regresi utama) ---
+const tengah = DenahConv.combineBox(kotak, 1, 100, 100, 100);
+check('tengah (bukan sudut): tetap 8 titik', tengah && tengah.length, 8);
+
+// --- combineBoxWithMeta: boxIdx nunjuk ke titik kotak, reindex map sudut lama yg lenyap ke -1 ---
+const meta = DenahConv.combineBoxWithMeta(kotak, 1, 300, 100, 100);
+check('meta sudut: reindex[2] (sudut lama 700,400) = -1', meta && meta.reindex[2], -1);
+check('meta sudut: boxIdx panjang 3 (p1,p4,p3 -- p2 kena skip krn offset+span nempel sudut)', meta && meta.boxIdx.length, 3);
+check('meta tengah: tak ada reindex yg -1 (tak ada sudut lama dibuang)', meta2FromTengah(), true);
+function meta2FromTengah() {
+  const m = DenahConv.combineBoxWithMeta(kotak, 1, 100, 100, 100);
+  return m ? !m.reindex.includes(-1) : false;
+}
+
 console.log(fail ? '\nADA FAIL' : '\nSEMUA LULUS');
 process.exit(fail ? 1 : 0);
