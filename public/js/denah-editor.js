@@ -310,10 +310,14 @@ class DenahEditor {
     this.besi = this.opts.besi || [];
     this.S = this.opts.model ? JSON.parse(JSON.stringify(this.opts.model)) : DenahEditor.defaultModel();
     if (this.besi.length) {
-      const first = this.besi[0].nama;
-      if (!this.S.matDefault.frame) this.S.matDefault.frame = first;
-      if (!this.S.matDefault.support) this.S.matDefault.support = first;
-      if (!this.S.matDefault.tiang) this.S.matDefault.tiang = first;
+      // Nebak default per-jenis (sama pola dgn "default material tebakan" blok kanopi di
+      // rab-opsi/index.blade.php): cari besi yang namanya MENGANDUNG kode ukuran, bukan
+      // hardcode nama persis (nama di master_material bisa ada embel2 tebal/merek).
+      // Frame+Tiang -> hollow 5x10, Support -> hollow 4x8. Gak ketemu -> fallback besi pertama.
+      const cari = (kw) => { const b = this.besi.find(x => x.nama && x.nama.toLowerCase().replace(/\s/g, '').includes(kw)); return b ? b.nama : this.besi[0].nama; };
+      if (!this.S.matDefault.frame) this.S.matDefault.frame = cari('5x10');
+      if (!this.S.matDefault.support) this.S.matDefault.support = cari('4x8');
+      if (!this.S.matDefault.tiang) this.S.matDefault.tiang = cari('5x10');
     }
     this.undoStack = []; this.redoStack = [];
     this.mode = 'bentuk';

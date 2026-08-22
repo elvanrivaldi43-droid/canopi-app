@@ -495,8 +495,10 @@ function tambahBlok(pane, tipe, data){
     // default material tebakan
     if(tipe==='kanopi' && !data){
         const cari=function(kw){ const b=BESI.find(function(x){return x.nama.toLowerCase().replace(/\s/g,'').includes(kw);}); return b?b.nama:''; };
-        const f=cari('5x10'); const mf=card.querySelector('.b-matFrame'), mt=card.querySelector('.b-matTiang');
+        const f=cari('5x10'); const s=cari('4x8');
+        const mf=card.querySelector('.b-matFrame'), mt=card.querySelector('.b-matTiang'), ms=card.querySelector('.b-matSupport');
         if(f && mf) mf.value=f; if(f && mt) mt.value=f;
+        if(s && ms) ms.value=s;
     }
     card.querySelector('.b-aktif').addEventListener('change',function(){ card.classList.toggle('off', !this.checked); });
 
