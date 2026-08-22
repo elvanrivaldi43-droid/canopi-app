@@ -263,6 +263,28 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    kotak-utuh) tetap benar walau ada sudut lama yang kebuang. Test baru di
    `tests/rangka/test_box_union.mjs` (kasus sudut awal/akhir + regresi notch
    tengah-sisi).
+   **Gelombang polesan 22 Agustus malam (semua LIVE, sebagian sudah divalidasi
+   Bos):** (a) **+Sudut/−Sudut jadi mode sticky-toggle** — tap sekali nyala
+   terus (bisa kerja berkali-kali), tap lagi/pindah tab/aksi lain = mati;
+   sinkron visual tombol 1 titik di `render()`; Undo/Redo sengaja
+   MEMPERTAHANKAN mode ini (penanda alat, bukan data). (b) **Reset kotak bisa
+   di-Undo** (dulu `resetBox()` ngosongin riwayat total — bug). (c) **Titik
+   "+ Sudut" diproyeksikan nempel ke garis sisi** (`closestOnSegment`, test
+   `test_closest_segment.mjs`) — tap meleset gak lagi bikin "paruh burung".
+   (d) **Anti-jebakan gestur mobile menyeluruh** (audit atas permintaan Bos):
+   blok pinch/double-tap zoom HALAMAN (gesturestart + touch-action;
+   viewport meta `app.blade.php` ternyata gak punya larangan zoom — guard ini
+   satu-satunya benteng), anti-seleksi teks + touch-callout seluruh kartu+menu
+   (input dikecualikan), blok contextmenu dalam editor (menu paste input tetap
+   hidup), overscroll-behavior (anti pull-to-refresh), user-drag none.
+   Residual sadar tanpa fix: edge-swipe back iOS (mitigasi autosave),
+   force-zoom aksesibilitas Android/OS (jangan dilawan). Default material
+   denah/kanopi baru: Frame+Tiang cari nama besi mengandung "5x10", Support
+   "4x8" (data lama yang kadung kesimpen TIDAK ditimpa — ganti manual).
+   **Pelajaran deploy:** file test baru WAJIB didaftarkan di
+   `tests/guardrail/manifest.json` di commit yang sama (deploy #127/#128 merah
+   karena ini, bukan FTP flaky — cek Actions/reproduksi `php scripts/canopi-check`
+   dulu sebelum nyalahin FTP).
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
