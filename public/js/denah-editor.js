@@ -323,6 +323,7 @@ class DenahEditor {
 .de-ribbon-panel{display:none}
 .de-ribbon-panel.on{display:block}
 .de-quickbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;align-items:center}
+.de-ico{width:18px;height:18px;display:block;flex:0 0 auto}
 .de-card.de-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;overflow-y:auto;border-radius:0;margin:0;box-shadow:none}
 .de-fullscreen-exit{display:none;flex:0 0 auto;min-height:40px;box-sizing:border-box;padding:0 18px;margin-left:6px;border-radius:8px;background:#f59e0b;color:#1e293b;border:none;font-size:13px;font-weight:700;cursor:pointer;align-items:center;justify-content:center}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -409,11 +410,14 @@ class DenahEditor {
   </div>
   </div>
   <div class="de-quickbar">
-    <label style="font-size:12px;display:flex;flex-direction:column;gap:3px">Snap grid<select data-role="inGrid"><option>10</option><option selected>20</option><option>25</option><option>50</option></select></label>
-    <span class="de-tool" data-mode="besi">Ganti besi</span>
-    <span class="de-mini" data-role="btnUndo">Undo</span>
-    <span class="de-mini" data-role="btnRedo">Redo</span>
-    <span class="de-mini" data-role="btnFullscreen">Perbesar Layar</span>
+    <label title="Snap grid — kelipatan pembulatan saat menggeser (cm)" style="display:flex;align-items:center;gap:5px">
+      <svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+      <select data-role="inGrid"><option>1</option><option>2</option><option>5</option><option>10</option><option selected>20</option><option>25</option><option>50</option></select>
+    </label>
+    <span class="de-tool" data-mode="besi" title="Ganti besi (ubah besi 1 batang)" aria-label="Ganti besi"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v18M8 3 4 7M8 3l4 4M16 21V3M16 21l-4-4M16 21l4-4"/></svg></span>
+    <span class="de-mini" data-role="btnUndo" title="Undo" aria-label="Undo"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg></span>
+    <span class="de-mini" data-role="btnRedo" title="Redo" aria-label="Redo"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/></svg></span>
+    <span class="de-mini" data-role="btnFullscreen" title="Perbesar Layar" aria-label="Perbesar Layar"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H4a1 1 0 0 0-1 1v4M16 3h4a1 1 0 0 1 1 1v4M8 21H4a1 1 0 0 1-1-1v-4M16 21h4a1 1 0 0 0 1-1v-4"/></svg></span>
   </div>
   <div class="de-row" data-role="boxPanel" style="display:none;margin-top:8px"></div>
   <div class="de-hint" data-role="hint">Mode Bentuk: seret bulatan sudut untuk mengubah bentuk. Ketuk angka cm di sisi untuk ketik panjang pasti.</div>
@@ -1359,7 +1363,10 @@ class DenahEditor {
     const PAD = this.PAD;
     const W = domW * this.SC + PAD * 2, H = domH * this.SC + PAD * 2;
     const X = x => PAD + x * this.SC, Y = y => PAD + y * this.SC;
-    const gpx = S.grid * this.SC;
+    // Grid latar jangan lebih rapat dari ~8px biar tak jadi bidang solid saat snap kecil (mis. 1cm).
+    // Snap (S.grid) tetap presisi apa adanya; ini murni kerapatan garis latar (visual).
+    let visCm = S.grid > 0 ? S.grid : 20; while (visCm * this.SC < 8 && visCm < 1000) visCm *= 2;
+    const gpx = visCm * this.SC;
     let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
     const gid = 'grid-' + this.uid;
     s += `<defs><pattern id="${gid}" width="${gpx}" height="${gpx}" patternUnits="userSpaceOnUse" x="${PAD}" y="${PAD}"><path d="M ${gpx} 0 L 0 0 0 ${gpx}" fill="none" stroke="#1e3a5f" stroke-width="0.5"/></pattern></defs>`;
