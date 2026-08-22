@@ -869,9 +869,10 @@ body,.page-content{overscroll-behavior-y:contain}
         // bindSvg() (bubble-phase, listener di svg) memproses pointerdown ini
         // sebagai drag baru sebelum pinch dikenali (lihat fix Finding 2, task-4 review)
         e.stopPropagation();
-        // batalkan drag 1-jari yg mungkin lagi jalan (vertex/support/box) di bindSvg
-        const svg = canvasEl().querySelector('svg');
-        if (svg) svg.dispatchEvent(new PointerEvent('pointercancel'));
+        // batalkan drag 1-jari yg mungkin lagi jalan (vertex/support/box) di bindSvg --
+        // panggil LANGSUNG (jalur dispatch synthetic event lama cacat: bubbles:false,
+        // gak pernah nyampe listener; lihat komentar di bindSvg)
+        if (this._cancelDrag) this._cancelDrag();
         const [p1, p2] = [...pointers.values()];
         const rect = wrap.getBoundingClientRect();
         const startMid = mid2(p1, p2);
@@ -2150,7 +2151,7 @@ body,.page-content{overscroll-behavior-y:contain}
     // _preDragS yang diambil di pointerdown -- gestur batal = tak terjadi apa-apa (janji yang
     // sama dgn redesign tiang 18 Juli). Entry undo yang kadung di-push saat drag mulai (isinya
     // identik snapshot) ikut dicabut biar tak ada langkah undo kosong.
-    el.addEventListener('pointercancel', () => {
+    const cancelDrag = () => {
       if (!drag) return;
       if (drag.longPressTimer) clearTimeout(drag.longPressTimer);
       this._hideAlignGuides && this._hideAlignGuides();
@@ -2159,7 +2160,13 @@ body,.page-content{overscroll-behavior-y:contain}
         Object.assign(this.S, JSON.parse(this._preDragS));
       }
       drag = null; this.syncInputs(); this.render();
-    });
+    };
+    el.addEventListener('pointercancel', cancelDrag);
+    // Dipanggil LANGSUNG oleh _wireZoom saat jari ke-2 pinch terdeteksi. Jalur lama (dispatch
+    // synthetic PointerEvent('pointercancel') ke <svg>) CACAT sejak awal: event buatan default
+    // bubbles:false, listener-nya di kontainer -> sinyal gak pernah nyampe, drag jalan terus
+    // bareng pinch (support kegeser/naik-kelas, zoom kacau -- laporan Elvan 22 Ags malam, 2x).
+    this._cancelDrag = cancelDrag;
   }
 
   // ---- API publik (dipakai Task 3) ----
