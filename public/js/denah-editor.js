@@ -323,7 +323,7 @@ class DenahEditor {
 .de-ribbon-strip.open{border-color:#334155;padding:10px 12px;max-height:45vh;overflow-y:auto}
 .de-ribbon-panel{display:none}
 .de-ribbon-panel.on{display:block}
-.de-quickbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.de-quickbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;align-items:center}
 .de-card.de-fullscreen{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9000;overflow-y:auto;border-radius:0;margin:0;box-shadow:none}
 .de-fullscreen-exit{display:none;flex:0 0 auto;min-height:40px;box-sizing:border-box;padding:0 18px;margin-left:6px;border-radius:8px;background:#f59e0b;color:#1e293b;border:none;font-size:13px;font-weight:700;cursor:pointer;align-items:center;justify-content:center}
 .de-canvas-wrap{position:relative;touch-action:none;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -368,7 +368,6 @@ class DenahEditor {
         <label>Lebar (cm)<input type="number" data-role="inL" value="400" step="10"></label>
         <label>Panjang (cm)<input type="number" data-role="inP" value="300" step="10"></label>
         <label>Tinggi tiang (cm)<input type="number" data-role="inT" value="300" step="10"></label>
-        <label>Snap grid<select data-role="inGrid"><option>10</option><option selected>20</option><option>25</option><option>50</option></select></label>
         <span class="de-mini" data-role="btnReset">Reset kotak dari Lebar×Panjang</span>
       </div>
     </div>
@@ -409,7 +408,6 @@ class DenahEditor {
     <div class="de-ribbon-panel" data-panel="mode">
       <div class="de-tools">
         <span class="de-tool on" data-mode="bentuk">Bentuk</span>
-        <span class="de-tool" data-mode="besi">Ganti besi</span>
         <span class="de-tool" data-mode="tiang">Tiang</span>
         <span class="de-mini" data-role="btnAddV">+ Sudut</span>
         <span class="de-mini" data-role="btnDelV">− Sudut</span>
@@ -422,6 +420,8 @@ class DenahEditor {
   </div>
   </div>
   <div class="de-quickbar">
+    <label style="font-size:12px;display:flex;flex-direction:column;gap:3px">Snap grid<select data-role="inGrid"><option>10</option><option selected>20</option><option>25</option><option>50</option></select></label>
+    <span class="de-tool" data-mode="besi">Ganti besi</span>
     <span class="de-mini" data-role="btnUndo">Undo</span>
     <span class="de-mini" data-role="btnRedo">Redo</span>
     <span class="de-mini" data-role="btnFullscreen">Perbesar Layar</span>
