@@ -970,7 +970,7 @@ class DenahEditor {
     panel.innerHTML =
       '<b style="font-size:12px;color:#334155">Posisi Tiang (cm dari kiri-depan)</b>' +
       '<div data-role="tiangPanelMsg" style="font-size:11px;color:#dc2626;margin:3px 0"></div>' +
-      (rows || '<div style="font-size:12px;color:#94a3b8;margin-top:4px">Belum ada tiang.</div>') +
+      rows +
       `<div class="de-tiang-item" style="border-bottom:0">
         <div class="de-tiang-head"><b style="font-size:12px">+ Tiang baru</b></div>
         <div class="de-tiang-fields">
@@ -1053,10 +1053,11 @@ class DenahEditor {
   renderSupportPanel(mem) {
     const panel = this._q('[data-role=supportPanel]');
     if (!panel) return;
-    panel.style.display = this.mode === 'support' ? '' : 'none';
-    if (this.mode !== 'support') { panel.innerHTML = ''; return; }
     const supNum = DenahConv.numberSupportsManual(mem);
     const manualMem = mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_'));
+    // Sembunyikan panel saat bukan mode support ATAU belum ada support manual (buang hint kosong, 22 Ags).
+    if (this.mode !== 'support' || !manualMem.length) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+    panel.style.display = '';
     const rows = manualMem.map(m => {
       const i = +m.id.slice(3);
       return `<div class="de-tiang-item" data-srow="${i}">
@@ -1067,8 +1068,7 @@ class DenahEditor {
       </div>`;
     }).join('');
     panel.innerHTML =
-      '<b style="font-size:12px;color:#334155">Daftar Support Manual</b>' +
-      (rows || '<div style="font-size:12px;color:#94a3b8;margin-top:4px">Belum ada support manual. Geser support grid atau pakai "+ Support manual" untuk menambah.</div>');
+      '<b style="font-size:12px;color:#334155">Daftar Support Manual</b>' + rows;
 
     panel.querySelectorAll('[data-role=sFokus]').forEach(btn => {
       btn.onclick = () => {
