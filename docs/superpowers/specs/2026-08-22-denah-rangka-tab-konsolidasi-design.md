@@ -1,96 +1,117 @@
-# Desain: DenahEditor — Konsolidasi Kontrol Rangka ke 1 Tab
+# Desain: DenahEditor — Ribbon 3 Tab (Rangka / Support / Tiang), 1 Tab = 1 Mode
 
 **Tanggal:** 2026-08-22
 **File utama:** `public/js/denah-editor.js` (1 file, tidak dipecah)
 
 ## Masalah
 
-Kontrol yang berkaitan dengan **rangka (frame)** tercerai-berai di 3 tab ribbon
-berbeda, jadi untuk mengatur satu rangka pengguna harus loncat-loncat antar tab:
+Kontrol di ribbon tercerai-berai dan tidak konsisten:
 
-- Tab **Ukuran** → Lebar, Panjang, Tinggi tiang, Snap grid, "Reset kotak dari L×P"
-- Tab **Mode** → Bentuk, +Sudut, −Sudut, +Tambah Kotak (plus mode Tiang & Ganti besi yang BUKAN rangka)
-- Tab **Ukur Sisi** → panjang tiap sisi (F1, F2, ...)
+- Kontrol **rangka** tersebar di 3 tab: **Ukuran** (Lebar/Panjang/Tinggi/Snap/Reset),
+  **Mode** (Bentuk, +Sudut, −Sudut, +Tambah Kotak), **Ukur Sisi** (panjang tiap sisi).
+- Tab **Mode** adalah "tab serbaguna" yang ngambang: isinya Bentuk + Ganti besi + Tiang
+  yang tidak satu domain.
+- Tab **Besi** cuma 3 dropdown besi default yang terpisah dari domain-nya masing-masing.
 
-Ini pola yang sama seperti Support dulu (berserakan lalu disatukan ke 1 tab,
-21 Agustus). Sekarang giliran rangka.
+Pola "1 tab = 1 mode" sudah dipakai Support (buka tab = aktif mode support, 21 Agustus).
+Sisanya belum ikut pola itu.
 
 ## Tujuan
 
-Satukan semua kontrol rangka ke **satu tab "Rangka"**. Support & Besi dibiarkan.
-Bukan perombakan seluruh ribbon — hanya konsolidasi rangka.
+Rapikan ribbon jadi **3 tab, tiap tab = 1 mode** (buka tab → otomatis masuk mode-nya):
+**Rangka (bentuk) · Support · Tiang**. Besi default nempel ke domain-nya. Tab "Ukuran",
+"Ukur Sisi", "Besi", "Mode" dibubarkan.
 
-## Keputusan (sudah disepakati Elvan)
+## Keputusan (disepakati Elvan)
 
 | # | Keputusan | Alasan |
 |---|---|---|
-| 1 | Semua kontrol bentuk + ukuran rangka masuk 1 tab "Rangka" | Hilangkan loncat-loncat antar tab |
-| 2 | Buka tab Rangka = otomatis aktif mode Bentuk | Pola sama Support (tab = jalan masuk mode) |
-| 3 | Tinggi tiang ikut ke tab Rangka (sebaris Lebar/Panjang) | Cara pikir "ukuran" menyatukan L/P/T |
-| 4 | Snap grid pindah ke quickbar atas (dekat Undo/Redo/Perbesar Layar) | Snap global lintas mode, bukan khusus rangka; selalu terlihat tanpa buka tab |
-| 5 | Tab "Ukuran" & "Ukur Sisi" dihapus | Isinya sudah pindah ke Rangka |
-| 6 | Tab "Mode" tetap ada, tinggal Ganti besi + Tiang | Bentuk pindah jadi implisit di tab Rangka; mode non-rangka tetap |
+| 1 | Ribbon jadi 3 tab: **Rangka · Support · Tiang** | Tiap tab satu pekerjaan jelas |
+| 2 | Buka tab = otomatis aktif mode-nya (Rangka→bentuk, Support→support, Tiang→tiang) | Pola konsisten (sudah dipakai Support) |
+| 3 | Kontrol rangka (L/P/Tinggi, +/−Sudut, +Kotak, Reset, panjang sisi) semua ke tab Rangka | Hilangkan loncat antar tab |
+| 4 | Besi **default** nempel ke domain: "Besi frame"→Rangka, "Besi support"→Support, "Besi tiang"→Tiang | Besi default = sifat tiap benda, bukan setelan bersama |
+| 5 | Tab "Besi" & "Mode" dibubarkan | Isinya sudah pindah / jadi mode-tab |
+| 6 | **Snap grid** & **Ganti besi** pindah ke quickbar atas | Snap = alat global lintas mode; Ganti besi = mode lintas-batang, tak punya domain tunggal |
+| 7 | "Ganti besi" (override per-batang) dipertahankan SEMENTARA | Masih satu-satunya cara override besi 1 batang rangka/tiang; akan pensiun saat backlog "tekan-tahan=menu Frame/Tiang" jalan (Support sudah punya di menu tahan) |
 
 ## Target akhir
 
-**Tab bar: 5 → 4 tab** — `Rangka | Support | Besi | Mode`
+**Tab bar: 5 → 3 tab** — `Rangka | Support | Tiang`
 
-**Tab "Rangka"** (buka tab → set `mode='bentuk'`), 3 baris:
+**Tab "Rangka"** (buka → `mode='bentuk'`):
 1. **Ukuran:** `Lebar` · `Panjang` · `Tinggi tiang` · `[Reset kotak dari L×P]`
 2. **Bentuk:** `[+ Sudut]` · `[− Sudut]` · `[+ Tambah Kotak]`
-3. **Panjang tiap sisi:** daftar `F1 [__] F2 [__] …` (pindahan dari Ukur Sisi)
+3. **Besi frame:** dropdown `Besi frame`
+4. **Panjang tiap sisi:** daftar `F1 [__] F2 [__] …` (pindahan dari Ukur Sisi)
 
-**Quickbar atas:** `Snap grid [20▾]` · `Undo` · `Redo` · `Perbesar Layar`
+**Tab "Support"** (buka → `mode='support'`, spt sekarang): setelan support existing + tambah dropdown `Besi support`.
 
-**Tab "Mode":** `Ganti besi` · `Tiang`
+**Tab "Tiang"** (buka → `mode='tiang'`): dropdown `Besi tiang` (panel kelola tiang tetap muncul di bawah kartu spt sekarang saat mode tiang aktif).
 
-**Tab "Support" & "Besi":** tidak berubah.
+**Quickbar atas:** `Snap grid [20▾]` · `Ganti besi` · `Undo` · `Redo` · `Perbesar Layar`
 
 ## Detail teknis
 
-Perubahan ini **murni relokasi markup + 1 tambahan logika**. Semua tombol/input
-sudah nyambung ke handler lewat atribut `data-role`, jadi memindahkan elemennya di
-markup TIDAK mengubah handler apa pun. Elemen yang dipindah (data-role tetap):
+Sebagian besar = **relokasi markup**; handler nyambung via `data-role`/`data-mode`,
+jadi memindah elemen TIDAK mengubah handler. Perubahan logika minimal & terisolasi.
 
-- Dari panel `ukuran` → panel `rangka`: `inL`, `inP`, `inT`, `btnReset`
-- Dari panel `mode` → panel `rangka`: `btnAddV` (+Sudut), `btnDelV` (−Sudut), `btnAddBox` (+Tambah Kotak)
-- Dari panel `sisi` → panel `rangka`: `sisiPanel` (daftar panjang sisi)
-- Dari panel `ukuran` → quickbar: `inGrid` (Snap grid)
+### Markup ribbon
 
-Elemen yang TETAP di tempatnya:
-- Tab `mode`: tool `data-mode="besi"` (Ganti besi) + `data-mode="tiang"` (Tiang).
-  Tool `data-mode="bentuk"` DIHAPUS dari markup (mode bentuk kini lewat tab Rangka).
-- Tab `support`, tab `besi`: utuh.
+- Tab bar: sisakan 3 span — `data-tab="rangka"` (label "Rangka"), `data-tab="support"`,
+  `data-tab="tiang"` (baru). Hapus `data-tab="ukuran"`, `data-tab="besi"`, `data-tab="mode"`,
+  `data-tab="sisi"`. `.de-fullscreen-exit` ("Selesai") tetap child terakhir.
+- Panel: `data-panel="rangka"` (isi gabungan), `data-panel="support"` (tambah dropdown besi),
+  `data-panel="tiang"` (baru, dropdown besi). Hapus panel `ukuran`, `besi`, `mode`, `sisi`.
 
-**Satu tambahan logika** — di handler klik tab (`_wireRibbon`, sekitar baris 592-610):
-saat tab yang dibuka = `rangka` dan mode belum `bentuk`, set `mode='bentuk'`, bersihkan
-highlight `.de-tool`, reset `armed`/`addSupportPt`/`boxPreview`, `setHint()`, `render()`
-— PERSIS pola blok `if (name === 'support' ...)` yang sudah ada, tinggal ditambah cabang
-`rangka`.
+### Relokasi elemen (data-role/data-mode TETAP)
 
-**Markup tab:** ganti `data-tab="ukuran"` jadi `data-tab="rangka"` (label "Rangka"),
-hapus `data-tab="sisi"`. Panel `data-panel="ukuran"` jadi `data-panel="rangka"`,
-hapus panel `data-panel="sisi"`.
+- `inL`, `inP`, `inT`, `btnReset` → panel `rangka`
+- `btnAddV` (+Sudut), `btnDelV` (−Sudut), `btnAddBox` (+Tambah Kotak) → panel `rangka`
+- `sisiPanel` (daftar panjang sisi) → panel `rangka`
+- `matFrame` (dropdown) → panel `rangka`
+- `matSupport` (dropdown) → panel `support`
+- `matTiang` (dropdown) → panel `tiang`
+- `inGrid` (Snap grid) → `.de-quickbar`
+- Tool `data-mode="besi"` ("Ganti besi") → `.de-quickbar` (jadi tombol mode di quickbar)
 
-**Snap grid di quickbar:** pindahkan `<label>Snap grid<select data-role="inGrid">…</select></label>`
-ke dalam `.de-quickbar`. Handler `inGrid` (`onchange`) tidak berubah.
+### Elemen yang DIHAPUS dari markup
 
-**Default mode saat init** tetap `bentuk` (baris ~270) — tidak berubah.
+- Tool `data-mode="bentuk"` ("Bentuk") — mode bentuk kini lewat tab Rangka.
+- Tool `data-mode="tiang"` ("Tiang") sebagai de-tool — mode tiang kini lewat tab Tiang.
+- Panel-panel tab lama (`ukuran`/`besi`/`mode`/`sisi`) beserta wadah `.de-tools`-nya.
+
+### Perubahan logika
+
+1. **Tab → mode (generalisasi blok Support yang ada, `_wireRibbon` ~baris 600-609):**
+   ganti special-case `if (name === 'support' ...)` jadi peta
+   `{ rangka:'bentuk', support:'support', tiang:'tiang' }`. Saat tab dibuka & mode belum
+   sesuai: set mode, bersihkan `armed`/`addSupportPt`/`boxPreview`, `setHint()`, `render()`.
+2. **Ganti besi di quickbar:** tombol `data-mode="besi"` di-wire seperti de-tool lama —
+   set `mode='besi'`, `setHint()`, `render()`; beri indikasi aktif (mis. class `on`) biar
+   pengguna tahu sedang di mode Ganti besi. Handler pemilihan besi per-batang
+   (`openMatMenu`) TIDAK berubah.
+3. **Default mode init** tetap `bentuk` (~baris 270). Saat load, ribbon tertutup, mode bentuk.
+
+### Yang TIDAK berubah
+
+- `openMatMenu`, `matOverride`, `matDefault`, `saranKotak`, `posisiSupport`, `buildMembers`,
+  render kanvas, panel kelola tiang/support, semua tes.
+- Snap grid handler `inGrid.onchange`.
 
 ## Di luar lingkup (sengaja)
 
-- Pola drag=pindah / tekan-tahan=menu untuk sudut & sisi rangka — backlog terpisah
-  (item resume point #2). Ini murni penataan tab, bukan ubah interaksi.
-- Kerapian label angka di kanvas (F1·600, angka cm support, label tiang) — tidak disentuh.
-- Rename tab "Mode" atau pecah jadi tab per-mode — tidak dilakukan (jaga scope).
+- Pola drag=pindah / tekan-tahan=menu untuk sudut & sisi rangka, dan untuk tiang — backlog
+  terpisah (resume point #2). Ini penataan ribbon, bukan ubah interaksi kanvas.
+- Kerapian label angka di kanvas (F1·600, dll).
+- Menghapus mode "Ganti besi" sepenuhnya — ditunda sampai menu-tahan Frame/Tiang jadi.
 
 ## Verifikasi
 
 - `node --check public/js/denah-editor.js` (VPS tidak punya browser/DOM).
-- Tes regresi rangka/support yang ada tetap hijau (`node tests/rangka/*.mjs`, guardrail penuh).
-- Checklist manual Elvan di browser/HP:
-  - **A.** Tab "Rangka" ada; buka → sudut rangka langsung bisa digeser (mode Bentuk aktif).
-  - **B.** Di tab Rangka lengkap: Lebar/Panjang/Tinggi tiang, +Sudut/−Sudut/+Kotak, Reset, daftar panjang sisi — semua jalan seperti dulu.
-  - **C.** Snap grid ada di bar atas, ganti nilainya → geser sudut membulat sesuai nilai baru.
-  - **D.** Tab "Mode" tinggal Ganti besi + Tiang, dua-duanya masih jalan. Tab Support & Besi normal.
-  - **E.** Tab "Ukuran" & "Ukur Sisi" sudah tidak ada, tidak ada kontrol yang hilang/dobel.
+- Guardrail penuh + tes `node tests/rangka/*.mjs` tetap hijau.
+- Checklist manual Elvan (browser/HP):
+  - **A.** Tab tinggal 3: Rangka, Support, Tiang. Buka Rangka → sudut langsung bisa digeser (mode Bentuk).
+  - **B.** Tab Rangka lengkap: Lebar/Panjang/Tinggi, +Sudut/−Sudut/+Kotak, Reset, Besi frame, daftar panjang sisi — semua jalan.
+  - **C.** Buka tab Tiang → bisa taruh/kelola tiang (mode tiang aktif), dropdown "Besi tiang" ada. Buka Support → mode support, dropdown "Besi support" ada.
+  - **D.** Bar atas: Snap grid (ganti nilai → snap ikut), Ganti besi (ketuk → masuk mode, tap batang rangka/tiang → ganti besi 1 batang), Undo/Redo/Perbesar Layar jalan.
+  - **E.** Tidak ada kontrol lama yang hilang/dobel; ganti besi default vs per-batang dua-duanya berfungsi.
