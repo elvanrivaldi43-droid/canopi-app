@@ -526,6 +526,7 @@ body,.page-content{overscroll-behavior-y:contain}
       <div class="de-row" style="margin-top:8px">
         <label>Besi support<select data-role="matSupport"></select></label>
         <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
+        <span class="de-mini" data-role="btnRestoreSup">Pulihkan yang dihapus</span>
       </div>
     </div>
     <div class="de-ribbon-panel" data-panel="tiang">
@@ -633,6 +634,18 @@ body,.page-content{overscroll-behavior-y:contain}
     this._q('[data-role=btnUndo]').onclick = () => this.undo();
     this._q('[data-role=btnRedo]').onclick = () => this.redo();
     this._q('[data-role=btnAddSupport]').onclick = () => { if (this.mode !== 'support') return; this.armed = 'addSupport'; this.addSupportPt = null; this.setHint('Klik titik ke-1 support…'); };
+    // Pulihkan semua garis support otomatis yang pernah di-"Kecualikan"/kadung hilang -- garis
+    // grid cuma DITANDAI skip di S.removed, bukan dihapus beneran, jadi pemulihan = hapus tanda.
+    // Bisa di-Undo (pushUndo dulu). Permintaan Elvan 22 Ags: grid bolong2 bekas insiden pinch,
+    // re-bikin manual gak mungkin presisi.
+    this._q('[data-role=btnRestoreSup]').onclick = () => {
+      if (this.mode !== 'support') return;
+      if (!Object.keys(this.S.removed || {}).length) { this.setHint('Tidak ada support yang pernah dihapus/dikecualikan.'); return; }
+      this.pushUndo();
+      this.S.removed = {};
+      this.setHint('Semua support otomatis dipulihkan.');
+      this.render();
+    };
     this._q('[data-role=btnAddBox]').onclick = () => {
       if (this.mode !== 'bentuk') return;
       this.armed = 'addBox';
