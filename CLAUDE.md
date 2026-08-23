@@ -285,17 +285,35 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    `tests/guardrail/manifest.json` di commit yang sama (deploy #127/#128 merah
    karena ini, bukan FTP flaky — cek Actions/reproduksi `php scripts/canopi-check`
    dulu sebelum nyalahin FTP).
-   **RESUME POINT (23 Ags dini hari): Redesign Support ID Stabil — SPEC SUDAH
-   DISETUJUI Elvan & ter-commit** di
-   `docs/superpowers/specs/2026-08-23-denah-support-id-stabil-design.md`
-   (dua fase pratinjau→kunci otomatis, garis grid nyimpan JALUR bukan ujung,
+   **Redesign Support ID Stabil — SELESAI implementasi, MENUNGGU validasi
+   manual Bos di HP** (dikerjakan via subagent-driven-development, 6 task +
+   review per task, semua test unit + `php scripts/canopi-check` hijau).
+   Dua fase pratinjau→kunci otomatis, garis grid nyimpan JALUR bukan ujung,
    toggle move di quickbar, pindah=ketik angka relatif, panel daftar ceklis,
-   grid=nonaktif reversibel / manual=hapus). **Langkah berikutnya: tulis
-   implementation plan via superpowers:writing-plans** (plan BELUM ditulis),
-   lalu eksekusi via subagent-driven-development. Spec bagian 3 = batasan
-   disengaja (jangan salah lapor bug). Tambalan 22 Ags yang akan DIGANTIKAN
-   sistem baru: rollback pinch (tetap dipakai), tombol "Pulihkan yang dihapus"
-   (pensiun setelah sistem baru jadi).
+   grid=nonaktif reversibel / manual=hapus. Tombol "Pulihkan yang dihapus"
+   masih hidup **khusus fase pratinjau** (pensiun menyusul setelah validasi
+   manual tuntas). Spec bagian 3 = batasan disengaja — jangan salah lapor bug.
+   Spec: `docs/superpowers/specs/2026-08-23-denah-support-id-stabil-design.md`.
+   Plan: `docs/superpowers/plans/2026-08-23-denah-support-id-stabil.md`.
+   **Checklist validasi manual Elvan di HP (belum dijalankan):**
+   1. Denah lama tampil & berperilaku persis seperti sebelumnya.
+   2. Tab Support → kunci susunan → panel S1..Sn muncul, input spacing hilang.
+   3. Undo balik ke pratinjau, Redo terkunci lagi.
+   4. Toggle move mati = kanvas tak merespons tap/geser (pinch-zoom aman);
+      nyala = tap dekat garis menyorot, tap lagi ganti ke garis tetangga.
+   5. Garis tersorot → isi arah+cm → Terapkan → pindah sesuai arah (h:atas/
+      bawah, v:kiri/kanan); Undo mengembalikan.
+   6. Ceklis baris → garis hilang dari gambar+hitungan besi; "Nonaktifkan/
+      Aktifkan semua" bekerja.
+   7. Ubah bentuk frame → garis terkunci ikut memanjang/memendek/terbelah;
+      area baru TIDAK dapat garis baru (disengaja).
+   8. + Support manual (fase terkunci) → nomor lanjutan, ujung bisa ditarik
+      saat tersorot+move nyala, Hapus di panel benar-benar menghapus (Undo
+      balikin).
+   9. "Susun Ulang" (dengan konfirmasi) → spacing hidup lagi, manual tetap
+      ada; kunci lagi → nomor entri baru melanjutkan (bukan mulai dari 1).
+   10. Ganti besi per garis → label "Support S{n}"; ganti bentuk frame →
+       besi pilihan tetap nempel di garis yang sama (inti fitur ID stabil).
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.

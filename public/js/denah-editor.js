@@ -1122,6 +1122,7 @@ body,.page-content{overscroll-behavior-y:contain}
     // karena nyimpan preview posisi yg bisa basi setelah gambar berubah.
     if (this.armed !== 'addV' && this.armed !== 'delV') this.armed = null;
     this.boxPreview = null; this.addSupportPt = null;
+    this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
     if (!this.undoStack.length) { this.setHint('Tak ada langkah untuk di-undo'); return; }
     this.redoStack.push(JSON.stringify(this.S)); if (this.redoStack.length > 40) this.redoStack.shift();
     Object.assign(this.S, JSON.parse(this.undoStack.pop()));
@@ -1131,6 +1132,7 @@ body,.page-content{overscroll-behavior-y:contain}
   redo() {
     if (this.armed !== 'addV' && this.armed !== 'delV') this.armed = null;  // lihat catatan di undo()
     this.boxPreview = null; this.addSupportPt = null;
+    this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
     if (!this.redoStack.length) { this.setHint('Tak ada langkah untuk di-redo'); return; }
     this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift();
     Object.assign(this.S, JSON.parse(this.redoStack.pop()));
@@ -2528,7 +2530,7 @@ body,.page-content{overscroll-behavior-y:contain}
   getModel() { return JSON.parse(JSON.stringify(this.S)); }
   getMembers() { return DenahConv.buildMembers(this.S); }
   getLuas() { return DenahConv.luasM2(this.S); }
-  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.syncInputs(); this.render(); }
+  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
 }
 
 // ---- self-check ringkas, browser-only (guard: tak jalan di produksi/Node) ----
