@@ -1688,13 +1688,15 @@ body,.page-content{overscroll-behavior-y:contain}
     this._syncVertBtns();
     // Toggle move cuma tampil di tab Support (tahap ini). Sorotan basi (entri sudah dihapus /
     // Undo balikin ke pratinjau) dilepas di sini — SATU titik validasi utk semua jalur mutasi.
-    const mv = this._q('[data-role=btnMove]');
-    if (mv) { mv.style.display = this.mode === 'support' ? '' : 'none'; mv.classList.toggle('on', this.moveOn); }
+    // Validasi selSup + reset moveOn HARUS jalan duluan, baru sinkron visual tombol move di
+    // bawahnya -- kalau kebalik, toggle 'on' sempat kepasang pakai nilai moveOn lama (basi).
     if (this.selSup != null && !(DenahConv.isLocked(this.S) && this.S.supportsLocked.some(e => e.no === this.selSup))) this.selSup = null;
     // Undo bisa balikin kunci -> pratinjau (supportsLocked=null) sementara moveOn tetap nyala dari
     // sebelumnya -- tombol jadi "on" padahal tak ada entri terkunci. Reset di sini (titik validasi
     // yang sama), bukan di undo()/redo(), biar semua jalur balik-ke-pratinjau otomatis konsisten.
     if (!DenahConv.isLocked(this.S)) this.moveOn = false;
+    const mv = this._q('[data-role=btnMove]');
+    if (mv) { mv.style.display = this.mode === 'support' ? '' : 'none'; mv.classList.toggle('on', this.moveOn); }
     this._syncSupportRows();
     const S = this.S;
     const mem = DenahConv.buildMembers(S);
