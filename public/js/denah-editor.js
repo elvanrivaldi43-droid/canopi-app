@@ -1565,8 +1565,14 @@ body,.page-content{overscroll-behavior-y:contain}
     const rows = !this.supPanelOpen ? '' : entries.map(e2 => {
       const sel = e2.no === this.selSup;
       const desc = DenahConv.describeLockedSupport(this.S, e2);
-      // Arah difilter per tipe (spec 2.3): h cuma atas/bawah, v cuma kiri/kanan, manual 4 arah.
-      const dirs = e2.manual ? ['atas', 'bawah', 'kiri', 'kanan'] : e2.axis === 'h' ? ['atas', 'bawah'] : ['kiri', 'kanan'];
+      // Arah difilter per tipe (spec 2.3): h cuma atas/bawah, v cuma kiri/kanan, manual 4 arah —
+      // KECUALI manual LURUS: geser sejajar garisnya sendiri (mis. datar digeser kiri/kanan) tak
+      // mengubah posisi jalur yg dipakai moveManualReclip buat re-clip, jadi no-op bisu. Cuma arah
+      // TEGAK LURUS garis yang ditawarkan utk manual lurus; manual MIRING & grid tak berubah.
+      const dirs = !e2.manual ? (e2.axis === 'h' ? ['atas', 'bawah'] : ['kiri', 'kanan'])
+        : e2.a.y === e2.b.y ? ['atas', 'bawah']
+        : e2.a.x === e2.b.x ? ['kiri', 'kanan']
+        : ['atas', 'bawah', 'kiri', 'kanan'];
       const editRow = !sel ? '' :
         `<div class="de-tiang-fields" style="margin-top:4px">
           <label>Arah<select data-role="slDir">${dirs.map(d => `<option>${d}</option>`).join('')}</select></label>
