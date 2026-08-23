@@ -217,27 +217,50 @@ const DenahConv = {
       const mat = (S.matOverride && S.matOverride[id]) || S.matDefault.frame;
       mem.push({ id, nama: 'F' + (i + 1), jenis: 'frame', panjang: Math.round(dist(v, w) * 10) / 10, material: mat, geom: { a: v, b: w } });
     });
-    const addSeg = (id, a, b) => {
-      if (rem[id]) return;
-      const mat = (S.matOverride && S.matOverride[id]) || S.matDefault.support;
-      mem.push({ id, nama: 'S', jenis: 'support', panjang: Math.round(dist(a, b)), material: mat, geom: { a, b } });
-    };
-    // Posisi garis per-sumbu (Spacing Per-Sumbu, 21 Ags). K lama jadi kotakFallback -- denah lama
-    // tanpa modeH/kotakH tetap ke jalur 'cm' + fallback, hasil PERSIS sama (id Sh_/Sv_ tak bergeser).
-    if (S.arah === 'h' || S.arah === '2') {
-      const posH = DenahConv.posisiSupport(bb.y0, bb.y1, S.modeH || 'cm', S.kotakH, S.kolomH, K);
-      posH.forEach((Y, li) => { const xs = scanX(V, Y);
-        for (let s = 0; s + 1 < xs.length; s += 2) addSeg('Sh_' + li + '_' + s, { x: xs[s], y: Y }, { x: xs[s + 1], y: Y }); });
+    if (Array.isArray(S.supportsLocked)) {
+      // FASE TERKUNCI (Support ID Stabil, 23 Ags): entri grid nyimpan JALUR {axis,pos} — ujung
+      // dihitung DI SINI dari polygon saat ini (frame berubah -> support ikut; coakan -> jalur
+      // terbelah jadi beberapa member ber-ID SAMA, panjang per potongan dijumlah utk hitungan besi).
+      // Entri nonaktif dilewati total (hilang dari gambar & hitungan, tetap ada di panel).
+      S.supportsLocked.forEach(e => {
+        if (e.aktif === false) return;
+        const id = 'SL' + e.no;
+        const mat = (S.matOverride && S.matOverride[id]) || S.matDefault.support;
+        const push = (a, b) => mem.push({ id, nama: 'S', jenis: 'support', panjang: Math.round(dist(a, b)), material: mat, geom: { a, b } });
+        if (e.manual) push({ ...e.a }, { ...e.b });
+        else if (e.axis === 'h') {
+          const xs = scanX(V, e.pos);
+          for (let s = 0; s + 1 < xs.length; s += 2) push({ x: xs[s], y: e.pos }, { x: xs[s + 1], y: e.pos });
+        } else {
+          const ys = scanY(V, e.pos);
+          for (let s = 0; s + 1 < ys.length; s += 2) push({ x: e.pos, y: ys[s] }, { x: e.pos, y: ys[s + 1] });
+        }
+      });
+    } else {
+      // FASE PRATINJAU — blok lama VERBATIM, JANGAN diubah (harness ekuivalensi 25.200 variasi
+      // per-sumbu + test_support_spacing harus tetap lolos).
+      const addSeg = (id, a, b) => {
+        if (rem[id]) return;
+        const mat = (S.matOverride && S.matOverride[id]) || S.matDefault.support;
+        mem.push({ id, nama: 'S', jenis: 'support', panjang: Math.round(dist(a, b)), material: mat, geom: { a, b } });
+      };
+      // Posisi garis per-sumbu (Spacing Per-Sumbu, 21 Ags). K lama jadi kotakFallback -- denah lama
+      // tanpa modeH/kotakH tetap ke jalur 'cm' + fallback, hasil PERSIS sama (id Sh_/Sv_ tak bergeser).
+      if (S.arah === 'h' || S.arah === '2') {
+        const posH = DenahConv.posisiSupport(bb.y0, bb.y1, S.modeH || 'cm', S.kotakH, S.kolomH, K);
+        posH.forEach((Y, li) => { const xs = scanX(V, Y);
+          for (let s = 0; s + 1 < xs.length; s += 2) addSeg('Sh_' + li + '_' + s, { x: xs[s], y: Y }, { x: xs[s + 1], y: Y }); });
+      }
+      if (S.arah === 'v' || S.arah === '2') {
+        const posV = DenahConv.posisiSupport(bb.x0, bb.x1, S.modeV || 'cm', S.kotakV, S.kolomV, K);
+        posV.forEach((X, li) => { const ys = scanY(V, X);
+          for (let s = 0; s + 1 < ys.length; s += 2) addSeg('Sv_' + li + '_' + s, { x: X, y: ys[s] }, { x: X, y: ys[s + 1] }); });
+      }
+      (S.supportsManual || []).forEach((m, i) => {
+        const id = 'Sm_' + i, mat = (S.matOverride && S.matOverride[id]) || S.matDefault.support;
+        mem.push({ id, nama: 'S', jenis: 'support', panjang: Math.round(dist(m.a, m.b)), material: mat, geom: { a: m.a, b: m.b } });
+      });
     }
-    if (S.arah === 'v' || S.arah === '2') {
-      const posV = DenahConv.posisiSupport(bb.x0, bb.x1, S.modeV || 'cm', S.kotakV, S.kolomV, K);
-      posV.forEach((X, li) => { const ys = scanY(V, X);
-        for (let s = 0; s + 1 < ys.length; s += 2) addSeg('Sv_' + li + '_' + s, { x: X, y: ys[s] }, { x: X, y: ys[s + 1] }); });
-    }
-    (S.supportsManual || []).forEach((m, i) => {
-      const id = 'Sm_' + i, mat = (S.matOverride && S.matOverride[id]) || S.matDefault.support;
-      mem.push({ id, nama: 'S', jenis: 'support', panjang: Math.round(dist(m.a, m.b)), material: mat, geom: { a: m.a, b: m.b } });
-    });
     (S.tiang || []).forEach((t, i) => {
       const id = 'T' + i, mat = (S.matOverride && S.matOverride[id]) || S.matDefault.tiang;
       mem.push({ id, nama: 'T' + (i + 1), jenis: 'tiang', panjang: S.tinggi, material: mat, geom: { p: t } });
@@ -264,6 +287,45 @@ const DenahConv = {
     const K = (kotak > 0 ? kotak : (kotakFallback > 0 ? kotakFallback : 100));
     for (let v = lo + K; v < hi - 1; v += K) out.push(v);
     return out;
+  },
+  // ---- Fase terkunci (Support ID Stabil, 23 Ags) ----
+  // supportsLocked = array -> fase terkunci; null/absen -> fase pratinjau (model lama, nol migrasi).
+  isLocked(S) { return Array.isArray(S.supportsLocked); },
+  // Bekukan susunan support jadi entri ber-ID stabil. MURNI: tidak memutasi S; kembalikan patch
+  // untuk Object.assign(S, patch). Penomoran SEKALI di sini: H atas->bawah, lalu V kiri->kanan,
+  // manual melanjutkan (spec 2.2). lockSeq lama (kalau ada, dari kunci sebelum Susun Ulang)
+  // DIPERTAHANKAN: nomor baru melanjutkan, tak pernah dipakai ulang.
+  lockSupports(S) {
+    const V = S.verts, bb = bbox(V), K = (S.kotak > 0 ? S.kotak : 100), rem = S.removed || {};
+    const mo = { ...(S.matOverride || {}) };
+    const entries = [];
+    let no = S.lockSeq > 0 ? S.lockSeq - 1 : 0;
+    // 1 garis grid lama = banyak id per-potongan (Sh_{li}_{s}). Entri lahir nonaktif kalau SEMUA
+    // potongannya kadung di-"Kecualikan"; sebagian doang -> tetap aktif (jalur = 1 kesatuan di
+    // model baru, bolong parsial tak bisa direpresentasikan — hilang sadar, sesuai spec 2.5).
+    // Override material: ambil dari potongan pertama yang punya, sisanya dibuang.
+    const addGrid = (axis, pos, oldPrefix, segCount) => {
+      no++;
+      let aktif = segCount === 0;
+      for (let s2 = 0; s2 < segCount; s2++) if (!rem[oldPrefix + s2]) aktif = true;
+      const ovKey = Object.keys(mo).find(k => k.startsWith(oldPrefix));
+      if (ovKey != null) { mo['SL' + no] = mo[ovKey]; Object.keys(mo).forEach(k => { if (k.startsWith(oldPrefix)) delete mo[k]; }); }
+      entries.push({ no, axis, pos, aktif });
+    };
+    if (S.arah === 'h' || S.arah === '2') {
+      DenahConv.posisiSupport(bb.y0, bb.y1, S.modeH || 'cm', S.kotakH, S.kolomH, K)
+        .forEach((Yp, li) => addGrid('h', Yp, 'Sh_' + li + '_', Math.floor(scanX(V, Yp).length / 2)));
+    }
+    if (S.arah === 'v' || S.arah === '2') {
+      DenahConv.posisiSupport(bb.x0, bb.x1, S.modeV || 'cm', S.kotakV, S.kolomV, K)
+        .forEach((Xp, li) => addGrid('v', Xp, 'Sv_' + li + '_', Math.floor(scanY(V, Xp).length / 2)));
+    }
+    (S.supportsManual || []).forEach((m, i) => {
+      no++;
+      if (mo['Sm_' + i] != null) { mo['SL' + no] = mo['Sm_' + i]; delete mo['Sm_' + i]; }
+      entries.push({ no, manual: true, a: { ...m.a }, b: { ...m.b }, aktif: true });
+    });
+    return { supportsLocked: entries, lockSeq: no + 1, matOverride: mo, supportsManual: [], removed: {} };
   },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
