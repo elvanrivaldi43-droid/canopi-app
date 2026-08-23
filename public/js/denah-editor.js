@@ -1645,8 +1645,9 @@ body,.page-content{overscroll-behavior-y:contain}
       const p = DenahConv.splitLockedGrid(this.S, this.selSup);
       if (!p) return;
       this.pushUndo();
-      Object.assign(this.S, p);
-      this.selSup = p.firstNo;
+      const { firstNo, ...state } = p; // firstNo = petunjuk UI, jangan masuk model
+      Object.assign(this.S, state);
+      this.selSup = firstNo;
       this.setHint('Jalur dipecah jadi potongan manual — tiap potongan kini bisa dihapus sendiri (tak ikut frame lagi).');
       this.render();
     };
