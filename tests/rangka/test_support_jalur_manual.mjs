@@ -104,6 +104,7 @@ check('numerik: NaN -> null',
   check('pecah hardening: nomor lanjut dari max no eksisting (3,4), bukan 1,2',
     p.supportsLocked.map(e => e.no), [3, 4, 2]);
   check('pecah hardening: lockSeq lanjut ke 5', p.lockSeq, 5);
+  check('pecah hardening: firstNo = nomor potongan pertama (3), bukan lockSeq lama (0/1)', p.firstNo, 3);
 }
 
 process.exit(fail ? 1 : 0);

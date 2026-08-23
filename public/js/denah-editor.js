@@ -433,7 +433,7 @@ const DenahConv = {
     delete mo['SL' + no];
     const out = list.slice();
     out.splice(idx, 1, ...news);
-    return { supportsLocked: out, lockSeq: seq, matOverride: mo };
+    return { supportsLocked: out, lockSeq: seq, matOverride: mo, firstNo: news[0].no };
   },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
@@ -1645,9 +1645,8 @@ body,.page-content{overscroll-behavior-y:contain}
       const p = DenahConv.splitLockedGrid(this.S, this.selSup);
       if (!p) return;
       this.pushUndo();
-      const firstNo = this.S.lockSeq > 0 ? this.S.lockSeq : 1;
       Object.assign(this.S, p);
-      this.selSup = firstNo;
+      this.selSup = p.firstNo;
       this.setHint('Jalur dipecah jadi potongan manual — tiap potongan kini bisa dihapus sendiri (tak ikut frame lagi).');
       this.render();
     };
