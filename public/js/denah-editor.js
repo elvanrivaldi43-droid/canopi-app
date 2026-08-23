@@ -1575,7 +1575,7 @@ body,.page-content{overscroll-behavior-y:contain}
       </div>`;
     panel.innerHTML = head + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows + formTambah;
 
-    this._q('[data-role=slLipat]').onclick = () => { this.supPanelOpen = !this.supPanelOpen; this.renderSupportPanel(mem); };
+    this._q('[data-role=slLipat]').onclick = () => { this.drawSupJalurPreview([]); this.supPanelOpen = !this.supPanelOpen; this.renderSupportPanel(mem); };
     this._q('[data-role=slSemua]').onclick = () => {
       this.pushUndo();
       entries.forEach(e2 => { e2.aktif = anyOff; });
