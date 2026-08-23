@@ -435,6 +435,30 @@ const DenahConv = {
     out.splice(idx, 1, ...news);
     return { supportsLocked: out, lockSeq: seq, matOverride: mo, firstNo: news[0].no };
   },
+  // Pindah entri terkunci LEWAT PANEL dgn re-clip ke frame (bug S16, 24 Ags: garis manual
+  // lurus digeser masuk zona coakan tetap tergambar/terhitung menembus udara). Garis manual
+  // LURUS (datar/tegak) di-rescan ke polygon di posisi barunya — berhenti di frame, terbelah
+  // per potongan; potongan PERTAMA mempertahankan nomor entri (identitas "dipindah", bukan
+  // entri baru), sisanya nomor baru + override dibawa. Garis MIRING (tap-2-titik) & entri
+  // GRID tetap perilaku moveLockedSupport biasa. MURNI. Return null = arah/cm tak valid;
+  // {entries: []} = posisi baru sepenuhnya di luar frame (caller wajib menolak pindah).
+  moveManualReclip(S, entry, arah, cm) {
+    const moved = DenahConv.moveLockedSupport(entry, arah, cm);
+    if (!moved) return null;
+    const mo = { ...(S.matOverride || {}) };
+    const horiz = entry.manual && entry.a.y === entry.b.y;
+    const vert = entry.manual && entry.a.x === entry.b.x;
+    if (!horiz && !vert) return { entries: [moved], lockSeq: S.lockSeq, matOverride: mo };
+    const axis = horiz ? 'h' : 'v';
+    const pos = horiz ? moved.a.y : moved.a.x;
+    let seq = Math.max(S.lockSeq || 1, ...(S.supportsLocked || []).map(e => e.no + 1), 1);
+    const entries = DenahConv.jalurSegments(S, axis, pos).map((sg, i) => {
+      const n2 = i === 0 ? entry.no : seq++;
+      if (i > 0 && mo['SL' + entry.no] != null) mo['SL' + n2] = mo['SL' + entry.no];
+      return { no: n2, manual: true, a: sg.a, b: sg.b, aktif: entry.aktif !== false };
+    });
+    return { entries, lockSeq: seq, matOverride: mo };
+  },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
   // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
@@ -1596,10 +1620,16 @@ body,.page-content{overscroll-behavior-y:contain}
     if (applyBtn) applyBtn.onclick = () => {
       const e2 = entries.find(x => x.no === this.selSup);
       const cmVal = DenahConv.parseCmValue(this._q('[data-role=slCm]').value);
-      const moved = e2 && DenahConv.moveLockedSupport(e2, this._q('[data-role=slDir]').value, cmVal);
-      if (!moved) { this._q('[data-role=slMsg]').textContent = 'Isi cm dengan angka > 0.'; return; }
+      const r = e2 && cmVal != null ? DenahConv.moveManualReclip(this.S, e2, this._q('[data-role=slDir]').value, cmVal) : null;
+      if (!r) { this._q('[data-role=slMsg]').textContent = 'Isi cm dengan angka > 0.'; return; }
+      if (!r.entries.length) { this._q('[data-role=slMsg]').textContent = 'Posisi baru di luar frame — pindah dibatalkan.'; return; }
       this.pushUndo();
-      entries[entries.indexOf(e2)] = moved;
+      const idx = entries.indexOf(e2);
+      entries.splice(idx, 1, ...r.entries);
+      this.S.lockSeq = r.lockSeq;
+      this.S.matOverride = r.matOverride;
+      this.selSup = r.entries[0].no;
+      if (r.entries.length > 1) this.setHint(`Garis terbelah ${r.entries.length} potongan di frame — hapus yang tak perlu dari panel.`);
       this.render();
     };
     const besiBtn = this._q('[data-role=slBesi]');

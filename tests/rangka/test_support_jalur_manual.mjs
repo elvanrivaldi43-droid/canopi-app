@@ -107,4 +107,58 @@ check('numerik: NaN -> null',
   check('pecah hardening: firstNo = nomor potongan pertama (3), bukan lockSeq lama (0/1)', p.firstNo, 3);
 }
 
+// ── moveManualReclip: pindah garis manual lurus = re-scan ke frame (bug S16 24 Ags) ──
+{
+  // Garis manual datar full-width di y=50 (di luar zona coakan, yg terbukti aktif di y=100..300
+  // per test 'coakan h' baris atas file ini) dipindah bawah 100 -> y=150 (masuk zona coakan)
+  // -> terbelah 2 potongan berhenti di frame; potongan pertama MEMPERTAHANKAN nomor entri.
+  const S = notch();
+  S.supportsLocked = [
+    { no: 16, manual: true, a: { x: 0, y: 50 }, b: { x: 600, y: 50 }, aktif: true },
+    { no: 20, axis: 'v', pos: 100, aktif: true },
+  ];
+  S.lockSeq = 21; S.matOverride = { 'SL16': 'BesiA' };
+  const r = DenahConv.moveManualReclip(S, S.supportsLocked[0], 'bawah', 100);
+  check('reclip: 2 potongan, no pertama dipertahankan', r.entries.map(e => [e.no, e.manual]), [[16, true], [21, true]]);
+  check('reclip: ujung potongan berhenti di frame',
+    [r.entries[0].a, r.entries[0].b, r.entries[1].a, r.entries[1].b],
+    [{ x: 0, y: 150 }, { x: 200, y: 150 }, { x: 400, y: 150 }, { x: 600, y: 150 }]);
+  check('reclip: override dibawa ke potongan baru', r.matOverride['SL21'], 'BesiA');
+  check('reclip: lockSeq maju', r.lockSeq, 22);
+  check('reclip: S & entri asal tak dimutasi', [S.lockSeq, S.supportsLocked[0].a.y], [21, 50]);
+}
+{
+  // Posisi baru sepenuhnya di luar frame -> entries kosong (UI menolak pindah)
+  const S = rect();
+  S.supportsLocked = [{ no: 1, manual: true, a: { x: 0, y: 150 }, b: { x: 400, y: 150 }, aktif: true }];
+  S.lockSeq = 2;
+  check('reclip: keluar frame -> entries kosong', DenahConv.moveManualReclip(S, S.supportsLocked[0], 'bawah', 500).entries, []);
+}
+{
+  // Garis manual MIRING -> translasi murni (tak di-rescan), nomor & bentuk return sama
+  const S = rect();
+  S.supportsLocked = [{ no: 3, manual: true, a: { x: 0, y: 0 }, b: { x: 100, y: 50 }, aktif: true }];
+  S.lockSeq = 4;
+  const r = DenahConv.moveManualReclip(S, S.supportsLocked[0], 'kanan', 10);
+  check('reclip miring: translasi murni 1 entri', r.entries.map(e => [e.no, e.a, e.b]),
+    [[3, { x: 10, y: 0 }, { x: 110, y: 50 }]]);
+  check('reclip miring: lockSeq tak berubah', r.lockSeq, 4);
+}
+{
+  // Entri GRID -> passthrough moveLockedSupport (pos berubah, 1 entri, lockSeq tetap)
+  const S = rect();
+  S.supportsLocked = [{ no: 5, axis: 'h', pos: 150, aktif: true }];
+  S.lockSeq = 6;
+  const r = DenahConv.moveManualReclip(S, S.supportsLocked[0], 'atas', 20);
+  check('reclip grid: passthrough pos', [r.entries.length, r.entries[0].pos, r.lockSeq], [1, 130, 6]);
+  check('reclip: arah invalid -> null', DenahConv.moveManualReclip(S, S.supportsLocked[0], 'kiri', 20), null);
+}
+{
+  // Entri manual nonaktif dipindah -> potongan mewarisi nonaktif
+  const S = notch();
+  S.supportsLocked = [{ no: 2, manual: true, a: { x: 0, y: 50 }, b: { x: 600, y: 50 }, aktif: false }];
+  S.lockSeq = 3;
+  check('reclip: aktif diwarisi', DenahConv.moveManualReclip(S, S.supportsLocked[0], 'bawah', 100).entries.map(e => e.aktif), [false, false]);
+}
+
 process.exit(fail ? 1 : 0);
