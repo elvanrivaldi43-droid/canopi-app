@@ -431,6 +431,9 @@ class DenahEditor {
     this.PAD = 44;
     this.zoomScale = 1; this.zoomTx = 0; this.zoomTy = 0;
     this.tiangPreview = null; // visual-only; tidak pernah masuk model/Undo/autosave
+    this.moveOn = false;      // toggle move quickbar (spec 2.3) — penanda alat, bukan data model
+    this.selSup = null;       // no entri support terkunci yang tersorot (null = tak ada)
+    this.supPanelOpen = false; // lipatan panel daftar Support (dilipat default, spec 2.4)
     this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
     // Blok pinch-zoom HALAMAN (WebKit/iOS event gesturestart) selama ada editor di halaman --
@@ -594,7 +597,7 @@ body,.page-content{overscroll-behavior-y:contain}
       <div class="de-legend" data-role="sisiPanel" style="margin-top:8px"></div>
     </div>
     <div class="de-ribbon-panel" data-panel="support">
-      <div class="de-row">
+      <div class="de-row" data-role="rowSupSpacing">
         <label>Arah support
           <select data-role="inArah"><option value="2">Grid 2 arah</option><option value="h">1 arah horizontal (melintang)</option><option value="v">1 arah vertikal (membujur)</option></select>
         </label>
@@ -620,6 +623,7 @@ body,.page-content{overscroll-behavior-y:contain}
         <label>Besi support<select data-role="matSupport"></select></label>
         <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
         <span class="de-mini" data-role="btnRestoreSup">Pulihkan yang dihapus</span>
+        <span class="de-mini" data-role="btnSusunUlang" style="display:none">Susun Ulang</span>
       </div>
     </div>
     <div class="de-ribbon-panel" data-panel="tiang">
@@ -635,6 +639,7 @@ body,.page-content{overscroll-behavior-y:contain}
       <select data-role="inGrid"><option>1</option><option>2</option><option>5</option><option>10</option><option selected>20</option><option>25</option><option>50</option></select>
     </label>
     <span class="de-tool" data-mode="besi" title="Ganti besi (ubah besi 1 batang)" aria-label="Ganti besi"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v18M8 3 4 7M8 3l4 4M16 21V3M16 21l-4-4M16 21l4-4"/></svg></span>
+    <span class="de-mini" data-role="btnMove" title="Geser/sorot elemen (mati = kanvas murni lihat)" aria-label="Toggle move" style="display:none"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M12 2 9 5M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3"/></svg></span>
     <span class="de-mini" data-role="btnUndo" title="Undo" aria-label="Undo"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-4"/></svg></span>
     <span class="de-mini" data-role="btnRedo" title="Redo" aria-label="Redo"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h4"/></svg></span>
     <span class="de-mini" data-role="btnFullscreen" title="Perbesar Layar" aria-label="Perbesar Layar"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H4a1 1 0 0 0-1 1v4M16 3h4a1 1 0 0 1 1 1v4M8 21H4a1 1 0 0 1-1-1v-4M16 21h4a1 1 0 0 0 1-1v-4"/></svg></span>
@@ -737,6 +742,27 @@ body,.page-content{overscroll-behavior-y:contain}
       this.pushUndo();
       this.S.removed = {};
       this.setHint('Semua support otomatis dipulihkan.');
+      this.render();
+    };
+    // Toggle move (spec 2.3): default MATI = kanvas murni lihat/zoom/pan. Menyalakan pertama
+    // kali di fase pratinjau = pintu kunci otomatis (spec 2.1). Hanya hidup di tab Support
+    // (tahap ini; Frame/Tiang belum, spec bagian 4).
+    this._q('[data-role=btnMove]').onclick = () => {
+      if (this.mode !== 'support') return;
+      this.moveOn = !this.moveOn;
+      if (this.moveOn) this._lockNow();      // no-op kalau sudah terkunci
+      if (!this.moveOn) this.selSup = null;  // matiin toggle = lepas sorotan
+      this.render();
+    };
+    // "Susun Ulang" (spec 2.1): konfirmasi eksplisit, tak ada regenerate diam-diam. Bisa di-Undo.
+    this._q('[data-role=btnSusunUlang]').onclick = () => {
+      if (!DenahConv.isLocked(this.S)) return;
+      if (!confirm('Susun ulang support? Editan per-garis (nonaktif, pindah posisi, besi per-garis grid) akan di-reset. Bisa di-Undo.')) return;
+      this.pushUndo();
+      Object.assign(this.S, DenahConv.unlockSupports(this.S));
+      this.moveOn = false; this.selSup = null;
+      this.setHint('Kembali ke mode susun: atur spacing, lalu kunci lagi saat siap.');
+      this.syncInputs();
       this.render();
     };
     this._q('[data-role=btnAddBox]').onclick = () => {
@@ -1109,9 +1135,14 @@ body,.page-content{overscroll-behavior-y:contain}
   //  - arah '2' -> dua baris; 'h' -> horizontal saja; 'v' -> vertikal saja (yang lain disembunyikan).
   //  - tiap baris: mode 'cm' tampilkan input Kotak, mode 'kolom' tampilkan input Jumlah kolom.
   _syncSupportRows() {
+    const locked = DenahConv.isLocked(this.S);
     const arah = this.S.arah;
-    this._q('[data-role=rowSupH]').style.display = (arah === 'h' || arah === '2') ? '' : 'none';
-    this._q('[data-role=rowSupV]').style.display = (arah === 'v' || arah === '2') ? '' : 'none';
+    // Terkunci: input spacing disembunyikan total, diganti tombol Susun Ulang (spec 2.1).
+    this._q('[data-role=rowSupSpacing]').style.display = locked ? 'none' : '';
+    this._q('[data-role=btnSusunUlang]').style.display = locked ? '' : 'none';
+    this._q('[data-role=btnRestoreSup]').style.display = locked ? 'none' : '';
+    this._q('[data-role=rowSupH]').style.display = (!locked && (arah === 'h' || arah === '2')) ? '' : 'none';
+    this._q('[data-role=rowSupV]').style.display = (!locked && (arah === 'v' || arah === '2')) ? '' : 'none';
     const modeH = this.S.modeH || 'cm', modeV = this.S.modeV || 'cm';
     this._q('[data-role=lblKotakH]').style.display = modeH === 'cm' ? '' : 'none';
     this._q('[data-role=lblKolomH]').style.display = modeH === 'kolom' ? '' : 'none';
@@ -1170,6 +1201,17 @@ body,.page-content{overscroll-behavior-y:contain}
     this.S.tiang = (this.S.tiang || []).map(sc);
     this.S.supportsManual = (this.S.supportsManual || []).map(m => ({ a: sc(m.a), b: sc(m.b) }));
     // Auto-recompute spacing saat resize DIHAPUS -- spacing sekarang eksplisit per-sumbu via input/saran, tidak lagi auto-ikut resize. Ini keputusan sadar: mode 'kolom' tetap rata otomatis walau ukuran berubah, mode 'cm' tetap nilai yang diketik user.
+    this.render();
+  }
+
+  // Momen kunci otomatis (spec 2.1 opsi b): dipanggil dari toggle move ATAU header panel ajakan.
+  // Mutasi model biasa lewat pushUndo -> bisa di-Undo (Undo balikin supportsLocked -> null).
+  _lockNow() {
+    if (DenahConv.isLocked(this.S)) return;
+    this.pushUndo();
+    Object.assign(this.S, DenahConv.lockSupports(this.S));
+    this.supPanelOpen = true;
+    this.setHint('Susunan dikunci — kelola per garis lewat panel Support.');
     this.render();
   }
 
@@ -1643,6 +1685,12 @@ body,.page-content{overscroll-behavior-y:contain}
     // jalur yg mengubah armed lalu render() (undo/redo, reset, Tambah Kotak, Ganti besi, pindah
     // tab) otomatis konsisten -- tak perlu nambal tiap handler satu-satu (rawan kelewat).
     this._syncVertBtns();
+    // Toggle move cuma tampil di tab Support (tahap ini). Sorotan basi (entri sudah dihapus /
+    // Undo balikin ke pratinjau) dilepas di sini — SATU titik validasi utk semua jalur mutasi.
+    const mv = this._q('[data-role=btnMove]');
+    if (mv) { mv.style.display = this.mode === 'support' ? '' : 'none'; mv.classList.toggle('on', this.moveOn); }
+    if (this.selSup != null && !(DenahConv.isLocked(this.S) && this.S.supportsLocked.some(e => e.no === this.selSup))) this.selSup = null;
+    this._syncSupportRows();
     const S = this.S;
     const mem = DenahConv.buildMembers(S);
     const cmap = colorMap(mem);
