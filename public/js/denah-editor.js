@@ -756,6 +756,7 @@ body,.page-content{overscroll-behavior-y:contain}
     };
     // "Susun Ulang" (spec 2.1): konfirmasi eksplisit, tak ada regenerate diam-diam. Bisa di-Undo.
     this._q('[data-role=btnSusunUlang]').onclick = () => {
+      if (this.mode !== 'support') return;
       if (!DenahConv.isLocked(this.S)) return;
       if (!confirm('Susun ulang support? Editan per-garis (nonaktif, pindah posisi, besi per-garis grid) akan di-reset. Bisa di-Undo.')) return;
       this.pushUndo();
@@ -1690,6 +1691,10 @@ body,.page-content{overscroll-behavior-y:contain}
     const mv = this._q('[data-role=btnMove]');
     if (mv) { mv.style.display = this.mode === 'support' ? '' : 'none'; mv.classList.toggle('on', this.moveOn); }
     if (this.selSup != null && !(DenahConv.isLocked(this.S) && this.S.supportsLocked.some(e => e.no === this.selSup))) this.selSup = null;
+    // Undo bisa balikin kunci -> pratinjau (supportsLocked=null) sementara moveOn tetap nyala dari
+    // sebelumnya -- tombol jadi "on" padahal tak ada entri terkunci. Reset di sini (titik validasi
+    // yang sama), bukan di undo()/redo(), biar semua jalur balik-ke-pratinjau otomatis konsisten.
+    if (!DenahConv.isLocked(this.S)) this.moveOn = false;
     this._syncSupportRows();
     const S = this.S;
     const mem = DenahConv.buildMembers(S);
