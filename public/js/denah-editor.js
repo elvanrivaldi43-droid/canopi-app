@@ -382,6 +382,55 @@ const DenahConv = {
     const luar = e.axis === 'h' ? (e.pos <= bb.y0 || e.pos >= bb.y1) : (e.pos <= bb.x0 || e.pos >= bb.x1);
     return luar ? txt + ' (di luar frame)' : txt;
   },
+  // Potongan jalur (axis+pos absolut) dari polygon SAAT INI. Tiap potongan BERHENTI di
+  // perpotongan frame — TIDAK menyeberangi coakan (keputusan Elvan 23 Ags: potongan yang
+  // tak diperlukan harus bisa dibuang sendiri-sendiri). Dasar bersama utk form "+ Garis
+  // support" numerik dan "Pecah jadi manual".
+  jalurSegments(S, axis, pos) {
+    const V = S.verts, out = [];
+    if (axis === 'h') {
+      const xs = scanX(V, pos);
+      for (let s = 0; s + 1 < xs.length; s += 2) out.push({ a: { x: xs[s], y: pos }, b: { x: xs[s + 1], y: pos } });
+    } else {
+      const ys = scanY(V, pos);
+      for (let s = 0; s + 1 < ys.length; s += 2) out.push({ a: { x: pos, y: ys[s] }, b: { x: pos, y: ys[s + 1] } });
+    }
+    return out;
+  },
+  // Entri manual dari posisi KETIK (cm relatif tepi atas utk datar / kiri utk tegak — konvensi
+  // sama describeLockedSupport). Satu entri per potongan (nomor lanjut lockSeq). MURNI.
+  // cmRel harus > 0: 0 = nempel tepi frame = duplikat batang frame, tolak.
+  manualEntriesFromJalur(S, axis, cmRel) {
+    if (!Number.isFinite(cmRel) || cmRel <= 0) return null;
+    const bb = bbox(S.verts);
+    const pos = axis === 'h' ? bb.y0 + cmRel : bb.x0 + cmRel;
+    let seq = S.lockSeq > 0 ? S.lockSeq : 1;
+    const entries = DenahConv.jalurSegments(S, axis, pos)
+      .map(sg => ({ no: seq++, manual: true, a: sg.a, b: sg.b, aktif: true }));
+    return { entries, lockSeq: seq };
+  },
+  // "Pecah jadi manual": entri grid `no` diganti (in-place di daftar) oleh entri manual per
+  // potongan — override besi disalin ke tiap potongan, aktif diwarisi. Setelah ini potongan
+  // tak lagi ikut frame (konsekuensi sadar). MURNI; null kalau no bukan grid / 0 potongan.
+  splitLockedGrid(S, no) {
+    const list = (S.supportsLocked || []);
+    const idx = list.findIndex(e => !e.manual && e.no === no);
+    if (idx < 0) return null;
+    const e = list[idx];
+    const segs = DenahConv.jalurSegments(S, e.axis, e.pos);
+    if (!segs.length) return null;
+    const mo = { ...(S.matOverride || {}) };
+    let seq = S.lockSeq > 0 ? S.lockSeq : 1;
+    const news = segs.map(sg => {
+      const n2 = seq++;
+      if (mo['SL' + no] != null) mo['SL' + n2] = mo['SL' + no];
+      return { no: n2, manual: true, a: sg.a, b: sg.b, aktif: e.aktif !== false };
+    });
+    delete mo['SL' + no];
+    const out = list.slice();
+    out.splice(idx, 1, ...news);
+    return { supportsLocked: out, lockSeq: seq, matOverride: mo };
+  },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
   // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
