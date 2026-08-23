@@ -404,7 +404,9 @@ const DenahConv = {
     if (!Number.isFinite(cmRel) || cmRel <= 0) return null;
     const bb = bbox(S.verts);
     const pos = axis === 'h' ? bb.y0 + cmRel : bb.x0 + cmRel;
-    let seq = S.lockSeq > 0 ? S.lockSeq : 1;
+    // Hardening (review Task 1): lockSeq bisa absen/stale relatif nomor entri yang sudah ada
+    // (mis. abis pecah manual tanpa lockSeq ikut disimpan) — ambil max biar nomor baru gak dobel.
+    let seq = Math.max(S.lockSeq || 1, ...(S.supportsLocked || []).map(e => e.no + 1), 1);
     const entries = DenahConv.jalurSegments(S, axis, pos)
       .map(sg => ({ no: seq++, manual: true, a: sg.a, b: sg.b, aktif: true }));
     return { entries, lockSeq: seq };
@@ -420,7 +422,9 @@ const DenahConv = {
     const segs = DenahConv.jalurSegments(S, e.axis, e.pos);
     if (!segs.length) return null;
     const mo = { ...(S.matOverride || {}) };
-    let seq = S.lockSeq > 0 ? S.lockSeq : 1;
+    // Hardening (review Task 1): sama seperti manualEntriesFromJalur — max thd nomor entri
+    // eksisting biar gak dobel kalau lockSeq absen/stale.
+    let seq = Math.max(S.lockSeq || 1, ...(S.supportsLocked || []).map(e => e.no + 1), 1);
     const news = segs.map(sg => {
       const n2 = seq++;
       if (mo['SL' + no] != null) mo['SL' + n2] = mo['SL' + no];
@@ -1547,7 +1551,8 @@ body,.page-content{overscroll-behavior-y:contain}
         </div>
         <div class="de-tiang-actions" style="margin-top:4px">
           <span class="de-mini" data-role="slBesi">Ganti besi</span>
-          ${e2.manual ? '<span class="de-mini" data-role="slHapus">Hapus</span>' : ''}
+          ${e2.manual ? '<span class="de-mini" data-role="slHapus">Hapus</span>'
+                      : '<span class="de-mini" data-role="slPecah">Pecah jadi manual</span>'}
         </div>`;
       return `<div class="de-tiang-item" data-slrow="${e2.no}" style="${sel ? 'background:#fef9c3;border-radius:6px;padding-left:4px;' : ''}${e2.aktif === false ? 'opacity:.45;' : ''}">
         <div class="de-tiang-head">
@@ -1559,7 +1564,16 @@ body,.page-content{overscroll-behavior-y:contain}
         </div>${editRow}
       </div>`;
     }).join('');
-    panel.innerHTML = head + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows;
+    const formTambah = !this.supPanelOpen ? '' :
+      `<div class="de-tiang-item" style="border-bottom:0">
+        <div class="de-tiang-head"><b style="font-size:12px">+ Garis support (ketik posisi)</b></div>
+        <div class="de-tiang-fields">
+          <label>Arah<select data-role="sjAxis"><option value="h">datar</option><option value="v">tegak</option></select></label>
+          <label><span data-role="sjLbl">cm dari atas</span><input type="text" inputmode="decimal" data-role="sjPos"></label>
+          <div class="de-tiang-actions"><span class="de-mini de-tiang-apply" data-role="sjTambah">Tambah</span><span class="de-mini" data-role="sjBatal">Batal</span></div>
+        </div>
+      </div>`;
+    panel.innerHTML = head + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows + formTambah;
 
     this._q('[data-role=slLipat]').onclick = () => { this.supPanelOpen = !this.supPanelOpen; this.renderSupportPanel(mem); };
     this._q('[data-role=slSemua]').onclick = () => {
@@ -1600,6 +1614,65 @@ body,.page-content{overscroll-behavior-y:contain}
       this.selSup = null;
       this.render();
     };
+    const sjAxis = this._q('[data-role=sjAxis]'), sjPos = this._q('[data-role=sjPos]');
+    if (sjAxis && sjPos) {
+      const updLbl = () => { this._q('[data-role=sjLbl]').textContent = sjAxis.value === 'h' ? 'cm dari atas' : 'cm dari kiri'; };
+      const updPreview = () => {
+        const cmv = DenahConv.parseCmValue(sjPos.value);
+        const r = cmv != null ? DenahConv.manualEntriesFromJalur(this.S, sjAxis.value, cmv) : null;
+        this.drawSupJalurPreview(r ? r.entries : []);
+        this._q('[data-role=slMsg]').textContent =
+          (cmv != null && r && !r.entries.length) ? 'Posisi di luar frame — tak ada garis.' : '';
+      };
+      sjAxis.onchange = () => { updLbl(); updPreview(); };
+      sjPos.oninput = updPreview;
+      this._q('[data-role=sjBatal]').onclick = () => { sjPos.value = ''; this.drawSupJalurPreview([]); this._q('[data-role=slMsg]').textContent = ''; };
+      this._q('[data-role=sjTambah]').onclick = () => {
+        const cmv = DenahConv.parseCmValue(sjPos.value);
+        const r = cmv != null ? DenahConv.manualEntriesFromJalur(this.S, sjAxis.value, cmv) : null;
+        if (!r) { this._q('[data-role=slMsg]').textContent = 'Isi posisi dengan angka > 0.'; return; }
+        if (!r.entries.length) { this._q('[data-role=slMsg]').textContent = 'Posisi di luar frame — tak ada garis.'; return; }
+        this.pushUndo();
+        this.S.supportsLocked.push(...r.entries);
+        this.S.lockSeq = r.lockSeq;
+        this.selSup = r.entries[0].no;
+        this.setHint(r.entries.length > 1 ? `${r.entries.length} potongan ditambah (berhenti di frame) — hapus yang tak perlu dari panel.` : '');
+        this.render();
+      };
+    }
+    const pecahBtn = this._q('[data-role=slPecah]');
+    if (pecahBtn) pecahBtn.onclick = () => {
+      const p = DenahConv.splitLockedGrid(this.S, this.selSup);
+      if (!p) return;
+      this.pushUndo();
+      const firstNo = this.S.lockSeq > 0 ? this.S.lockSeq : 1;
+      Object.assign(this.S, p);
+      this.selSup = firstNo;
+      this.setHint('Jalur dipecah jadi potongan manual — tiap potongan kini bisa dihapus sendiri (tak ikut frame lagi).');
+      this.render();
+    };
+  }
+
+  // Ghost preview garis support numerik (pola sama drawTiangPreview): dashed cyan per potongan.
+  // entries [] / tombol Batal = hapus preview.
+  drawSupJalurPreview(entries) {
+    const svg = this._q('.de-canvas svg');
+    if (!svg) return;
+    const old = svg.querySelector('[data-sup-preview]');
+    if (old) old.remove();
+    if (!entries || !entries.length) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('data-sup-preview', '1');
+    g.setAttribute('style', 'pointer-events:none');
+    entries.forEach(e => {
+      const ln = document.createElementNS(NS, 'line');
+      [['x1', this.PAD + e.a.x * this.SC], ['y1', this.PAD + e.a.y * this.SC],
+       ['x2', this.PAD + e.b.x * this.SC], ['y2', this.PAD + e.b.y * this.SC]].forEach(([k, v]) => ln.setAttribute(k, v));
+      ln.setAttribute('stroke', '#22d3ee'); ln.setAttribute('stroke-width', '3'); ln.setAttribute('stroke-dasharray', '6,4');
+      g.appendChild(ln);
+    });
+    svg.appendChild(g);
   }
 
   // Preview Task 3: gambar langsung ke SVG tanpa render() agar state, Undo dan onChange tak tersentuh.

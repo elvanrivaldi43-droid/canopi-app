@@ -87,4 +87,23 @@ check('numerik: NaN -> null',
   check('pecah: jalur di luar frame (0 potongan) -> null', DenahConv.splitLockedGrid(S, 1), null);
 }
 
+// ── Hardening (review Task 1): lockSeq absen/stale + entri no eksisting -> nomor baru TIDAK dobel ──
+{
+  const S = rect(); // 1 potongan
+  S.supportsLocked = [{ no: 1, axis: 'h', pos: 50, aktif: true }, { no: 3, manual: true, a: { x: 0, y: 0 }, b: { x: 1, y: 1 }, aktif: true }];
+  S.lockSeq = 0; // absen/stale — kalau dipakai apa adanya bakal mulai dari 1 dan tabrakan sama no:1
+  const r = DenahConv.manualEntriesFromJalur(S, 'v', 100); // bb.x0=0 -> pos 100
+  check('numerik hardening: nomor lanjut dari max no eksisting (4), bukan 1', r.entries.map(e => e.no), [4]);
+  check('numerik hardening: lockSeq lanjut ke 5', r.lockSeq, 5);
+}
+{
+  const S = notch(); // 2 potongan utk h @150
+  S.supportsLocked = [{ no: 1, axis: 'h', pos: 150, aktif: true }, { no: 2, manual: true, a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, aktif: true }];
+  S.lockSeq = 0; // absen/stale — kalau dipakai apa adanya, potongan kedua (no lama+1=2) tabrakan sama entri no:2
+  const p = DenahConv.splitLockedGrid(S, 1);
+  check('pecah hardening: nomor lanjut dari max no eksisting (3,4), bukan 1,2',
+    p.supportsLocked.map(e => e.no), [3, 4, 2]);
+  check('pecah hardening: lockSeq lanjut ke 5', p.lockSeq, 5);
+}
+
 process.exit(fail ? 1 : 0);
