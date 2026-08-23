@@ -285,6 +285,17 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    `tests/guardrail/manifest.json` di commit yang sama (deploy #127/#128 merah
    karena ini, bukan FTP flaky — cek Actions/reproduksi `php scripts/canopi-check`
    dulu sebelum nyalahin FTP).
+   **RESUME POINT (23 Ags dini hari): Redesign Support ID Stabil — SPEC SUDAH
+   DISETUJUI Elvan & ter-commit** di
+   `docs/superpowers/specs/2026-08-23-denah-support-id-stabil-design.md`
+   (dua fase pratinjau→kunci otomatis, garis grid nyimpan JALUR bukan ujung,
+   toggle move di quickbar, pindah=ketik angka relatif, panel daftar ceklis,
+   grid=nonaktif reversibel / manual=hapus). **Langkah berikutnya: tulis
+   implementation plan via superpowers:writing-plans** (plan BELUM ditulis),
+   lalu eksekusi via subagent-driven-development. Spec bagian 3 = batasan
+   disengaja (jangan salah lapor bug). Tambalan 22 Ags yang akan DIGANTIKAN
+   sistem baru: rollback pinch (tetap dipakai), tombol "Pulihkan yang dihapus"
+   (pensiun setelah sistem baru jadi).
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
