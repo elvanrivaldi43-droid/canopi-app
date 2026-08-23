@@ -358,6 +358,18 @@ const DenahConv = {
     if (entry.axis === 'v') return d[1] !== 0 ? null : { ...entry, pos: entry.pos + d[0] };
     return null;
   },
+  // Sorot toleran fase terkunci (spec 2.3): kandidat id support dalam threshold th (cm) urut
+  // jarak titik-ke-ruas naik. Multi-potongan ber-id sama muncul sekali (jarak terkecil).
+  // Cycling "tap lagi = kandidat berikutnya" urusan UI, bukan di sini.
+  supportsNearPoint(mem, pt, th) {
+    const best = {};
+    mem.forEach(m => {
+      if (m.jenis !== 'support') return;
+      const d = dist(pt, closestOnSegment(pt, m.geom.a, m.geom.b));
+      if (d <= th && (best[m.id] == null || d < best[m.id])) best[m.id] = d;
+    });
+    return Object.keys(best).sort((a, b) => best[a] - best[b]);
+  },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
   // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
@@ -1518,11 +1530,15 @@ body,.page-content{overscroll-behavior-y:contain}
       // support yang bisa di-Fokus dari panel.
       let code;
       if (m.jenis === 'support') {
-        code = id.startsWith('Sm_') ? 'S' + DenahConv.numberSupportsManual(mem)[id] : 'grid';
+        code = id.startsWith('SL') ? 'S' + id.slice(2)
+             : id.startsWith('Sm_') ? 'S' + DenahConv.numberSupportsManual(mem)[id] : 'grid';
       } else {
         code = m.nama;
       }
-      label = `${jenisNama[m.jenis]} ${code} · ${m.panjang}cm`;
+      // Fase terkunci: 1 id 'SL{no}' bisa terbelah beberapa potongan (coakan) -- panjang yang
+      // ditampilkan TOTAL semua potongan, bukan cuma potongan yang barusan diketuk.
+      const totLen = mem.filter(x => x.id === id).reduce((a2, x) => a2 + x.panjang, 0);
+      label = `${jenisNama[m.jenis]} ${code} · ${id.startsWith('SL') ? totLen : m.panjang}cm`;
     }
     this._q('[data-role=matMenuLabel]').textContent = label;
     const menu = this._q('[data-role=matMenu]');
@@ -1726,18 +1742,27 @@ body,.page-content{overscroll-behavior-y:contain}
     // support (grup — diredupkan saat seret sudut). Support manual dapat titik ujung yang bisa digeser.
     s += '<g id="supLayer">';
     const supNum = DenahConv.numberSupportsManual(mem);
+    const locked = DenahConv.isLocked(S);
+    const segCount = {};
     mem.filter(m => m.jenis === 'support').forEach(m => { const c = cmap[m.material]; const manual = m.id.startsWith('Sm_');
       const mx = (m.geom.a.x + m.geom.b.x) / 2, my = (m.geom.a.y + m.geom.b.y) / 2;
+      // Fase terkunci: id member 'SL{no}'. Garis tersorot (this.selSup) menyala kuning-tebal
+      // (spec 2.3 "sorot dulu, aksi kemudian" — sinkron dua arah dgn baris panel).
+      const lockedEntry = locked && m.id.startsWith('SL');
+      const selected = lockedEntry && +m.id.slice(2) === this.selSup;
+      const stroke = selected ? '#facc15' : c;
+      const sw = selected ? 5 : (manual ? 3 : 2);
       // garis tampak (tanpa event) + garis transparan lebar (target ketuk) + label. id garis tampak
       // SELALU ada (bukan cuma manual seperti dulu) -- grid support butuh id stabil-per-render
       // "sg_{id}" biar drag-preview (Task 3) bisa update atribut x1/y1/x2/y2-nya langsung tanpa
       // render ulang, sama pola dgn manual (sm{i}).
-      const lineId = manual ? 'sm' + m.id.slice(3) : 'sg_' + m.id;
-      s += `<line id="${lineId}" x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="${c}" stroke-width="${manual ? 3 : 2}"><title>${m.material} • ${m.panjang}cm</title></line>`;
+      const segIdx = segCount[m.id] = (segCount[m.id] || 0) + 1;
+      const lineId = lockedEntry ? 'slg' + m.id.slice(2) + '_' + (segIdx - 1) : (manual ? 'sm' + m.id.slice(3) : 'sg_' + m.id);
+      s += `<line id="${lineId}" x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="${stroke}" stroke-width="${sw}"><title>${m.material} • ${m.panjang}cm</title></line>`;
       s += `<line x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="transparent" stroke-width="14" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
-      // Label S{n} KHUSUS manual (nomor independen dari grid, lihat DenahConv.numberSupportsManual).
-      // Grid support tidak diberi nomor lagi (id-nya tak stabil lintas render, lihat Task 1).
-      const label = manual ? `S${supNum[m.id]} · ${m.panjang}` : `${m.panjang}`;
+      // Label S{n} KHUSUS manual/terkunci (nomor independen dari grid, lihat DenahConv.numberSupportsManual).
+      // Grid support (fase pratinjau) tidak diberi nomor lagi (id-nya tak stabil lintas render, lihat Task 1).
+      const label = lockedEntry ? `S${m.id.slice(2)} · ${m.panjang}` : (manual ? `S${supNum[m.id]} · ${m.panjang}` : `${m.panjang}`);
       // Support horizontal & vertikal yang berpotongan deket tengah kotak dulu labelnya numpuk
       // (dua-duanya persis di titik tengah garis masing-masing). Vertikal digeser ke kanan garis
       // (bukan lagi persis di tengah) biar gak ketiban label horizontal yang lewat situ.
@@ -1748,10 +1773,16 @@ body,.page-content{overscroll-behavior-y:contain}
       const rot = isHoriz ? '' : ` dy="-6" transform="rotate(-90 ${lx} ${ly})"`;
       const ty = isHoriz ? ly - 4 : ly;
       s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${lx}" y="${ty}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3"${rot}>${label}</text>`; });
-    if (this.mode === 'support') mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
+    if (this.mode === 'support' && !locked) mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
       ['a', 'b'].forEach(end => { const p = m.geom[end], cx = X(p.x), cy = Y(p.y);
         s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;
         s += `<circle id="smh${i}${end}" cx="${cx}" cy="${cy}" r="4" fill="#0f2740" stroke="#38bdf8" stroke-width="2.5" style="pointer-events:none"/>`; }); });
+    else if (this.mode === 'support' && locked && this.moveOn && this.selSup != null) {
+      const e = S.supportsLocked.find(x => x.no === this.selSup && x.manual && x.aktif !== false);
+      if (e) ['a', 'b'].forEach(end => { const p = e[end], cx = X(p.x), cy = Y(p.y);
+        s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-slend="${e.no}" data-end="${end}" style="cursor:grab"/>`;
+        s += `<circle id="slh${e.no}${end}" cx="${cx}" cy="${cy}" r="4" fill="#0f2740" stroke="#facc15" stroke-width="2.5" style="pointer-events:none"/>`; });
+    }
     s += '</g>';
     // frame (tebal) + label sisi — tiap sisi id fl{i}/fll{i} biar bisa diupdate saat seret
     mem.filter(m => m.jenis === 'frame').forEach((m, i) => { const c = cmap[m.material]; const a = m.geom.a, b = m.geom.b;
@@ -1954,6 +1985,48 @@ body,.page-content{overscroll-behavior-y:contain}
           }, 450);
         }
       } else if (this.mode === 'support') {
+        const locked = DenahConv.isLocked(this.S);
+        if (locked) {
+          // FASE TERKUNCI (spec 2.3): menu tekan-tahan DIHAPUS; geser garis DIHAPUS (pindah =
+          // ketik angka di panel). Yang tersisa di kanvas: (a) + Support manual 2 tap,
+          // (b) tarik ujung manual TERSOROT (moveOn nyala), (c) tap toleran = sorot/ganti kandidat.
+          // moveOn mati = kanvas murni lihat/zoom/pan, tak ada satupun yang merespons.
+          if (this.armed === 'addSupport') {
+            if (!this.addSupportPt) { this.addSupportPt = { x: this.snap(cm.x), y: this.snap(cm.y) }; this.setHint('Titik ke-2 support…'); }
+            else {
+              this.pushUndo();
+              const no = this.S.lockSeq || 1;
+              this.S.supportsLocked.push({ no, manual: true, a: this.addSupportPt, b: { x: this.snap(cm.x), y: this.snap(cm.y) }, aktif: true });
+              this.S.lockSeq = no + 1;      // entri baru melanjutkan nomor (spec 2.2)
+              this.addSupportPt = null; this.armed = null; this.selSup = no; this.setHint(); this.render();
+            }
+            return;
+          }
+          if (!this.moveOn) return;
+          if (t.dataset.slend != null) {
+            // Tarik ujung: HANYA manual tersorot (grid tak punya ujung tarikan — otomatis dari frame).
+            const no = +t.dataset.slend, end = t.dataset.end;
+            const myDrag = { type: 'lockend', no, end, startPt: cm, moved: false,
+              h: el.querySelector('#slh' + no + end) };
+            drag = myDrag;
+            el.setPointerCapture(e.pointerId); e.preventDefault();
+            return;
+          }
+          // Tap toleran: garis terdekat menang; tap lagi di tempat sama = kandidat berikutnya.
+          const mem2 = DenahConv.buildMembers(this.S);
+          const TH = 24 / this.screenScale(el) / this.SC;
+          const ids = DenahConv.supportsNearPoint(mem2, cm, TH);
+          if (!ids.length) { if (this.selSup != null) { this.selSup = null; this.render(); } return; }
+          const curId = 'SL' + this.selSup;
+          const k = ids.indexOf(curId);
+          const sameSpot = this._lastPickPt && dist(cm, this._lastPickPt) < TH;
+          this._lastPickPt = cm;
+          this.selSup = +((k >= 0 && sameSpot) ? ids[(k + 1) % ids.length] : ids[0]).slice(2);
+          this.supPanelOpen = true;   // panel daftar Support (Task 5) harus kebuka saat sorot dari kanvas
+          this.render();
+          return;
+        }
+        // FASE PRATINJAU: blok lama verbatim (data-sm / addSupport / Sm_ / supgrid) — jangan diubah.
         // Redesign Support (21 Agustus): SEMUA sub-elemen pakai pola Tiang -- tap cepat tanpa
         // gerak = no-op, geser = pindah, tahan diam 450ms = menu. pushUndo() TIDAK di sini
         // (banyak gestur berakhir tanpa mutasi) -- dipindah ke pointermove persis saat gerakan
@@ -2176,6 +2249,17 @@ body,.page-content{overscroll-behavior-y:contain}
           const line = el.querySelector('#sg_' + drag.id);
           if (line) { line.setAttribute('x1', ax); line.setAttribute('y1', ay); line.setAttribute('x2', bx); line.setAttribute('y2', by); }
           if (drag.hit) { drag.hit.setAttribute('x1', ax); drag.hit.setAttribute('y1', ay); drag.hit.setAttribute('x2', bx); drag.hit.setAttribute('y2', by); }
+        } else if (drag.type === 'lockend') {
+          if (!drag.moved && dist(cm, drag.startPt) > 4) { drag.moved = true; this.pushUndo(); }
+          if (!drag.moved) return;
+          const e2 = this.S.supportsLocked.find(x => x.no === drag.no);
+          if (!e2) return;
+          const anchor = e2[drag.end === 'a' ? 'b' : 'a'];
+          const TH = (this.S.grid || 20) * 1.2;
+          const snapped = DenahConv._orthoSnapToPoint(cm, anchor, TH);
+          e2[drag.end] = snapped;
+          const px2 = PAD + snapped.x * this.SC, py2 = PAD + snapped.y * this.SC;
+          if (drag.h) { drag.h.setAttribute('cx', px2); drag.h.setAttribute('cy', py2); }
         }
       }
     });
@@ -2303,6 +2387,16 @@ body,.page-content{overscroll-behavior-y:contain}
           this.S.removed[drag.id] = true;
         }
         // !moved dan menu belum sempat kebuka (dilepas cepat < 450ms) -> tak ada aksi sama sekali.
+      }
+      else if (drag.type === 'lockend') {
+        if (drag.moved) {
+          const e2 = this.S.supportsLocked.find(x => x.no === drag.no);
+          if (e2) {
+            // Pola sama tipe 'sup': sumbu yg barusan ortho-snap ke anchor JANGAN di-grid-snap lagi.
+            const anchor = e2[drag.end === 'a' ? 'b' : 'a'], p = e2[drag.end];
+            e2[drag.end] = { x: p.x === anchor.x ? p.x : this.snap(p.x), y: p.y === anchor.y ? p.y : this.snap(p.y) };
+          }
+        }
       }
       drag = null; this.render(); };
     el.addEventListener('pointerup', end);
