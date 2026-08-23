@@ -370,6 +370,18 @@ const DenahConv = {
     });
     return Object.keys(best).sort((a, b) => best[a] - best[b]);
   },
+  // Teks info baris panel (spec 2.4) — posisi RELATIF bbox frame saat ini (ikut bentuk).
+  // Jalur yang kegeser sampai luar frame tak tergambar (scan kosong) tapi tetap terdaftar;
+  // ditandai di sini biar user paham kenapa garisnya "hilang".
+  describeLockedSupport(S, e) {
+    if (e.manual) return 'manual · ' + Math.round(dist(e.a, e.b)) + 'cm';
+    const bb = bbox(S.verts);
+    const txt = e.axis === 'h'
+      ? 'datar · ' + Math.round(e.pos - bb.y0) + 'cm dari atas'
+      : 'tegak · ' + Math.round(e.pos - bb.x0) + 'cm dari kiri';
+    const luar = e.axis === 'h' ? (e.pos <= bb.y0 || e.pos >= bb.y1) : (e.pos <= bb.x0 || e.pos >= bb.x1);
+    return luar ? txt + ' (di luar frame)' : txt;
+  },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
   // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
@@ -1401,48 +1413,136 @@ body,.page-content{overscroll-behavior-y:contain}
     };
   }
 
-  // Panel daftar Support manual (Redesign Support, 21 Agustus) -- meniru renderTiangPanel di atas,
-  // TANPA input X/Y (geser di canvas sudah cukup, lihat spec Keputusan #6). Support grid otomatis
-  // SENGAJA tak masuk sini -- belum jadi entri manual, tak addressable/tak stabil (Keputusan #5).
+  // Panel Support (spec 2.4). Fase pratinjau: daftar manual lama + SATU baris ajakan kunci
+  // (pintu masuk #2 kunci otomatis). Fase terkunci: daftar ceklis S1..Sn lengkap.
   renderSupportPanel(mem) {
     const panel = this._q('[data-role=supportPanel]');
     if (!panel) return;
-    const supNum = DenahConv.numberSupportsManual(mem);
-    const manualMem = mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_'));
-    // Sembunyikan panel saat bukan mode support ATAU belum ada support manual (buang hint kosong, 22 Ags).
-    if (this.mode !== 'support' || !manualMem.length) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+    if (this.mode !== 'support') { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+    const locked = DenahConv.isLocked(this.S);
+
+    if (!locked) {
+      // ── PRATINJAU: baris ajakan + daftar manual lama (perilaku 21 Ags dipertahankan) ──
+      panel.style.display = '';
+      const supNum = DenahConv.numberSupportsManual(mem);
+      const manualMem = mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_'));
+      const rows = manualMem.map(m => {
+        const i = +m.id.slice(3);
+        return `<div class="de-tiang-item" data-srow="${i}">
+          <div class="de-tiang-head">
+            <b style="font-size:12px">S${supNum[m.id]}</b>
+            <div class="de-tiang-actions"><span class="de-mini" data-role="sFokus" data-i="${i}">Fokus</span><span class="de-mini" data-role="sHapus" data-i="${i}">Hapus</span></div>
+          </div>
+        </div>`;
+      }).join('');
+      panel.innerHTML =
+        `<div class="de-tiang-head" data-role="supLockInvite" style="cursor:pointer">
+           <b style="font-size:12px">Support — kelola per garis</b>
+           <span class="de-mini">Kunci susunan</span>
+         </div>` +
+        (manualMem.length ? '<b style="font-size:12px;color:#334155">Daftar Support Manual</b>' + rows : '');
+      this._q('[data-role=supLockInvite]').onclick = () => this._lockNow();
+      // wiring sFokus/sHapus lama VERBATIM (copy dari implementasi sekarang)
+      panel.querySelectorAll('[data-role=sFokus]').forEach(btn => {
+        btn.onclick = () => {
+          const i = +btn.dataset.i;
+          const line = this.el.querySelector('#sm' + i);
+          if (!line) return;
+          this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
+          const prevStroke = line.getAttribute('stroke'), prevW = line.getAttribute('stroke-width');
+          line.setAttribute('stroke', '#facc15'); line.setAttribute('stroke-width', '6');
+          setTimeout(() => { if (line.isConnected) { line.setAttribute('stroke', prevStroke); line.setAttribute('stroke-width', prevW); } }, 900);
+        };
+      });
+      panel.querySelectorAll('[data-role=sHapus]').forEach(btn => {
+        btn.onclick = () => {
+          const i = +btn.dataset.i;
+          this.pushUndo();
+          this._spliceSupportManual(i);
+          this.render();
+        };
+      });
+      return;
+    }
+
+    // ── TERKUNCI: header + toggle Semua + lipat/buka + baris ceklis ──
     panel.style.display = '';
-    const rows = manualMem.map(m => {
-      const i = +m.id.slice(3);
-      return `<div class="de-tiang-item" data-srow="${i}">
-        <div class="de-tiang-head">
-          <b style="font-size:12px">S${supNum[m.id]}</b>
-          <div class="de-tiang-actions"><span class="de-mini" data-role="sFokus" data-i="${i}">Fokus</span><span class="de-mini" data-role="sHapus" data-i="${i}">Hapus</span></div>
+    const entries = this.S.supportsLocked;
+    const anyOff = entries.some(e2 => e2.aktif === false);
+    const head =
+      `<div class="de-tiang-head">
+        <b style="font-size:12px">Support (${entries.length})</b>
+        <div class="de-tiang-actions">
+          <span class="de-mini" data-role="slSemua">${anyOff ? 'Aktifkan semua' : 'Nonaktifkan semua'}</span>
+          <span class="de-mini" data-role="slLipat">${this.supPanelOpen ? 'Lipat' : 'Buka'}</span>
         </div>
       </div>`;
+    const rows = !this.supPanelOpen ? '' : entries.map(e2 => {
+      const sel = e2.no === this.selSup;
+      const desc = DenahConv.describeLockedSupport(this.S, e2);
+      // Arah difilter per tipe (spec 2.3): h cuma atas/bawah, v cuma kiri/kanan, manual 4 arah.
+      const dirs = e2.manual ? ['atas', 'bawah', 'kiri', 'kanan'] : e2.axis === 'h' ? ['atas', 'bawah'] : ['kiri', 'kanan'];
+      const editRow = !sel ? '' :
+        `<div class="de-tiang-fields" style="margin-top:4px">
+          <label>Arah<select data-role="slDir">${dirs.map(d => `<option>${d}</option>`).join('')}</select></label>
+          <label>cm<input type="text" inputmode="decimal" data-role="slCm"></label>
+          <span class="de-mini de-tiang-apply" data-role="slApply">Terapkan</span>
+        </div>
+        <div class="de-tiang-actions" style="margin-top:4px">
+          <span class="de-mini" data-role="slBesi">Ganti besi</span>
+          ${e2.manual ? '<span class="de-mini" data-role="slHapus">Hapus</span>' : ''}
+        </div>`;
+      return `<div class="de-tiang-item" data-slrow="${e2.no}" style="${sel ? 'background:#fef9c3;border-radius:6px;padding-left:4px;' : ''}${e2.aktif === false ? 'opacity:.45;' : ''}">
+        <div class="de-tiang-head">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px">
+            <input type="checkbox" data-role="slAktif" data-no="${e2.no}" ${e2.aktif === false ? '' : 'checked'}>
+            <b>S${e2.no}</b> <span style="color:#64748b">${desc}</span>
+          </label>
+          <div class="de-tiang-actions"><span class="de-mini" data-role="slFokus" data-no="${e2.no}">Fokus</span></div>
+        </div>${editRow}
+      </div>`;
     }).join('');
-    panel.innerHTML =
-      '<b style="font-size:12px;color:#334155">Daftar Support Manual</b>' + rows;
+    panel.innerHTML = head + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows;
 
-    panel.querySelectorAll('[data-role=sFokus]').forEach(btn => {
-      btn.onclick = () => {
-        const i = +btn.dataset.i;
-        const line = this.el.querySelector('#sm' + i);
-        if (!line) return;
-        this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
-        const prevStroke = line.getAttribute('stroke'), prevW = line.getAttribute('stroke-width');
-        line.setAttribute('stroke', '#facc15'); line.setAttribute('stroke-width', '6');
-        setTimeout(() => { if (line.isConnected) { line.setAttribute('stroke', prevStroke); line.setAttribute('stroke-width', prevW); } }, 900);
-      };
+    this._q('[data-role=slLipat]').onclick = () => { this.supPanelOpen = !this.supPanelOpen; this.renderSupportPanel(mem); };
+    this._q('[data-role=slSemua]').onclick = () => {
+      this.pushUndo();
+      entries.forEach(e2 => { e2.aktif = anyOff; });
+      this.render();
+    };
+    panel.querySelectorAll('[data-role=slAktif]').forEach(cb => cb.onchange = () => {
+      const e2 = entries.find(x => x.no === +cb.dataset.no);
+      if (!e2) return;
+      this.pushUndo(); e2.aktif = cb.checked; this.render();
     });
-    panel.querySelectorAll('[data-role=sHapus]').forEach(btn => {
-      btn.onclick = () => {
-        const i = +btn.dataset.i;
-        this.pushUndo();
-        this._spliceSupportManual(i);
-        this.render();
-      };
+    panel.querySelectorAll('[data-role=slFokus]').forEach(btn => btn.onclick = () => {
+      this.selSup = +btn.dataset.no;
+      this.supPanelOpen = true;
+      this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
+      this.render();   // render() menyorot garis di kanvas (Task 4) + melebarkan baris ini
     });
+    const applyBtn = this._q('[data-role=slApply]');
+    if (applyBtn) applyBtn.onclick = () => {
+      const e2 = entries.find(x => x.no === this.selSup);
+      const cmVal = DenahConv.parseCmValue(this._q('[data-role=slCm]').value);
+      const moved = e2 && DenahConv.moveLockedSupport(e2, this._q('[data-role=slDir]').value, cmVal);
+      if (!moved) { this._q('[data-role=slMsg]').textContent = 'Isi cm dengan angka > 0.'; return; }
+      this.pushUndo();
+      entries[entries.indexOf(e2)] = moved;
+      this.render();
+    };
+    const besiBtn = this._q('[data-role=slBesi]');
+    if (besiBtn) besiBtn.onclick = (ev) => this.openMatMenu(ev, 'SL' + this.selSup);
+    const hapusBtn = this._q('[data-role=slHapus]');
+    if (hapusBtn) hapusBtn.onclick = () => {
+      const idx = entries.findIndex(x => x.no === this.selSup);
+      if (idx < 0) return;
+      this.pushUndo();
+      delete this.S.matOverride['SL' + this.selSup];
+      entries.splice(idx, 1);       // ID stabil: nomor lain TIDAK bergeser, tak ada remap
+      this.selSup = null;
+      this.render();
+    };
   }
 
   // Preview Task 3: gambar langsung ke SVG tanpa render() agar state, Undo dan onChange tak tersentuh.

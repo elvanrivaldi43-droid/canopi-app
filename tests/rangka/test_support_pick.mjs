@@ -30,4 +30,11 @@ const memSplit = [
 ];
 check('multi-potongan 1 id -> dedup', DenahConv.supportsNearPoint(memSplit, { x: 350, y: 55 }, 24), ['SL7']);
 
+// ── describeLockedSupport: teks baris panel ──
+const Sd = { verts: [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 300 }, { x: 0, y: 300 }] };
+check('describe h', DenahConv.describeLockedSupport(Sd, { no: 1, axis: 'h', pos: 149, aktif: true }), 'datar · 149cm dari atas');
+check('describe v', DenahConv.describeLockedSupport(Sd, { no: 2, axis: 'v', pos: 100, aktif: true }), 'tegak · 100cm dari kiri');
+check('describe manual', DenahConv.describeLockedSupport(Sd, { no: 3, manual: true, a: { x: 0, y: 0 }, b: { x: 240, y: 0 }, aktif: true }), 'manual · 240cm');
+check('describe di luar frame', DenahConv.describeLockedSupport(Sd, { no: 4, axis: 'h', pos: 350, aktif: true }), 'datar · 350cm dari atas (di luar frame)');
+
 process.exit(fail ? 1 : 0);
