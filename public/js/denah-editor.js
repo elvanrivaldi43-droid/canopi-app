@@ -1125,7 +1125,9 @@ body,.page-content{overscroll-behavior-y:contain}
     this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
     if (!this.undoStack.length) { this.setHint('Tak ada langkah untuk di-undo'); return; }
     this.redoStack.push(JSON.stringify(this.S)); if (this.redoStack.length > 40) this.redoStack.shift();
-    Object.assign(this.S, JSON.parse(this.undoStack.pop()));
+    // Assignment wholesale (bukan Object.assign): snapshot = state utuh, Object.assign tak
+    // menghapus key yang absen di snapshot (mis. supportsLocked pas balik ke pratinjau).
+    this.S = JSON.parse(this.undoStack.pop());
     this.syncInputs();
     this.render();
   }
@@ -1135,7 +1137,8 @@ body,.page-content{overscroll-behavior-y:contain}
     this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
     if (!this.redoStack.length) { this.setHint('Tak ada langkah untuk di-redo'); return; }
     this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift();
-    Object.assign(this.S, JSON.parse(this.redoStack.pop()));
+    // Sama seperti undo(): assignment wholesale, bukan Object.assign (lihat catatan di atas).
+    this.S = JSON.parse(this.redoStack.pop());
     this.syncInputs();
     this.render();
   }
@@ -1252,6 +1255,9 @@ body,.page-content{overscroll-behavior-y:contain}
     const L = +(this._q('[data-role=inL]').value) || 400;
     const P = +(this._q('[data-role=inP]').value) || 300;
     this.S.verts = [{ x: 0, y: 0 }, { x: L, y: 0 }, { x: L, y: P }, { x: 0, y: P }];
+    // Sengaja TIDAK menyentuh S.supportsLocked/lockSeq di sini -- kalau fase terkunci, garis
+    // lock tetap ada dan ikut mengikuti bentuk frame baru (bukan "reset ke pratinjau"); ini
+    // perilaku disengaja (bisa di-Undo lewat pushUndo() di atas), bukan celah yang perlu ditutup.
     this.S.removed = {}; this.S.supportsManual = []; this.S.matOverride = {}; this.S.combinedBoxes = [];
     this.S.tiang = [];   // JANGAN auto-taruh tiang di sudut — user yang tentukan tiang (mode Tiang)
     this.S.grid = +(this._q('[data-role=inGrid]').value);
@@ -1625,7 +1631,11 @@ body,.page-content{overscroll-behavior-y:contain}
     const jenisNama = { frame: 'Frame', support: 'Support', tiang: 'Tiang' };
     const m = mem.find(x => x.id === id);
     let label = id;
-    if (m) {
+    if (!m && id.startsWith('SL')) {
+      // Entri nonaktif/di-luar-frame gak hasilkan member (tak ada potongan tergambar) --
+      // tetap kasih label yg masuk akal ("Support S7") ketimbang id mentah "SL7".
+      label = 'Support S' + id.slice(2);
+    } else if (m) {
       // frame/tiang: m.nama sudah "F3"/"T2". support MANUAL: nomor dari DenahConv.numberSupportsManual
       // (SATU sumber sama dgn label kanvas & panel, lihat Task 1/3). Support GRID: tak dinomori
       // lagi (ID-nya tak stabil lintas render), cukup ditandai "grid" biar user tahu ini bukan
@@ -2100,7 +2110,7 @@ body,.page-content{overscroll-behavior-y:contain}
               const no = this.S.lockSeq || 1;
               this.S.supportsLocked.push({ no, manual: true, a: this.addSupportPt, b: { x: this.snap(cm.x), y: this.snap(cm.y) }, aktif: true });
               this.S.lockSeq = no + 1;      // entri baru melanjutkan nomor (spec 2.2)
-              this.addSupportPt = null; this.armed = null; this.selSup = no; this.setHint(); this.render();
+              this.addSupportPt = null; this.armed = null; this.selSup = no; this.supPanelOpen = true; this.setHint(); this.render();
             }
             return;
           }

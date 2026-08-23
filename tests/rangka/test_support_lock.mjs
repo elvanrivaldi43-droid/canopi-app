@@ -120,4 +120,31 @@ check('isLocked: supportsLocked [] -> true', DenahConv.isLocked({ ...base(), sup
     [4, 5, true]);
 }
 
+// ── undo() kunci pertama balik ke pratinjau UTUH (bug: Object.assign tak menghapus key absen
+// di snapshot pratinjau -- supportsLocked nyangkut true, matOverride campur key lama/baru) ──
+{
+  const ed = Object.create(DenahEditor.prototype);
+  ed.S = base();
+  ed.S.matOverride = { 'Sh_0_0': 'BesiLama' };   // pilihan besi per-garis fase pratinjau
+  ed.undoStack = []; ed.redoStack = [];
+  ed.opts = {};
+  ed.armed = null; ed.boxPreview = null; ed.addSupportPt = null; ed._lastPickPt = null;
+  ed.supPanelOpen = false;
+  // stub method DOM -- undo()/redo()/_lockNow() manggil ini tapi gak ada document di node
+  ed.render = () => {}; ed.syncInputs = () => {}; ed.setHint = () => {};
+
+  const preLock = JSON.parse(JSON.stringify(ed.S));
+  check('pra-kunci: belum locked', DenahConv.isLocked(ed.S), false);
+
+  ed._lockNow();   // pushUndo() + Object.assign(lockSupports patch), pola sama tombol kunci nyata
+  check('setelah lock: locked', DenahConv.isLocked(ed.S), true);
+
+  ed.undo();
+  check('undo kunci pertama: isLocked balik false', DenahConv.isLocked(ed.S), false);
+  check('undo kunci pertama: state persis pra-kunci (matOverride dst)', ed.S, preLock);
+
+  ed.redo();
+  check('redo: terkunci lagi', DenahConv.isLocked(ed.S), true);
+}
+
 process.exit(fail ? 1 : 0);
