@@ -327,6 +327,37 @@ const DenahConv = {
     });
     return { supportsLocked: entries, lockSeq: no + 1, matOverride: mo, supportsManual: [], removed: {} };
   },
+  // "Susun Ulang": balik ke fase pratinjau. Entri grid dibuang (input spacing hidup lagi),
+  // entri manual balik jadi supportsManual (ujung nyata dipertahankan, termasuk yang nonaktif —
+  // model lama tak kenal nonaktif, mending muncul lagi daripada data hilang diam-diam).
+  // Override grid ikut hangus (sesuai peringatan "editan per-garis di-reset"); override manual
+  // di-remap ke Sm_{i}. lockSeq SENGAJA tidak di-patch: nilai lama tetap di S, kunci berikutnya
+  // melanjutkan nomor (spec 2.2). MURNI, tidak memutasi S.
+  unlockSupports(S) {
+    const mo = { ...(S.matOverride || {}) };
+    const manual = [];
+    (S.supportsLocked || []).forEach(e => {
+      const key = 'SL' + e.no;
+      if (!e.manual) { delete mo[key]; return; }
+      if (mo[key] != null) { mo['Sm_' + manual.length] = mo[key]; delete mo[key]; }
+      manual.push({ a: { ...e.a }, b: { ...e.b } });
+    });
+    return { supportsLocked: null, supportsManual: manual, matOverride: mo, removed: {} };
+  },
+  // Pindah entri terkunci = ketik angka RELATIF (spec 2.3). Arah difilter: garis h cuma
+  // atas/bawah, v cuma kiri/kanan, manual 4 arah. Return entri BARU atau null (tak valid).
+  // "atas" = y layar mengecil (kanvas y tumbuh ke bawah).
+  moveLockedSupport(entry, arah, cm) {
+    if (!Number.isFinite(cm) || cm <= 0) return null;
+    const d = { atas: [0, -cm], bawah: [0, cm], kiri: [-cm, 0], kanan: [cm, 0] }[arah];
+    if (!d) return null;
+    if (entry.manual) {
+      return { ...entry, a: { x: entry.a.x + d[0], y: entry.a.y + d[1] }, b: { x: entry.b.x + d[0], y: entry.b.y + d[1] } };
+    }
+    if (entry.axis === 'h') return d[0] !== 0 ? null : { ...entry, pos: entry.pos + d[1] };
+    if (entry.axis === 'v') return d[1] !== 0 ? null : { ...entry, pos: entry.pos + d[0] };
+    return null;
+  },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
   // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
