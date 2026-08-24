@@ -43,6 +43,15 @@ const base = () => ({
   check('balok titik bebas: panjang benar', bl2[0].panjang, Math.round(Math.hypot(100, 100)));
 }
 
+// ── buildMembers cabang balok baca matOverride (Ganti besi sebelumnya dead state) ──
+{
+  const S = base(); S.tiang = [{ x: 0, y: 0 }, { x: 300, y: 0 }];
+  S.balok = [{ no: 1, a: { t: 0 }, b: { t: 1 }, material: 'WF 100' }];
+  S.matOverride = { B1: 'WF 125' };
+  const bl3 = DenahConv.buildMembers(S).filter(m => m.jenis === 'balok');
+  check('matOverride balok kebaca (bukan b.material mentah)', bl3[0].material, 'WF 125');
+}
+
 // ── cascadeTiangRemoval ──
 {
   const S = base();

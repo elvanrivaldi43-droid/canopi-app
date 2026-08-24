@@ -268,7 +268,8 @@ const DenahConv = {
     (S.balok || []).forEach(b => {
       const a = DenahConv.resolveBalokEndpoint(S, b.a), c = DenahConv.resolveBalokEndpoint(S, b.b);
       if (!a || !c) return;
-      mem.push({ id: 'B' + b.no, nama: 'B' + b.no, jenis: 'balok', panjang: Math.round(dist(a, c)), material: b.material, geom: { a, b: c } });
+      const mat = (S.matOverride && S.matOverride['B' + b.no]) || b.material;
+      mem.push({ id: 'B' + b.no, nama: 'B' + b.no, jenis: 'balok', panjang: Math.round(dist(a, c)), material: mat, geom: { a, b: c } });
     });
     return mem;
   },
