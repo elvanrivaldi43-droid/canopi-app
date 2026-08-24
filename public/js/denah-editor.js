@@ -1208,7 +1208,11 @@ body,.page-content{overscroll-behavior-y:contain}
 
     wrap.addEventListener('pointermove', e => {
       if (!pointers.has(e.pointerId)) return;
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // WAJIB ikut refresh stempel `t`: tulisan tanpa `t` bikin penjaga jari-basi di pointerdown
+      // (pv.t || nowTs -> umur 0) tak pernah bisa buang jari hantu yang pointerup-nya hilang
+      // (swipe notifikasi/gestur pinggir iOS) -> semua tap berikutnya dianggap jari ke-2 pinch,
+      // SELURUH kanvas mati di semua tab sampai halaman di-reload (laporan Elvan 24 Ags malam).
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, t: Date.now() });
       if (pointers.size === 2 && pinch) {
         e.preventDefault();
         const [p1, p2] = [...pointers.values()];
