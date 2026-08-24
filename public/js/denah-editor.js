@@ -265,6 +265,11 @@ const DenahConv = {
       const id = 'T' + i, mat = (S.matOverride && S.matOverride[id]) || S.matDefault.tiang;
       mem.push({ id, nama: 'T' + (i + 1), jenis: 'tiang', panjang: S.tinggi, material: mat, geom: { p: t } });
     });
+    (S.balok || []).forEach(b => {
+      const a = DenahConv.resolveBalokEndpoint(S, b.a), c = DenahConv.resolveBalokEndpoint(S, b.b);
+      if (!a || !c) return;
+      mem.push({ id: 'B' + b.no, nama: 'B' + b.no, jenis: 'balok', panjang: Math.round(dist(a, c)), material: b.material, geom: { a, b: c } });
+    });
     return mem;
   },
   luasM2(S) { return Math.round(shoelace(S.verts) / 10000 * 100) / 100; },
@@ -481,6 +486,40 @@ const DenahConv = {
       return { no: n2, manual: true, a: sg.a, b: sg.b, aktif: entry.aktif !== false };
     });
     return { entries, lockSeq: seq, matOverride: mo };
+  },
+  // ---- Balok melintang (portal frame + bracing) ----
+  // Endpoint balok: {t: tiangIdx} = referensi tiang (ikut geser); {p:{x,y}} = titik bebas.
+  // resolveBalokEndpoint: kembalikan koordinat cm ATAU null kalau ref tiang tak valid
+  // (dilewati diam-diam di buildMembers/render — data tetap ada, tinggal user perbaiki lewat panel).
+  resolveBalokEndpoint(S, end) {
+    if (end && end.t != null) {
+      const t = (S.tiang || [])[end.t];
+      return t ? { x: t.x, y: t.y } : null;
+    }
+    if (end && end.p) return { x: end.p.x, y: end.p.y };
+    return null;
+  },
+  // Hapus tiang di idx + kaskade ke balok: ref ke tiang itu -> dibekukan jadi titik bebas
+  // (posisi TERAKHIR tiang tsb), ref ke tiang > idx -> shift -1. balokSeq tak berubah.
+  // MURNI: tidak memutasi S; caller Object.assign(S, patch).
+  cascadeTiangRemoval(S, tiangIdx) {
+    const tiangLama = (S.tiang || [])[tiangIdx];
+    const tiang = (S.tiang || []).filter((_, i) => i !== tiangIdx);
+    const remap = (end) => {
+      if (!end || end.t == null) return end && end.p ? { p: { x: end.p.x, y: end.p.y } } : end;
+      if (end.t === tiangIdx) return { p: { x: tiangLama.x, y: tiangLama.y } };
+      return { t: end.t > tiangIdx ? end.t - 1 : end.t };
+    };
+    const balok = (S.balok || []).map(b => ({ no: b.no, a: remap(b.a), b: remap(b.b), material: b.material }));
+    return { tiang, balok, balokSeq: S.balokSeq || (balok.reduce((m, b) => Math.max(m, b.no), 0) + 1) };
+  },
+  // Total batang standar per material WF (default batang 6m = 600cm). Non-WF diabaikan.
+  hitungBatangWF(mem, panjangBatang = 600) {
+    const tot = {};
+    (mem || []).forEach(m => { if (m.jenis === 'balok' && /wf/i.test(m.material)) tot[m.material] = (tot[m.material] || 0) + m.panjang; });
+    const out = {};
+    Object.keys(tot).forEach(k => { out[k] = Math.ceil(tot[k] / panjangBatang); });
+    return out;
   },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan

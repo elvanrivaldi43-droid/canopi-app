@@ -348,6 +348,12 @@
       "runner": "node",
       "requires_db": false,
       "manual": false
+    },
+    {
+      "path": "tests/rangka/test_balok_melintang.mjs",
+      "runner": "node",
+      "requires_db": false,
+      "manual": false
     }
   ],
   "excluded": [
