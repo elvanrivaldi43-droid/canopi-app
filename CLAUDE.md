@@ -285,35 +285,48 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    `tests/guardrail/manifest.json` di commit yang sama (deploy #127/#128 merah
    karena ini, bukan FTP flaky — cek Actions/reproduksi `php scripts/canopi-check`
    dulu sebelum nyalahin FTP).
-   **Redesign Support ID Stabil — SELESAI implementasi, MENUNGGU validasi
-   manual Bos di HP** (dikerjakan via subagent-driven-development, 6 task +
-   review per task, semua test unit + `php scripts/canopi-check` hijau).
-   Dua fase pratinjau→kunci otomatis, garis grid nyimpan JALUR bukan ujung,
-   toggle move di quickbar, pindah=ketik angka relatif, panel daftar ceklis,
-   grid=nonaktif reversibel / manual=hapus. Tombol "Pulihkan yang dihapus"
-   masih hidup **khusus fase pratinjau** (pensiun menyusul setelah validasi
-   manual tuntas). Spec bagian 3 = batasan disengaja — jangan salah lapor bug.
-   Spec: `docs/superpowers/specs/2026-08-23-denah-support-id-stabil-design.md`.
-   Plan: `docs/superpowers/plans/2026-08-23-denah-support-id-stabil.md`.
-   **Checklist validasi manual Elvan di HP (belum dijalankan):**
-   1. Denah lama tampil & berperilaku persis seperti sebelumnya.
-   2. Tab Support → kunci susunan → panel S1..Sn muncul, input spacing hilang.
-   3. Undo balik ke pratinjau, Redo terkunci lagi.
-   4. Toggle move mati = kanvas tak merespons tap/geser (pinch-zoom aman);
-      nyala = tap dekat garis menyorot, tap lagi ganti ke garis tetangga.
-   5. Garis tersorot → isi arah+cm → Terapkan → pindah sesuai arah (h:atas/
-      bawah, v:kiri/kanan); Undo mengembalikan.
-   6. Ceklis baris → garis hilang dari gambar+hitungan besi; "Nonaktifkan/
-      Aktifkan semua" bekerja.
-   7. Ubah bentuk frame → garis terkunci ikut memanjang/memendek/terbelah;
-      area baru TIDAK dapat garis baru (disengaja).
-   8. + Support manual (fase terkunci) → nomor lanjutan, ujung bisa ditarik
-      saat tersorot+move nyala, Hapus di panel benar-benar menghapus (Undo
-      balikin).
-   9. "Susun Ulang" (dengan konfirmasi) → spacing hidup lagi, manual tetap
-      ada; kunci lagi → nomor entri baru melanjutkan (bukan mulai dari 1).
-   10. Ganti besi per garis → label "Support S{n}"; ganti bentuk frame →
-       besi pilihan tetap nempel di garis yang sama (inti fitur ID stabil).
+   **Redesign Support ID Stabil — LIVE, SEBAGIAN BESAR TERVALIDASI Bos di HP
+   (23-24 Ags).** Dua fase pratinjau→kunci otomatis, garis grid nyimpan JALUR
+   bukan ujung, toggle move quickbar, pindah=ketik angka relatif, panel ceklis.
+   Spec bagian 3 = batasan disengaja — jangan salah lapor bug. Spec/plan:
+   `docs/superpowers/{specs,plans}/2026-08-23-denah-support-id-stabil*`.
+   **Gelombang lanjutan 23-24 Ags yang juga LIVE (semua via SDD + review):**
+   (a) **Garis support numerik + "Pecah jadi manual"** — form ketik posisi
+   (datar/tegak + cm) dgn ghost preview, potongan BERHENTI di frame (tak
+   menyeberangi coakan); pecah jalur grid → entri manual per potongan (hapus
+   yg tak perlu → hitungan besi benar). Plan:
+   `docs/superpowers/plans/2026-08-23-denah-support-jalur-manual.md`.
+   (b) **Pindah garis manual lurus di-re-clip ke frame** (kasus S16: geser
+   masuk coakan → terbelah/berhenti, keluar frame → ditolak); arah dropdown
+   difilter tegak-lurus garis. (c) **Label kanvas rapi** (aturan Elvan): frame
+   di LUAR garis + rotasi ikut arah sisi, support di dalam, garis tegak anchor
+   30%, label adaptif potongan pendek — TERVALIDASI. (d) **Balok Melintang
+   B1..Bn** (portal frame + bracing): entitas baru `S.balok[]`+`balokSeq`,
+   ujung tipe Tiang (ikut geser) / Titik bebas (X-dari-kiri/Y-dari-depan,
+   konvensi sama panel Tiang), pilih besi per balok, legend "WF: N batang 6m"
+   (ceil total/600), hapus tiang → cascade ujung balok dibekukan jadi titik
+   bebas (1 langkah Undo). Plan:
+   `docs/superpowers/plans/2026-08-24-denah-balok-melintang.md`.
+   (e) **Fix jari hantu pinch** — pointermove kini refresh stempel `t`;
+   sebelumnya 1 pointerup hilang (swipe notifikasi iOS) = SELURUH kanvas mati
+   permanen di semua tab sampai reload (kasus nyata 24 Ags malam).
+   **Validasi manual yang SUDAH lolos:** kunci/undo-redo/sorot/pindah angka/
+   ceklis/coakan-terbelah (poin 1-7 checklist lama), label rapi, balok
+   tiang↔tiang + hapus-tiang-cascade + undo, ganti besi balok, hapus balok,
+   titik bebas, bracing diagonal, custom bebas↔bebas, legend batang WF.
+   **Validasi yang MASIH tersisa (lanjutkan dari sini):**
+   1. Tap tak nyangkut saat balok menimpa frame (tes A-E; percobaan pertama
+      gagal BUKAN karena fitur — kena jari hantu (e); ulangi setelah fix).
+   2. + Support manual fase terkunci: nomor lanjutan, tarik ujung saat
+      tersorot+move nyala, Hapus beneran (Undo balikin).
+   3. "Susun Ulang": konfirmasi, spacing hidup lagi, kunci ulang nomor lanjut.
+   4. Ganti besi garis grid → ubah bentuk frame → besi tetap nempel ke garis
+      yang sama (inti ID stabil).
+   5. Tombol "Pecah jadi manual" dipakai beneran (kasus S2 coakan).
+   6. Pindah garis manual masuk coakan → terbelah (ulang kasus S16).
+   Tombol "Pulihkan yang dihapus" masih hidup khusus fase pratinjau — pensiun
+   setelah validasi tuntas. Nomor S/B tak pernah dipakai ulang (hapus B2 →
+   berikutnya B3) = disengaja, bukan bug.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
@@ -367,6 +380,14 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
      identitas garis (sekelas perilaku field `kotak` tunggal lama).
    - Checklist manual A-D (laporan Task 5) belum tentu sudah dijalankan Elvan
      tuntas di device; kalau ada anomali baru, cek ke sana dulu.
+9. **Autosave RAB rawan tabrakan dua tab (KASUS NYATA 24 Ags malam: data denah
+   Elvan ke-rollback).** `rab-opsi` autosave = last-writer-wins tanpa guard:
+   tab kedua yang megang data lama, sekali disentuh, menimpa data baru di
+   server. Perlu task terpisah (nyentuh backend, JANGAN dikebut): snapshot
+   bawa penanda versi/stempel muat, endpoint autosave menolak simpanan yang
+   basisnya lebih tua dari yang tersimpan (409) + UI kasih peringatan "ada
+   data lebih baru, muat ulang". Sampai fix ini ada, ATURAN OPERASIONAL:
+   buka RAB cukup 1 tab, perhatikan toast "Tersimpan" hijau tiap habis edit.
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 
