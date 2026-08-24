@@ -1815,8 +1815,8 @@ body,.page-content{overscroll-behavior-y:contain}
         </label>
         <div data-role="${prefix}Tiang" style="margin-top:4px"><label style="font-size:11px">Tiang<select data-role="${prefix}T" ${nTiang ? '' : 'disabled'}>${opsTiang || '<option>—</option>'}</select></label></div>
         <div data-role="${prefix}Bebas" style="display:none;margin-top:4px" class="de-tiang-fields">
-          <label style="font-size:11px">X (cm)<input type="text" inputmode="decimal" data-role="${prefix}X"></label>
-          <label style="font-size:11px">Y (cm)<input type="text" inputmode="decimal" data-role="${prefix}Y"></label>
+          <label style="font-size:11px">X dari kiri<input type="text" inputmode="decimal" data-role="${prefix}X"></label>
+          <label style="font-size:11px">Y dari depan<input type="text" inputmode="decimal" data-role="${prefix}Y"></label>
         </div>
       </div>`;
     const form = !this.balokPanelOpen ? '' :
@@ -1889,7 +1889,10 @@ body,.page-content{overscroll-behavior-y:contain}
     if (bBatal) bBatal.onclick = () => { this.clearBalokPreview(); this._q('[data-role=bMsg]').textContent = ''; };
   }
 
-  // Baca form ujung (prefix b1/b2) → {t:i} | {p:{x,y}} | null (belum lengkap).
+  // Baca form ujung (prefix b1/b2) → {t:i} | {p:{x,y}} | null (belum lengkap). Titik bebas
+  // diketik "X dari kiri / Y dari depan" (SAMA konvensi panel Tiang) -- HARUS lewat
+  // tiangFromOffset, jangan dipakai mentah sbg koordinat model (bug nyata: dulu Y=50 jatuh
+  // ~50cm dari BELAKANG/atas, bukan 50cm dari depan seperti labelnya -- laporan Elvan 24 Ags).
   _readBalokEnd(prefix) {
     const tipe = this._q(`[data-role=${prefix}Tipe]`).value;
     if (tipe === 't') {
@@ -1897,9 +1900,9 @@ body,.page-content{overscroll-behavior-y:contain}
       const t = +sel.value;
       return Number.isInteger(t) && (this.S.tiang || [])[t] ? { t } : null;
     }
-    const x = DenahConv.parseCmValue(this._q(`[data-role=${prefix}X]`).value);
-    const y = DenahConv.parseCmValue(this._q(`[data-role=${prefix}Y]`).value);
-    return (x != null && y != null) ? { p: { x, y } } : null;
+    const dx = DenahConv.parseCmValue(this._q(`[data-role=${prefix}X]`).value);
+    const dy = DenahConv.parseCmValue(this._q(`[data-role=${prefix}Y]`).value);
+    return (dx != null && dy != null) ? { p: DenahConv.tiangFromOffset(this.S, dx, dy) } : null;
   }
 
   // Ghost preview garis Balok (pola sama drawSupJalurPreview): dashed ungu.
