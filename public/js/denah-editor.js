@@ -1789,7 +1789,7 @@ body,.page-content{overscroll-behavior-y:contain}
     if (this.mode !== 'tiang') { panel.style.display = 'none'; panel.innerHTML = ''; return; }
     panel.style.display = '';
     const list = this.S.balok || [];
-    const desc = (end) => end && end.t != null ? 'T' + (end.t + 1) : 'bebas';
+    const desc = (end) => end && end.t != null ? ((this.S.tiang || [])[end.t] ? 'T' + (end.t + 1) : 'ref patah') : 'bebas';
     const rows = !this.balokPanelOpen ? '' : list.map(b => {
       const a = DenahConv.resolveBalokEndpoint(this.S, b.a), c = DenahConv.resolveBalokEndpoint(this.S, b.b);
       const panj = (a && c) ? Math.round(Math.hypot(c.x - a.x, c.y - a.y)) + 'cm' : 'ref patah';
@@ -1855,17 +1855,19 @@ body,.page-content{overscroll-behavior-y:contain}
     };
     ['b1', 'b2'].forEach(prefix => {
       const tipeSel = this._q(`[data-role=${prefix}Tipe]`);
-      const toggleTipe = () => {
+      // Sync tampilan (Tiang/Titik bebas) dipisah dari updatePreview -- setup awal cuma sync
+      // tampilan, TANPA preview, biar panel baru dibuka gak langsung gambar garis panjang-nol
+      // (default kedua ujung sama-sama T1).
+      const syncDisplay = () => {
         const isTiang = tipeSel.value === 't';
         this._q(`[data-role=${prefix}Tiang]`).style.display = isTiang ? '' : 'none';
         this._q(`[data-role=${prefix}Bebas]`).style.display = isTiang ? 'none' : '';
-        updatePreview();
       };
-      tipeSel.onchange = toggleTipe;
+      tipeSel.onchange = () => { syncDisplay(); updatePreview(); };
       this._q(`[data-role=${prefix}T]`).onchange = updatePreview;
       this._q(`[data-role=${prefix}X]`).oninput = updatePreview;
       this._q(`[data-role=${prefix}Y]`).oninput = updatePreview;
-      toggleTipe();
+      syncDisplay();
     });
     const bTambah = this._q('[data-role=bTambah]');
     if (bTambah) bTambah.onclick = () => {
@@ -2332,8 +2334,10 @@ body,.page-content{overscroll-behavior-y:contain}
       const stroke = selected ? '#facc15' : (c || '#a855f7');
       const sw = selected ? 8 : 6;
       const ax = X(m.geom.a.x), ay = Y(m.geom.a.y), bx = X(m.geom.b.x), by = Y(m.geom.b.y);
-      s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round"><title>${m.material} • ${m.panjang}cm</title></line>`;
-      s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="18" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
+      // Hit-testing digating ke mode 'besi' saja (satu-satunya konsumen id 'B{n}', lihat bindSvg) --
+      // di mode lain layer ini transparan ke event biar gak nelan tap tab Rangka/Support di bawahnya.
+      s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" style="pointer-events:${this.mode === 'besi' ? 'auto' : 'none'}"/>`;
+      s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="18" data-id="${m.id}" class="hit" style="cursor:pointer;pointer-events:${this.mode === 'besi' ? 'auto' : 'none'}"><title>${m.material} • ${m.panjang}cm</title></line>`;
       // Label di titik tengah ikut arah garis (pola sama frame — jangan pernah terbalik).
       const lx = (ax + bx) / 2, ly = (ay + by) / 2;
       let ang = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
