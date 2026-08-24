@@ -382,6 +382,29 @@ const DenahConv = {
     const luar = e.axis === 'h' ? (e.pos <= bb.y0 || e.pos >= bb.y1) : (e.pos <= bb.x0 || e.pos >= bb.x1);
     return luar ? txt + ' (di luar frame)' : txt;
   },
+  // Vektor satuan arah LUAR polygon dari sisi a->b. Deteksi pakai point-in-polygon (scanX
+  // parity) di titik uji sedikit di sisi normal — robust utk winding CW/CCW & bentuk coakan,
+  // tanpa asumsi urutan vertex. Dipakai penempatan label frame DI LUAR garis (aturan Elvan
+  // 24 Ags: frame di luar, support di dalam, biar tak pernah tabrakan).
+  outwardNormal(V, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    const nx = dy / len, ny = -dx / len;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const eps = Math.max(1, len * 0.01);
+    const probe = { x: mid.x + nx * eps, y: mid.y + ny * eps };
+    const xs = scanX(V, probe.y);
+    let c = 0; for (const x of xs) if (x < probe.x) c++;
+    const inside = c % 2 === 1;
+    return inside ? { x: -nx, y: -ny } : { x: nx, y: ny };
+  },
+  // Teks label support sesuai ruang (satuan svg; font 9 -> ~5.5/karakter + bantalan).
+  // Potongan pendek turun ke nomor saja, super pendek tanpa label; tersorot selalu penuh.
+  supportLabelText(fullText, shortText, lenSvg, selected) {
+    if (selected) return fullText;
+    if (lenSvg >= fullText.length * 5.5 + 8) return fullText;
+    if (shortText && lenSvg >= shortText.length * 5.5 + 8) return shortText;
+    return '';
+  },
   // Potongan jalur (axis+pos absolut) dari polygon SAAT INI. Tiap potongan BERHENTI di
   // perpotongan frame — TIDAK menyeberangi coakan (keputusan Elvan 23 Ags: potongan yang
   // tak diperlukan harus bisa dibuang sendiri-sendiri). Dasar bersama utk form "+ Garis
@@ -793,6 +816,19 @@ body,.page-content{overscroll-behavior-y:contain}
       const sel = this._q(`[data-role=${role}]`);
       if (sel) sel.innerHTML = optsHtml;
     });
+  }
+
+  // Atribut label frame: posisi di LUAR polygon + rotasi ikut arah sisi (teks selalu tegak-baca).
+  // SATU sumber utk render() DAN update live saat drag (upLbl vert-drag & boxgroup) — dua jalur
+  // itu wajib pakai ini juga, kalau tidak label "lompat" balik ke gaya lama selama drag.
+  _frameLabelAttrs(a, b) {
+    const n = DenahConv.outwardNormal(this.S.verts, a, b);
+    const off = 11 / this.SC;
+    const mx = (a.x + b.x) / 2 + n.x * off, my = (a.y + b.y) / 2 + n.y * off;
+    let ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    if (ang > 90 || ang <= -90) ang += 180;   // jangan pernah terbalik bacanya
+    const lx = this.PAD + mx * this.SC, ly = this.PAD + my * this.SC;
+    return { lx, ly, ang };
   }
 
   // Sinkron tanda visual "on" tombol + Sudut / − Sudut ke state this.armed (dipakai mode sticky).
@@ -2032,17 +2068,23 @@ body,.page-content{overscroll-behavior-y:contain}
       s += `<line x1="${X(m.geom.a.x)}" y1="${Y(m.geom.a.y)}" x2="${X(m.geom.b.x)}" y2="${Y(m.geom.b.y)}" stroke="transparent" stroke-width="14" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
       // Label S{n} KHUSUS manual/terkunci (nomor independen dari grid, lihat DenahConv.numberSupportsManual).
       // Grid support (fase pratinjau) tidak diberi nomor lagi (id-nya tak stabil lintas render, lihat Task 1).
-      const label = lockedEntry ? `S${m.id.slice(2)} · ${m.panjang}` : (manual ? `S${supNum[m.id]} · ${m.panjang}` : `${m.panjang}`);
+      const fullLabel = lockedEntry ? `S${m.id.slice(2)} · ${m.panjang}` : (manual ? `S${supNum[m.id]} · ${m.panjang}` : `${m.panjang}`);
+      const shortLabel = lockedEntry ? `S${m.id.slice(2)}` : (manual ? `S${supNum[m.id]}` : '');
+      const label = DenahConv.supportLabelText(fullLabel, shortLabel, m.panjang * this.SC, selected);
       // Support horizontal & vertikal yang berpotongan deket tengah kotak dulu labelnya numpuk
-      // (dua-duanya persis di titik tengah garis masing-masing). Vertikal digeser ke kanan garis
-      // (bukan lagi persis di tengah) biar gak ketiban label horizontal yang lewat situ.
+      // (dua-duanya persis di titik tengah garis masing-masing). Vertikal digeser ke titik 30%
+      // (dari ujung "atas"/awal garis, bukan lagi persis di tengah) biar gak ketiban label
+      // horizontal yang selalu di titik tengah garisnya (kasus S5×S11, aturan Elvan 24 Ags).
       // Support horizontal: label mendatar sedikit di atas garis (spt sekarang). Support vertikal:
       // teks diputar -90 (baca bawah->atas) biar ikut arah garis, digeser sedikit ke sisi garis.
       const isHoriz = Math.abs(m.geom.a.y - m.geom.b.y) < Math.abs(m.geom.a.x - m.geom.b.x);
-      const lx = X(mx), ly = Y(my);
+      const t3 = 0.3;
+      const px = isHoriz ? mx : m.geom.a.x + (m.geom.b.x - m.geom.a.x) * t3;
+      const py = isHoriz ? my : m.geom.a.y + (m.geom.b.y - m.geom.a.y) * t3;
+      const lx = X(px), ly = Y(py);
       const rot = isHoriz ? '' : ` dy="-6" transform="rotate(-90 ${lx} ${ly})"`;
       const ty = isHoriz ? ly - 4 : ly;
-      s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${lx}" y="${ty}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3"${rot}>${label}</text>`; });
+      if (label) s += `<text ${manual ? `id="smlbl${m.id.slice(3)}"` : ''} x="${lx}" y="${ty}" fill="#93c5fd" font-size="9" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3"${rot}>${label}</text>`; });
     if (this.mode === 'support' && !locked) mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { const i = m.id.slice(3);
       ['a', 'b'].forEach(end => { const p = m.geom[end], cx = X(p.x), cy = Y(p.y);
         s += `<circle cx="${cx}" cy="${cy}" r="22" fill="transparent" data-sm="${i}" data-end="${end}" class="smhit" style="cursor:grab"/>`;
@@ -2058,8 +2100,8 @@ body,.page-content{overscroll-behavior-y:contain}
     mem.filter(m => m.jenis === 'frame').forEach((m, i) => { const c = cmap[m.material]; const a = m.geom.a, b = m.geom.b;
       s += `<line id="fl${i}" x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="${c}" stroke-width="5" stroke-linecap="round"><title>${m.material} • ${m.panjang}cm</title></line>`;
       s += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="transparent" stroke-width="16" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
-      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-      s += `<text id="fll${i}" x="${X(mx)}" y="${Y(my) - 5}" fill="#e2e8f0" font-size="13" text-anchor="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3">F${i + 1} · ${m.panjang}</text>`; });
+      const fla = this._frameLabelAttrs(a, b);
+      s += `<text id="fll${i}" x="${fla.lx}" y="${fla.ly}" fill="#e2e8f0" font-size="13" text-anchor="middle" dominant-baseline="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3" transform="rotate(${fla.ang} ${fla.lx} ${fla.ly})">F${i + 1} · ${m.panjang}</text>`; });
     // kotak-support (Gabungan Kotak): hit-area transparan per kotak buat drag-kotak-utuh. Dirender
     // SEBELUM titik sudut (di bawah ini) supaya tap TEPAT di titik sudut tetap prioritas drag-sudut
     // biasa (SVG: elemen belakangan di markup ada di atas utk hit-testing).
@@ -2384,7 +2426,9 @@ body,.page-content{overscroll-behavior-y:contain}
           if (drag.lPrev) { drag.lPrev.setAttribute('x2', px2); drag.lPrev.setAttribute('y2', py2); }
           if (drag.lThis) { drag.lThis.setAttribute('x1', px2); drag.lThis.setAttribute('y1', py2); }
           const upLbl = (elx, i) => { if (!elx) return; const a = this.S.verts[i], b = this.S.verts[(i + 1) % n];
-            elx.setAttribute('x', X((a.x + b.x) / 2)); elx.setAttribute('y', Y((a.y + b.y) / 2) - 5);
+            const fla = this._frameLabelAttrs(a, b);
+            elx.setAttribute('x', fla.lx); elx.setAttribute('y', fla.ly);
+            elx.setAttribute('transform', `rotate(${fla.ang} ${fla.lx} ${fla.ly})`);
             elx.textContent = 'F' + (i + 1) + ' · ' + (Math.round(dist(a, b) * 10) / 10); };
           upLbl(drag.tPrev, (vi - 1 + n) % n); upLbl(drag.tThis, vi); this.syncLP();
         } else if (drag.type === 'sup') {
@@ -2470,7 +2514,10 @@ body,.page-content{overscroll-behavior-y:contain}
           if (drag.hb) { drag.hb.setAttribute('cx', bx); drag.hb.setAttribute('cy', by); }
           if (drag.hita) { drag.hita.setAttribute('cx', ax); drag.hita.setAttribute('cy', ay); }
           if (drag.hitb) { drag.hitb.setAttribute('cx', bx); drag.hitb.setAttribute('cy', by); }
-          if (drag.lbl) { const lmx = X((a.x + b.x) / 2), lmy = Y((a.y + b.y) / 2), lvert = Math.abs(a.y - b.y) >= Math.abs(a.x - b.x);
+          if (drag.lbl) { const lvert = Math.abs(a.y - b.y) >= Math.abs(a.x - b.x);
+            const t3 = 0.3;
+            const lmx = lvert ? X(a.x + (b.x - a.x) * t3) : X((a.x + b.x) / 2);
+            const lmy = lvert ? Y(a.y + (b.y - a.y) * t3) : Y((a.y + b.y) / 2);
             drag.lbl.setAttribute('x', lmx); drag.lbl.setAttribute('y', lvert ? lmy : lmy - 4);
             if (lvert) { drag.lbl.setAttribute('dy', '-6'); drag.lbl.setAttribute('transform', `rotate(-90 ${lmx} ${lmy})`); }
             else { drag.lbl.removeAttribute('dy'); drag.lbl.removeAttribute('transform'); } }
@@ -2499,7 +2546,9 @@ body,.page-content{overscroll-behavior-y:contain}
             const a = this.S.verts[si], b = this.S.verts[(si + 1) % n];
             if (drag.fl[idx]) { drag.fl[idx].setAttribute('x1', X(a.x)); drag.fl[idx].setAttribute('y1', Y(a.y)); drag.fl[idx].setAttribute('x2', X(b.x)); drag.fl[idx].setAttribute('y2', Y(b.y)); }
             if (drag.fll[idx]) {
-              drag.fll[idx].setAttribute('x', X((a.x + b.x) / 2)); drag.fll[idx].setAttribute('y', Y((a.y + b.y) / 2) - 5);
+              const fla = this._frameLabelAttrs(a, b);
+              drag.fll[idx].setAttribute('x', fla.lx); drag.fll[idx].setAttribute('y', fla.ly);
+              drag.fll[idx].setAttribute('transform', `rotate(${fla.ang} ${fla.lx} ${fla.ly})`);
               drag.fll[idx].textContent = 'F' + (si + 1) + ' · ' + (Math.round(dist(a, b) * 10) / 10);
             }
           });

@@ -342,6 +342,12 @@
       "runner": "node",
       "requires_db": false,
       "manual": false
+    },
+    {
+      "path": "tests/rangka/test_support_label.mjs",
+      "runner": "node",
+      "requires_db": false,
+      "manual": false
     }
   ],
   "excluded": [
