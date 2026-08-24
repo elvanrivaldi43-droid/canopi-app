@@ -583,6 +583,7 @@ class DenahEditor {
       if (!this.S.matDefault.frame) this.S.matDefault.frame = cari('5x10');
       if (!this.S.matDefault.support) this.S.matDefault.support = cari('4x8');
       if (!this.S.matDefault.tiang) this.S.matDefault.tiang = cari('5x10');
+      if (!this.S.matDefault.balok) this.S.matDefault.balok = cari('wf') || this.besi[0].nama;
     }
     this.undoStack = []; this.redoStack = [];
     this.mode = 'bentuk';
@@ -597,6 +598,8 @@ class DenahEditor {
     this.moveOn = false;      // toggle move quickbar (spec 2.3) — penanda alat, bukan data model
     this.selSup = null;       // no entri support terkunci yang tersorot (null = tak ada)
     this.supPanelOpen = false; // lipatan panel daftar Support (dilipat default, spec 2.4)
+    this.selBalok = null;      // no balok yang tersorot (null = tak ada)
+    this.balokPanelOpen = false; // lipatan panel daftar Balok Melintang
     this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
     // Blok pinch-zoom HALAMAN (WebKit/iOS event gesturestart) selama ada editor di halaman --
@@ -639,7 +642,8 @@ class DenahEditor {
       verts: [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 300 }, { x: 0, y: 300 }],
       grid: 20, target: 100,
       kotak: 100, autoKotak: true, arah: '2', supportsManual: [], removed: {}, tiang: [],
-      tinggi: 300, matDefault: { frame: '', support: '', tiang: '' }, matOverride: {}, combinedBoxes: [],
+      balok: [], balokSeq: 1,
+      tinggi: 300, matDefault: { frame: '', support: '', tiang: '', balok: '' }, matOverride: {}, combinedBoxes: [],
     };
   }
 
@@ -812,6 +816,7 @@ body,.page-content{overscroll-behavior-y:contain}
   <div class="de-hint" data-role="hint"></div>
   <div class="de-card de-tiang-panel" style="display:none;margin-top:10px;padding:10px" data-role="tiangPanel"></div>
   <div class="de-card de-tiang-panel" style="display:none;margin-top:10px;padding:10px" data-role="supportPanel"></div>
+  <div class="de-card de-tiang-panel" style="display:none;margin-top:10px;padding:10px" data-role="balokPanel"></div>
   <div class="de-canvas-wrap" data-role="canvasWrap">
     <div class="de-canvas"></div>
     <span class="de-zoom-reset" data-role="btnZoomReset">Reset</span>
@@ -1764,6 +1769,48 @@ body,.page-content{overscroll-behavior-y:contain}
     };
   }
 
+  // Panel daftar Balok Melintang di tab Tiang. Muncul selalu di mode tiang (form tambah harus
+  // terjangkau); baris ceklis tak diperlukan (balok pasti dipakai, tak ada konsep nonaktif).
+  renderBalokPanel(mem) {
+    const panel = this._q('[data-role=balokPanel]');
+    if (!panel) return;
+    if (this.mode !== 'tiang') { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+    panel.style.display = '';
+    const list = this.S.balok || [];
+    const desc = (end) => end && end.t != null ? 'T' + (end.t + 1) : 'bebas';
+    const rows = !this.balokPanelOpen ? '' : list.map(b => {
+      const a = DenahConv.resolveBalokEndpoint(this.S, b.a), c = DenahConv.resolveBalokEndpoint(this.S, b.b);
+      const panj = (a && c) ? Math.round(Math.hypot(c.x - a.x, c.y - a.y)) + 'cm' : 'ref patah';
+      const sel = this.selBalok === b.no;
+      return `<div class="de-tiang-item" data-brow="${b.no}" style="${sel ? 'background:#fef9c3;border-radius:6px;padding-left:4px;' : ''}">
+        <div class="de-tiang-head">
+          <div><b style="font-size:12px">B${b.no}</b> <span style="color:#64748b;font-size:11px">${desc(b.a)}↔${desc(b.b)} · ${b.material} · ${panj}</span></div>
+          <div class="de-tiang-actions">
+            <span class="de-mini" data-role="bFokus" data-no="${b.no}">Fokus</span>
+            <span class="de-mini" data-role="bBesi" data-no="${b.no}">Ganti besi</span>
+            <span class="de-mini" data-role="bHapus" data-no="${b.no}">Hapus</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    panel.innerHTML =
+      `<div class="de-tiang-head">
+        <b style="font-size:12px">Balok Melintang (${list.length})</b>
+        <span class="de-mini" data-role="bLipat">${this.balokPanelOpen ? 'Lipat' : 'Buka'}</span>
+      </div>${rows}<div data-role="bMsg" style="font-size:11px;color:#dc2626;margin-top:4px"></div>`;
+    this._q('[data-role=bLipat]').onclick = () => { this.balokPanelOpen = !this.balokPanelOpen; this.renderBalokPanel(mem); };
+    panel.querySelectorAll('[data-role=bFokus]').forEach(btn => btn.onclick = () => { this.selBalok = +btn.dataset.no; this.balokPanelOpen = true; this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' }); this.render(); });
+    panel.querySelectorAll('[data-role=bHapus]').forEach(btn => btn.onclick = () => {
+      const no = +btn.dataset.no;
+      this.pushUndo();
+      this.S.balok = (this.S.balok || []).filter(x => x.no !== no);
+      delete this.S.matOverride['B' + no];
+      if (this.selBalok === no) this.selBalok = null;
+      this.render();
+    });
+    panel.querySelectorAll('[data-role=bBesi]').forEach(btn => btn.onclick = (ev) => this.openMatMenu(ev, 'B' + btn.dataset.no));
+  }
+
   // Ghost preview garis support numerik (pola sama drawTiangPreview): dashed cyan per potongan.
   // entries [] / tombol Batal = hapus preview.
   drawSupJalurPreview(entries) {
@@ -1857,11 +1904,11 @@ body,.page-content{overscroll-behavior-y:contain}
     this.menuId = id;
     const cur = this.S.matOverride[id] || '';
     const pick = this._q('[data-role=matPick]');
-    pick.value = cur || (id[0] === 'F' ? this.S.matDefault.frame : id[0] === 'T' ? this.S.matDefault.tiang : this.S.matDefault.support);
+    pick.value = cur || (id[0] === 'F' ? this.S.matDefault.frame : id[0] === 'T' ? this.S.matDefault.tiang : id[0] === 'B' ? this.S.matDefault.balok : this.S.matDefault.support);
     // Label biar jelas batang mana yang barusan diketuk (F3/S5/T2 — nomor SAMA seperti yang
     // tertulis di kanvas, bukan id internal), biar user yakin ini batang yang benar sebelum ganti.
     const mem = this.getMembers();
-    const jenisNama = { frame: 'Frame', support: 'Support', tiang: 'Tiang' };
+    const jenisNama = { frame: 'Frame', support: 'Support', tiang: 'Tiang', balok: 'Balok' };
     const m = mem.find(x => x.id === id);
     let label = id;
     if (!m && id.startsWith('SL')) {
@@ -1877,6 +1924,8 @@ body,.page-content{overscroll-behavior-y:contain}
       if (m.jenis === 'support') {
         code = id.startsWith('SL') ? 'S' + id.slice(2)
              : id.startsWith('Sm_') ? 'S' + DenahConv.numberSupportsManual(mem)[id] : 'grid';
+      } else if (m.jenis === 'balok') {
+        code = m.nama;   // "B3"
       } else {
         code = m.nama;
       }
@@ -2162,6 +2211,36 @@ body,.page-content{overscroll-behavior-y:contain}
     mem.filter(m => m.jenis === 'tiang').forEach((m, i) => { const c = cmap[m.material]; const p = m.geom.p;
       s += `<circle id="tc${i}" cx="${X(p.x)}" cy="${Y(p.y)}" r="6" fill="${c}" stroke="#0f2740" stroke-width="1.5" data-id="${m.id}" class="hit"><title>Tiang ${m.material} • ${m.panjang}cm</title></circle>`;
       s += `<text id="tl${i}" x="${X(p.x) + 10}" y="${Y(p.y) + 5}" fill="#fbbf24" font-size="13" font-weight="700" paint-order="stroke" stroke="#0f2740" stroke-width="4">T${i + 1}</text>`; });
+    // Balok melintang (Portal/Bracing). Layer di atas support, di bawah frame — visual utama.
+    // Ref tiang patah? `buildMembers` sudah menyaringnya (member tak dibuat); di sini pakai `mem` filter.
+    const bSel = this.selBalok;
+    mem.filter(m => m.jenis === 'balok').forEach(m => {
+      const c = cmap[m.material];
+      const no = +m.id.slice(1);
+      const selected = bSel === no;
+      const stroke = selected ? '#facc15' : (c || '#a855f7');
+      const sw = selected ? 8 : 6;
+      const ax = X(m.geom.a.x), ay = Y(m.geom.a.y), bx = X(m.geom.b.x), by = Y(m.geom.b.y);
+      s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round"><title>${m.material} • ${m.panjang}cm</title></line>`;
+      s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="18" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
+      // Label di titik tengah ikut arah garis (pola sama frame — jangan pernah terbalik).
+      const lx = (ax + bx) / 2, ly = (ay + by) / 2;
+      let ang = Math.atan2(by - ay, bx - ax) * 180 / Math.PI;
+      if (ang > 90 || ang <= -90) ang += 180;
+      const fullText = `${m.nama} · ${m.material} · ${m.panjang}`;
+      const shortText = m.nama;
+      const label = DenahConv.supportLabelText(fullText, shortText, dist(m.geom.a, m.geom.b) * this.SC, selected);
+      if (label) s += `<text x="${lx}" y="${ly - 10}" fill="#e2e8f0" font-size="12" font-weight="700" text-anchor="middle" dominant-baseline="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3" transform="rotate(${ang} ${lx} ${ly - 10})">${label}</text>`;
+    });
+    // Endpoint marker (visual saja): ref tiang = solid ungu, bebas = kosong.
+    (S.balok || []).forEach(b => {
+      const a = DenahConv.resolveBalokEndpoint(S, b.a), c = DenahConv.resolveBalokEndpoint(S, b.b);
+      [['a', a, b.a], ['b', c, b.b]].forEach(([, pt, end]) => {
+        if (!pt) return;
+        const cx = X(pt.x), cy = Y(pt.y), isTiang = end && end.t != null;
+        s += `<circle cx="${cx}" cy="${cy}" r="5" fill="${isTiang ? '#a855f7' : '#0f2740'}" stroke="#a855f7" stroke-width="2" style="pointer-events:none"/>`;
+      });
+    });
     if (this.armed === 'addBox' && this.boxPreview.sisiIdx != null) {
       const pv = this.computeBoxPreviewVerts();
       const pts = [pv.p1, pv.p4, pv.p3, pv.p2].map(p => `${X(p.x)},${Y(p.y)}`).join(' ');
@@ -2180,11 +2259,19 @@ body,.page-content{overscroll-behavior-y:contain}
     this._q('[data-role=legend]').innerHTML = used.length
       ? used.map(n => `<span><span class="de-sw" style="background:${cmap[n]}"></span><b>${n}</b></span>`).join('')
       : '<span style="color:#94a3b8">Belum ada batang</span>';
+    // Info tambahan batang WF (dibeli per-batang 6m; sisa potongan biar user tulis manual di catatan RAB).
+    const batang = DenahConv.hitungBatangWF(mem);
+    const batangKeys = Object.keys(batang);
+    if (batangKeys.length) {
+      this._q('[data-role=legend]').innerHTML += ' <span style="margin-left:12px;color:#a855f7;font-weight:600">' +
+        batangKeys.map(k => `${k}: ${batang[k]} batang 6m`).join(' · ') + '</span>';
+    }
     this._q('[data-role=luas]').textContent = (shoelace(S.verts) / 10000).toFixed(2) + ' m²';
     this.renderSides(mem);
     this.renderBoxPanel();
     this.renderTiangPanel(mem);
     this.renderSupportPanel(mem);
+    this.renderBalokPanel(mem);
     this._changed();
   }
 
