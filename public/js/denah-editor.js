@@ -997,7 +997,14 @@ body,.page-content{overscroll-behavior-y:contain}
       if (this._tiangAddPt) { this.pushUndo(); this.S.tiang.push(this.clampTiang(this._tiangAddPt)); this._closeTiangMenu(); this.render(); }
     };
     this._q('[data-role=tiangMenuHapus]').onclick = () => {
-      if (this._tiangMenuIdx != null) { this.pushUndo(); this.S.tiang.splice(this._tiangMenuIdx, 1); this._closeTiangMenu(); this.render(); }
+      if (this._tiangMenuIdx != null) {
+        this.pushUndo();
+        const i = this._tiangMenuIdx;
+        const affected = (this.S.balok || []).filter(b => (b.a.t === i) || (b.b.t === i)).length;
+        Object.assign(this.S, DenahConv.cascadeTiangRemoval(this.S, i));
+        if (affected) this.setHint(`${affected} balok yg terhubung tiang T${i + 1} dibekukan ujungnya jadi titik bebas.`);
+        this._closeTiangMenu(); this.render();
+      }
     };
     this._q('[data-role=tiangMenuGanti]').onclick = e => {
       if (this._tiangMenuIdx != null) { const id = 'T' + this._tiangMenuIdx; this._closeTiangMenu(); this.openMatMenu(e, id); }
@@ -1281,6 +1288,7 @@ body,.page-content{overscroll-behavior-y:contain}
     if (this.armed !== 'addV' && this.armed !== 'delV') this.armed = null;
     this.boxPreview = null; this.addSupportPt = null;
     this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
+    this.selBalok = null;
     if (!this.undoStack.length) { this.setHint('Tak ada langkah untuk di-undo'); return; }
     this.redoStack.push(JSON.stringify(this.S)); if (this.redoStack.length > 40) this.redoStack.shift();
     // Assignment wholesale (bukan Object.assign): snapshot = state utuh, Object.assign tak
@@ -1293,6 +1301,7 @@ body,.page-content{overscroll-behavior-y:contain}
     if (this.armed !== 'addV' && this.armed !== 'delV') this.armed = null;  // lihat catatan di undo()
     this.boxPreview = null; this.addSupportPt = null;
     this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
+    this.selBalok = null;
     if (!this.redoStack.length) { this.setHint('Tak ada langkah untuk di-redo'); return; }
     this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift();
     // Sama seperti undo(): assignment wholesale, bukan Object.assign (lihat catatan di atas).
@@ -1553,7 +1562,9 @@ body,.page-content{overscroll-behavior-y:contain}
       btn.onclick = () => {
         const i = +btn.dataset.i;
         this.pushUndo();
-        this.S.tiang.splice(i, 1);
+        const affected = (this.S.balok || []).filter(b => (b.a.t === i) || (b.b.t === i)).length;
+        Object.assign(this.S, DenahConv.cascadeTiangRemoval(this.S, i));
+        if (affected) this.setHint(`${affected} balok terhubung dibekukan.`);
         this.render();
       };
     });
@@ -1794,12 +1805,37 @@ body,.page-content{overscroll-behavior-y:contain}
         </div>
       </div>`;
     }).join('');
+    const nTiang = (this.S.tiang || []).length;
+    const opsTiang = Array.from({ length: nTiang }, (_, i) => `<option value="${i}">T${i + 1}</option>`).join('');
+    const opsBesi = this.besi.map(b => `<option>${b.nama}</option>`).join('');
+    const endHtml = (label, prefix) => `
+      <div style="border:1px solid #e2e8f0;border-radius:6px;padding:6px;margin-top:4px">
+        <label style="font-size:11px;color:#334155">${label}
+          <select data-role="${prefix}Tipe" style="margin-left:6px"><option value="t">Tiang</option><option value="p">Titik bebas</option></select>
+        </label>
+        <div data-role="${prefix}Tiang" style="margin-top:4px"><label style="font-size:11px">Tiang<select data-role="${prefix}T" ${nTiang ? '' : 'disabled'}>${opsTiang || '<option>—</option>'}</select></label></div>
+        <div data-role="${prefix}Bebas" style="display:none;margin-top:4px" class="de-tiang-fields">
+          <label style="font-size:11px">X (cm)<input type="text" inputmode="decimal" data-role="${prefix}X"></label>
+          <label style="font-size:11px">Y (cm)<input type="text" inputmode="decimal" data-role="${prefix}Y"></label>
+        </div>
+      </div>`;
+    const form = !this.balokPanelOpen ? '' :
+      `<div class="de-tiang-item" style="border-bottom:0">
+        <div class="de-tiang-head"><b style="font-size:12px">+ Balok melintang</b></div>
+        ${endHtml('Ujung 1', 'b1')}
+        ${endHtml('Ujung 2', 'b2')}
+        <div style="margin-top:6px"><label style="font-size:11px">Besi<select data-role="bMat">${opsBesi}</select></label></div>
+        <div class="de-tiang-actions" style="margin-top:6px">
+          <span class="de-mini de-tiang-apply" data-role="bTambah">Tambah</span>
+          <span class="de-mini" data-role="bBatal">Batal</span>
+        </div>
+      </div>`;
     panel.innerHTML =
       `<div class="de-tiang-head">
         <b style="font-size:12px">Balok Melintang (${list.length})</b>
         <span class="de-mini" data-role="bLipat">${this.balokPanelOpen ? 'Lipat' : 'Buka'}</span>
-      </div>${rows}<div data-role="bMsg" style="font-size:11px;color:#dc2626;margin-top:4px"></div>`;
-    this._q('[data-role=bLipat]').onclick = () => { this.balokPanelOpen = !this.balokPanelOpen; this.renderBalokPanel(mem); };
+      </div>${rows}${form}<div data-role="bMsg" style="font-size:11px;color:#dc2626;margin-top:4px"></div>`;
+    this._q('[data-role=bLipat]').onclick = () => { this.clearBalokPreview(); this.balokPanelOpen = !this.balokPanelOpen; this.renderBalokPanel(mem); };
     panel.querySelectorAll('[data-role=bFokus]').forEach(btn => btn.onclick = () => { this.selBalok = +btn.dataset.no; this.balokPanelOpen = true; this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' }); this.render(); });
     panel.querySelectorAll('[data-role=bHapus]').forEach(btn => btn.onclick = () => {
       const no = +btn.dataset.no;
@@ -1810,7 +1846,79 @@ body,.page-content{overscroll-behavior-y:contain}
       this.render();
     });
     panel.querySelectorAll('[data-role=bBesi]').forEach(btn => btn.onclick = (ev) => this.openMatMenu(ev, 'B' + btn.dataset.no));
+    if (!this.balokPanelOpen) return;
+    this._q('[data-role=bMat]').value = this.S.matDefault.balok;
+    const updatePreview = () => {
+      const a = this._readBalokEnd('b1'), b = this._readBalokEnd('b2');
+      const pa = a && DenahConv.resolveBalokEndpoint(this.S, a), pb = b && DenahConv.resolveBalokEndpoint(this.S, b);
+      this.drawBalokPreview(pa && pb ? { a: pa, b: pb } : null);
+    };
+    ['b1', 'b2'].forEach(prefix => {
+      const tipeSel = this._q(`[data-role=${prefix}Tipe]`);
+      const toggleTipe = () => {
+        const isTiang = tipeSel.value === 't';
+        this._q(`[data-role=${prefix}Tiang]`).style.display = isTiang ? '' : 'none';
+        this._q(`[data-role=${prefix}Bebas]`).style.display = isTiang ? 'none' : '';
+        updatePreview();
+      };
+      tipeSel.onchange = toggleTipe;
+      this._q(`[data-role=${prefix}T]`).onchange = updatePreview;
+      this._q(`[data-role=${prefix}X]`).oninput = updatePreview;
+      this._q(`[data-role=${prefix}Y]`).oninput = updatePreview;
+      toggleTipe();
+    });
+    const bTambah = this._q('[data-role=bTambah]');
+    if (bTambah) bTambah.onclick = () => {
+      const a = this._readBalokEnd('b1'), b = this._readBalokEnd('b2');
+      const mat = this._q('[data-role=bMat]').value;
+      if (!a || !b) { this._q('[data-role=bMsg]').textContent = 'Lengkapi kedua ujung (pilih tiang atau isi X/Y titik bebas).'; return; }
+      const pa = DenahConv.resolveBalokEndpoint(this.S, a), pb = DenahConv.resolveBalokEndpoint(this.S, b);
+      if (!pa || !pb || (pa.x === pb.x && pa.y === pb.y)) { this._q('[data-role=bMsg]').textContent = 'Dua ujung tak boleh sama.'; return; }
+      this.pushUndo();
+      this.S.balok = this.S.balok || [];
+      const no = Math.max(this.S.balokSeq || 1, ...this.S.balok.map(x => x.no + 1), 1);
+      this.S.balok.push({ no, a, b, material: mat });
+      this.S.balokSeq = no + 1;
+      this.selBalok = no;
+      this.setHint(`Balok B${no} ditambah.`);
+      this.render();
+    };
+    const bBatal = this._q('[data-role=bBatal]');
+    if (bBatal) bBatal.onclick = () => { this.clearBalokPreview(); this._q('[data-role=bMsg]').textContent = ''; };
   }
+
+  // Baca form ujung (prefix b1/b2) → {t:i} | {p:{x,y}} | null (belum lengkap).
+  _readBalokEnd(prefix) {
+    const tipe = this._q(`[data-role=${prefix}Tipe]`).value;
+    if (tipe === 't') {
+      const sel = this._q(`[data-role=${prefix}T]`);
+      const t = +sel.value;
+      return Number.isInteger(t) && (this.S.tiang || [])[t] ? { t } : null;
+    }
+    const x = DenahConv.parseCmValue(this._q(`[data-role=${prefix}X]`).value);
+    const y = DenahConv.parseCmValue(this._q(`[data-role=${prefix}Y]`).value);
+    return (x != null && y != null) ? { p: { x, y } } : null;
+  }
+
+  // Ghost preview garis Balok (pola sama drawSupJalurPreview): dashed ungu.
+  drawBalokPreview(seg) {
+    const svg = this._q('.de-canvas svg');
+    if (!svg) return;
+    const old = svg.querySelector('[data-balok-preview]');
+    if (old) old.remove();
+    if (!seg) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('data-balok-preview', '1');
+    g.setAttribute('style', 'pointer-events:none');
+    const ln = document.createElementNS(NS, 'line');
+    [['x1', this.PAD + seg.a.x * this.SC], ['y1', this.PAD + seg.a.y * this.SC],
+     ['x2', this.PAD + seg.b.x * this.SC], ['y2', this.PAD + seg.b.y * this.SC]].forEach(([k, v]) => ln.setAttribute(k, v));
+    ln.setAttribute('stroke', '#a855f7'); ln.setAttribute('stroke-width', '4'); ln.setAttribute('stroke-dasharray', '8,5');
+    g.appendChild(ln);
+    svg.appendChild(g);
+  }
+  clearBalokPreview() { this.drawBalokPreview(null); }
 
   // Ghost preview garis support numerik (pola sama drawTiangPreview): dashed cyan per potongan.
   // entries [] / tombol Batal = hapus preview.
@@ -2102,6 +2210,8 @@ body,.page-content{overscroll-behavior-y:contain}
     // Validasi selSup + reset moveOn HARUS jalan duluan, baru sinkron visual tombol move di
     // bawahnya -- kalau kebalik, toggle 'on' sempat kepasang pakai nilai moveOn lama (basi).
     if (this.selSup != null && !(DenahConv.isLocked(this.S) && this.S.supportsLocked.some(e => e.no === this.selSup))) this.selSup = null;
+    // Sorotan Balok basi (dihapus / Undo balikin ke snapshot tanpa entri itu) -- pola sama selSup.
+    if (this.selBalok != null && !(this.S.balok || []).some(b => b.no === this.selBalok)) this.selBalok = null;
     // Undo bisa balikin kunci -> pratinjau (supportsLocked=null) sementara moveOn tetap nyala dari
     // sebelumnya -- tombol jadi "on" padahal tak ada entri terkunci. Reset di sini (titik validasi
     // yang sama), bukan di undo()/redo(), biar semua jalur balik-ke-pratinjau otomatis konsisten.
@@ -2874,7 +2984,7 @@ body,.page-content{overscroll-behavior-y:contain}
   getModel() { return JSON.parse(JSON.stringify(this.S)); }
   getMembers() { return DenahConv.buildMembers(this.S); }
   getLuas() { return DenahConv.luasM2(this.S); }
-  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
+  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.selBalok = null; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
 }
 
 // ---- self-check ringkas, browser-only (guard: tak jalan di produksi/Node) ----
