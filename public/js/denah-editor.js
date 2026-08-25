@@ -2315,8 +2315,14 @@ body,.page-content{overscroll-behavior-y:contain}
     s += '</g>';
     // frame (tebal) + label sisi — tiap sisi id fl{i}/fll{i} biar bisa diupdate saat seret
     mem.filter(m => m.jenis === 'frame').forEach((m, i) => { const c = cmap[m.material]; const a = m.geom.a, b = m.geom.b;
-      s += `<line id="fl${i}" x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="${c}" stroke-width="5" stroke-linecap="round"><title>${m.material} • ${m.panjang}cm</title></line>`;
-      s += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="transparent" stroke-width="16" data-id="${m.id}" class="hit" style="cursor:pointer"/>`;
+      // Garis tampak frame TIDAK ikut hit-testing (tooltip pindah ke pita sentuh), dan pita
+      // sentuhnya digating ke mode yang MEMANG mengonsumsi tap frame (bentuk: ketik sisi/+Sudut/
+      // kotak; besi: ganti material). Tanpa gating ini, ujung support manual hasil ketik-posisi
+      // (yang selalu jatuh PERSIS di garis frame) ketutup pita frame -> gak bisa ditarik di mode
+      // support (laporan Elvan 25 Ags, Tes 1 no.4). Pola sama gating balok/vhit.
+      const fpe = (this.mode === 'bentuk' || this.mode === 'besi') ? 'auto' : 'none';
+      s += `<line id="fl${i}" x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="${c}" stroke-width="5" stroke-linecap="round" style="pointer-events:none"/>`;
+      s += `<line x1="${X(a.x)}" y1="${Y(a.y)}" x2="${X(b.x)}" y2="${Y(b.y)}" stroke="transparent" stroke-width="16" data-id="${m.id}" class="hit" style="cursor:pointer;pointer-events:${fpe}"><title>${m.material} • ${m.panjang}cm</title></line>`;
       const fla = this._frameLabelAttrs(a, b);
       s += `<text id="fll${i}" x="${fla.lx}" y="${fla.ly}" fill="#e2e8f0" font-size="13" text-anchor="middle" dominant-baseline="middle" paint-order="stroke" stroke="#0f2740" stroke-width="3" transform="rotate(${fla.ang} ${fla.lx} ${fla.ly})">F${i + 1} · ${m.panjang}</text>`; });
     // kotak-support (Gabungan Kotak): hit-area transparan per kotak buat drag-kotak-utuh. Dirender
