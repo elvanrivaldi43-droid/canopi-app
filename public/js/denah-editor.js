@@ -1840,7 +1840,16 @@ body,.page-content{overscroll-behavior-y:contain}
         <span class="de-mini" data-role="bLipat">${this.balokPanelOpen ? 'Lipat' : 'Buka'}</span>
       </div>${rows}${form}<div data-role="bMsg" style="font-size:11px;color:#dc2626;margin-top:4px"></div>`;
     this._q('[data-role=bLipat]').onclick = () => { this.clearBalokPreview(); this.balokPanelOpen = !this.balokPanelOpen; this.renderBalokPanel(mem); };
-    panel.querySelectorAll('[data-role=bFokus]').forEach(btn => btn.onclick = () => { this.selBalok = +btn.dataset.no; this.balokPanelOpen = true; this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' }); this.render(); });
+    // Fokus = toggle: tap lagi di baris yang sama melepas sorotan (satu-satunya jalur lepas
+    // sorot balok -- balok tak bisa ditap di kanvas kecuali mode besi, jadi tanpa toggle ini
+    // halo sorot nempel selamanya).
+    panel.querySelectorAll('[data-role=bFokus]').forEach(btn => btn.onclick = () => {
+      const no = +btn.dataset.no;
+      if (this.selBalok === no) { this.selBalok = null; this.render(); return; }
+      this.selBalok = no; this.balokPanelOpen = true;
+      this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
+      this.render();
+    });
     panel.querySelectorAll('[data-role=bHapus]').forEach(btn => btn.onclick = () => {
       const no = +btn.dataset.no;
       this.pushUndo();
@@ -2338,12 +2347,16 @@ body,.page-content{overscroll-behavior-y:contain}
       const c = cmap[m.material];
       const no = +m.id.slice(1);
       const selected = bSel === no;
-      const stroke = selected ? '#facc15' : (c || '#a855f7');
-      const sw = selected ? 8 : 6;
+      const stroke = c || '#a855f7';
       const ax = X(m.geom.a.x), ay = Y(m.geom.a.y), bx = X(m.geom.b.x), by = Y(m.geom.b.y);
+      // Tersorot = HALO kuning DI BAWAH garis, bukan mengganti warnanya -- garis balok selalu
+      // tampil warna besi aslinya. Dulu tersorot = seluruh garis jadi kuning; karena sorotan balok
+      // awet (gak ada tap-lepas di kanvas spt support), ganti besi kelihatan "warnanya gak
+      // berubah" padahal cuma ketutup highlight (laporan Elvan 25 Ags).
+      if (selected) s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#facc15" stroke-width="12" stroke-linecap="round" style="pointer-events:none"/>`;
       // Hit-testing digating ke mode 'besi' saja (satu-satunya konsumen id 'B{n}', lihat bindSvg) --
       // di mode lain layer ini transparan ke event biar gak nelan tap tab Rangka/Support di bawahnya.
-      s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" style="pointer-events:${this.mode === 'besi' ? 'auto' : 'none'}"/>`;
+      s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="${stroke}" stroke-width="6" stroke-linecap="round" style="pointer-events:${this.mode === 'besi' ? 'auto' : 'none'}"/>`;
       s += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="transparent" stroke-width="18" data-id="${m.id}" class="hit" style="cursor:pointer;pointer-events:${this.mode === 'besi' ? 'auto' : 'none'}"><title>${m.material} • ${m.panjang}cm</title></line>`;
       // Label di titik tengah ikut arah garis (pola sama frame — jangan pernah terbalik).
       const lx = (ax + bx) / 2, ly = (ay + by) / 2;
