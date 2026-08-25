@@ -2577,7 +2577,9 @@ body,.page-content{overscroll-behavior-y:contain}
               const no = this.S.lockSeq || 1;
               this.S.supportsLocked.push({ no, manual: true, a: this.addSupportPt, b: { x: this.snap(cm.x), y: this.snap(cm.y) }, aktif: true });
               this.S.lockSeq = no + 1;      // entri baru melanjutkan nomor (spec 2.2)
-              this.addSupportPt = null; this.armed = null; this.selSup = no; this.supPanelOpen = true; this.setHint(); this.render();
+              // supPanelOpen SENGAJA tidak dipaksa: panel di ATAS kanvas — buka otomatis bikin
+              // layout loncat & tap berikutnya meleset (laporan Elvan 25 Ags).
+              this.addSupportPt = null; this.armed = null; this.selSup = no; this.setHint(); this.render();
             }
             return;
           }
@@ -2601,7 +2603,9 @@ body,.page-content{overscroll-behavior-y:contain}
           const sameSpot = this._lastPickPt && dist(cm, this._lastPickPt) < TH;
           this._lastPickPt = cm;
           this.selSup = +((k >= 0 && sameSpot) ? ids[(k + 1) % ids.length] : ids[0]).slice(2);
-          this.supPanelOpen = true;   // panel daftar Support (Task 5) harus kebuka saat sorot dari kanvas
+          // Panel TIDAK dibuka otomatis dari tap kanvas (dulu iya): panel di ATAS kanvas, buka
+          // otomatis mendorong kanvas turun di bawah jari -> tap berikutnya meleset ke garis lain
+          // + kerasa ribet (laporan Elvan 25 Ags). Buka panel = manual lewat tombol "Buka".
           this.render();
           return;
         }
@@ -2846,6 +2850,14 @@ body,.page-content{overscroll-behavior-y:contain}
           e2[drag.end] = snapped;
           const px2 = PAD + snapped.x * this.SC, py2 = PAD + snapped.y * this.SC;
           if (drag.h) { drag.h.setAttribute('cx', px2); drag.h.setAttribute('cy', py2); }
+          // GARIS ikut jari live (bukan cuma titiknya) — dulu garis baru pindah saat jari
+          // dilepas, kerasa "seluruh garis loncat/miring tiba-tiba" (laporan Elvan 25 Ags).
+          // Entri manual terkunci = 1 potongan -> id 'slg{no}_0'. Pola sama drag 'sup' pratinjau.
+          const lline = el.querySelector('#slg' + drag.no + '_0');
+          if (lline) {
+            lline.setAttribute(drag.end === 'a' ? 'x1' : 'x2', px2);
+            lline.setAttribute(drag.end === 'a' ? 'y1' : 'y2', py2);
+          }
         }
       }
     });
