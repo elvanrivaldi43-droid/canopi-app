@@ -396,10 +396,10 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    **Residual sadar (bukan bug, dicatat dari review):** (a) Simpan Final di
    tab yang sudah konflik masih BISA menimpa (aksi eksplisit; confirm-nya
    sudah diberi peringatan keras); (b) race autoSave vs simpanFinal bisa
-   bikin 1x dialog 409 palsu — draft aman, reload memulihkan. **Perlu cek
-   Bos 1x di phpMyAdmin:** kolom `pipeline_leads.rab_snapshot` idealnya
-   LONGTEXT + utf8mb4 — kalau TEXT 64KB, snapshot besar kepotong diam-diam
-   (bahaya lama yang kini juga bikin guard md5 selalu konflik).
+   bikin 1x dialog 409 palsu — draft aman, reload memulihkan. Kolom
+   `pipeline_leads.rab_snapshot` SUDAH DICEK Bos 27 Ags: LONGTEXT — aman,
+   tak ada risiko snapshot kepotong. Seluruh #9 TERVALIDASI di HP 27 Ags
+   (tes mode pesawat + draft pulih + konflik dua tab ditolak).
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 
