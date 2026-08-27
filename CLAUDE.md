@@ -348,6 +348,13 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    diganti combobox custom ketik-cari (`_wireBesiCombo()`, 1 implementasi
    4 titik pakai; nilai tak valid saat blur direvert, native `<input
    list=datalist>` sengaja dihindari — dukungan iOS Safari tak konsisten).
+   **Bug ditemukan Bos 27 Ags malam & sudah difix:** fokus ke input tadinya
+   manggil `input.select()` -- di iOS Safari itu memicu menu sistem
+   "Potong/Salin/Tempel/Isi-Auto" yang nutupin & rebutan sentuhan sama
+   dropdown custom di bawahnya, jadi dropdown "selalu hilang" pas mau tap
+   pilih hasil pencarian. Fix: kosongkan `.value` langsung saat fokus
+   (bukan select-all) -- tak memicu menu sistem itu, blur tetap balik ke
+   nilai lama otomatis kalau ditinggal kosong tanpa pilih apa-apa.
    (d) Ukur Sisi: awalnya chip F1..Fn (tap dulu baru kotak ketik muncul),
    lalu direvisi lagi jadi **dropdown** pilih F1..Fn + checkbox "Tampilkan
    semua" di sampingnya (checked = semua kotak ketik F1..Fn muncul
@@ -367,8 +374,9 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    Support (hapus tiang → `selTiang` direset null krn indeks ikut geser;
    tambah tiang baru → auto-terpilih). Diverifikasi node --check + 13 test
    .mjs rangka + canopi-check --full sebelum tiap push; commit
-   `540dbcd..HEAD`. **Belum ada laporan validasi manual HP** utk versi
-   dropdown ini.
+   `540dbcd..HEAD`. **Dropdown Support/Tiang & Ukur Sisi SUDAH dicoba Bos
+   di HP dan OK** ("sudah berhasil semua"); yang tersisa cuma bug combobox
+   besi di atas (poin c) -- fix-nya belum dicoba ulang di HP.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.

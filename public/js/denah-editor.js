@@ -920,7 +920,12 @@ body,.page-content{overscroll-behavior-y:contain}
         : '<div class="de-combo-empty">Tak ditemukan</div>';
       listEl.style.display = 'block';
     };
-    input.addEventListener('focus', () => { lastGood = input.value; input.select(); filterList(''); });
+    // Kosongkan (bukan input.select()) saat fokus -- .select() di iOS Safari memicu menu sistem
+    // "Potong/Salin/Tempel/Isi-Auto" yang nutupin & rebutan sentuhan sama dropdown custom di
+    // bawahnya (laporan Elvan 27 Ags: dropdown "selalu hilang" pas mau tap pilih -- bukan bug
+    // tap-nya). Set .value langsung (bukan seleksi) tidak memicu menu itu, dan blur tetap balik
+    // ke lastGood otomatis kalau dikosongin lalu ditinggal tanpa pilih apa-apa.
+    input.addEventListener('focus', () => { lastGood = input.value; input.value = ''; filterList(''); });
     input.addEventListener('input', () => filterList(input.value));
     // pointerdown (bukan click) + preventDefault: cegah input blur duluan sebelum tap kebaca
     // (pola combobox standar -- blur akan nutup listEl sebelum click sempat jalan kalau tidak).
