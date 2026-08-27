@@ -406,6 +406,27 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    belum sempat dilaporkan tapi kena bug sama). Diverifikasi node
    --check + 13 test .mjs rangka + canopi-check --full. Belum ada
    laporan validasi manual HP.
+   (g) **Permintaan Elvan 27 Ags malam — konvensi posisi Support disamakan
+   ke Tiang + panjang ditambahkan ke deskripsi:** sumbu H (`datar`) di
+   `describeLockedSupport` dulu "Ncm dari atas" diukur dari `bb.y0` (tepi
+   atas model) -- BEDA dari panel Tiang yang originnya `bb.y1`
+   ("depan"/sisi terbuka kanopi, lihat `tiangToOffset`/`denahOrigin`).
+   Diubah jadi "Ncm dari depan" diukur dari `bb.y1`, PERSIS konvensi
+   Tiang (sumbu V "dari kiri"/`bb.x0` sudah cocok dari awal, tak diubah).
+   `manualEntriesFromJalur` (form "+ Garis support ketik posisi") ikut
+   diubah ke `bb.y1 - cmRel` biar angka yang diketik & yang ditampilkan
+   di panel konsisten satu arti. **Panjang ditambahkan** ke deskripsi
+   (mis. "datar · 151cm dari depan · 400cm") -- dijumlah dari member
+   ber-id sama di `mem` (`buildMembers`), BUKAN dihitung ulang manual, jadi
+   otomatis benar kalau garis kepotong coakan jadi >1 potongan (jumlah
+   total, sama logika hitungan besi yang sudah ada). `describeLockedSupport`
+   nambah parameter `mem` opsional (dua pemanggil di `renderSupportPanel`
+   sudah punya `mem` di scope, tinggal diteruskan). Entri manual TIDAK
+   diubah (sudah tampilkan panjang dari awal, tanpa posisi). Test lama
+   `test_support_pick.mjs`/`test_support_jalur_manual.mjs` disesuaikan +
+   3 assert baru utk parameter `mem`. Diverifikasi node --check + 13 test
+   .mjs rangka (tanpa FAIL) + canopi-check --full. Belum ada laporan
+   validasi manual HP.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.

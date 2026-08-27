@@ -37,7 +37,7 @@ check('di luar frame -> []', DenahConv.jalurSegments(rect(), 'h', 999), []);
 // ── manualEntriesFromJalur: relatif tepi, nomor dari lockSeq ──
 {
   const S = notch(); S.supportsLocked = []; S.lockSeq = 7;
-  const r = DenahConv.manualEntriesFromJalur(S, 'h', 150); // bb.y0=0 -> pos 150
+  const r = DenahConv.manualEntriesFromJalur(S, 'h', 150); // bb.y1=300, dari depan -> pos 300-150=150
   check('numerik: 2 entri manual nomor 7,8', r.entries.map(e => [e.no, e.manual, e.aktif]),
     [[7, true, true], [8, true, true]]);
   check('numerik: ujung potongan pertama', r.entries[0].a, { x: 0, y: 150 });

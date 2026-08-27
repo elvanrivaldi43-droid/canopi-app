@@ -379,12 +379,21 @@ const DenahConv = {
   // Teks info baris panel (spec 2.4) — posisi RELATIF bbox frame saat ini (ikut bentuk).
   // Jalur yang kegeser sampai luar frame tak tergambar (scan kosong) tapi tetap terdaftar;
   // ditandai di sini biar user paham kenapa garisnya "hilang".
-  describeLockedSupport(S, e) {
+  // Sumbu H diukur dari DEPAN (bb.y1), BUKAN dari atas (bb.y0) -- konvensi SAMA persis panel
+  // Tiang (tiangToOffset: origin = {x:bb.x0, y:bb.y1}, "X dari kiri / Y dari depan"). "Depan"
+  // kanopi = sisi terbuka/luar (bb.y1 di koordinat model ini) -- Sumbu V ("dari kiri", bb.x0)
+  // sudah cocok dari awal dgn Tiang, tak diubah. mem (opsional) dipakai nambahin PANJANG asli
+  // (dijumlah dari member yang sudah dibangun buildMembers -- itu yang benar kalau garis
+  // kepotong coakan jadi >1 potongan, bukan re-hitung scan sendiri di sini) -- permintaan Elvan
+  // 27 Ags: panjang lebih berguna drpd cuma posisi buat milih di dropdown.
+  describeLockedSupport(S, e, mem) {
     if (e.manual) return 'manual · ' + Math.round(dist(e.a, e.b)) + 'cm';
     const bb = bbox(S.verts);
+    const panjang = mem ? mem.filter(m => m.jenis === 'support' && m.id === 'SL' + e.no).reduce((s, m) => s + m.panjang, 0) : 0;
+    const panjangTxt = panjang > 0 ? ' · ' + panjang + 'cm' : '';
     const txt = e.axis === 'h'
-      ? 'datar · ' + Math.round(e.pos - bb.y0) + 'cm dari atas'
-      : 'tegak · ' + Math.round(e.pos - bb.x0) + 'cm dari kiri';
+      ? 'datar · ' + Math.round(bb.y1 - e.pos) + 'cm dari depan' + panjangTxt
+      : 'tegak · ' + Math.round(e.pos - bb.x0) + 'cm dari kiri' + panjangTxt;
     const luar = e.axis === 'h' ? (e.pos <= bb.y0 || e.pos >= bb.y1) : (e.pos <= bb.x0 || e.pos >= bb.x1);
     return luar ? txt + ' (di luar frame)' : txt;
   },
@@ -426,13 +435,13 @@ const DenahConv = {
     }
     return out;
   },
-  // Entri manual dari posisi KETIK (cm relatif tepi atas utk datar / kiri utk tegak — konvensi
-  // sama describeLockedSupport). Satu entri per potongan (nomor lanjut lockSeq). MURNI.
-  // cmRel harus > 0: 0 = nempel tepi frame = duplikat batang frame, tolak.
+  // Entri manual dari posisi KETIK (cm relatif tepi DEPAN/bb.y1 utk datar, kiri/bb.x0 utk tegak —
+  // konvensi SAMA persis describeLockedSupport & panel Tiang). Satu entri per potongan (nomor
+  // lanjut lockSeq). MURNI. cmRel harus > 0: 0 = nempel tepi frame = duplikat batang frame, tolak.
   manualEntriesFromJalur(S, axis, cmRel) {
     if (!Number.isFinite(cmRel) || cmRel <= 0) return null;
     const bb = bbox(S.verts);
-    const pos = axis === 'h' ? bb.y0 + cmRel : bb.x0 + cmRel;
+    const pos = axis === 'h' ? bb.y1 - cmRel : bb.x0 + cmRel;
     // Hardening (review Task 1): lockSeq bisa absen/stale relatif nomor entri yang sudah ada
     // (mis. abis pecah manual tanpa lockSeq ikut disimpan) — ambil max biar nomor baru gak dobel.
     let seq = Math.max(S.lockSeq || 1, ...(S.supportsLocked || []).map(e => e.no + 1), 1);
@@ -1835,13 +1844,13 @@ body,.page-content{overscroll-behavior-y:contain}
     const picker = this.supPanelOpen ? '' : `<div style="width:100%;margin-top:6px">
       <select data-role="slPick" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
         <option value="">Pilih support…</option>
-        ${entries.map(e2 => `<option value="${e2.no}"${this.selSup === e2.no ? ' selected' : ''}>S${e2.no} — ${DenahConv.describeLockedSupport(this.S, e2)}${e2.aktif === false ? ' (nonaktif)' : ''}</option>`).join('')}
+        ${entries.map(e2 => `<option value="${e2.no}"${this.selSup === e2.no ? ' selected' : ''}>S${e2.no} — ${DenahConv.describeLockedSupport(this.S, e2, mem)}${e2.aktif === false ? ' (nonaktif)' : ''}</option>`).join('')}
       </select>
     </div>`;
     const list = this.supPanelOpen ? entries : entries.filter(e2 => e2.no === this.selSup);
     const rows = list.map(e2 => {
       const sel = e2.no === this.selSup;
-      const desc = DenahConv.describeLockedSupport(this.S, e2);
+      const desc = DenahConv.describeLockedSupport(this.S, e2, mem);
       // Arah difilter per tipe (spec 2.3): h cuma atas/bawah, v cuma kiri/kanan, manual 4 arah —
       // KECUALI manual LURUS: geser sejajar garisnya sendiri (mis. datar digeser kiri/kanan) tak
       // mengubah posisi jalur yg dipakai moveManualReclip buat re-clip, jadi no-op bisu. Cuma arah
@@ -1876,7 +1885,7 @@ body,.page-content{overscroll-behavior-y:contain}
         <div class="de-tiang-head"><b style="font-size:12px">+ Garis support (ketik posisi)</b></div>
         <div class="de-tiang-fields">
           <label>Arah<select data-role="sjAxis"><option value="h">datar</option><option value="v">tegak</option></select></label>
-          <label><span data-role="sjLbl">cm dari atas</span><input type="text" inputmode="decimal" data-role="sjPos"></label>
+          <label><span data-role="sjLbl">cm dari depan</span><input type="text" inputmode="decimal" data-role="sjPos"></label>
           <div class="de-tiang-actions"><span class="de-mini de-tiang-apply" data-role="sjTambah">Tambah</span><span class="de-mini" data-role="sjBatal">Batal</span></div>
         </div>
       </div>`;
@@ -1930,7 +1939,7 @@ body,.page-content{overscroll-behavior-y:contain}
     };
     const sjAxis = this._q('[data-role=sjAxis]'), sjPos = this._q('[data-role=sjPos]');
     if (sjAxis && sjPos) {
-      const updLbl = () => { this._q('[data-role=sjLbl]').textContent = sjAxis.value === 'h' ? 'cm dari atas' : 'cm dari kiri'; };
+      const updLbl = () => { this._q('[data-role=sjLbl]').textContent = sjAxis.value === 'h' ? 'cm dari depan' : 'cm dari kiri'; };
       const updPreview = () => {
         const cmv = DenahConv.parseCmValue(sjPos.value);
         const r = cmv != null ? DenahConv.manualEntriesFromJalur(this.S, sjAxis.value, cmv) : null;
