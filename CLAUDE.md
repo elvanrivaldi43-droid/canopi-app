@@ -471,8 +471,19 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    (mis. ganti step wizard) balikin lagi opsi/blok yang tadi dihapus,
    BUKAN bug database duplikat/gagal hapus. Fix: tambah `autoSave();` di
    akhir kedua fungsi itu (`resources/views/rab-opsi/index.blade.php`).
-   Diverifikasi canopi-check --full (Blade compile). Belum ada laporan
-   validasi manual HP.
+   **Bug SATU KELAS ditemukan lagi 27 Ags malam (langsung nyusul yg di
+   atas):** ganti "Nama opsi aktif" & nama blok (termasuk nama "Denah")
+   juga TIDAK TERSIMPAN kalau refresh -- akar masalah sama: input `opsiNama`,
+   select `opsiFinishing`, & field blok (`b-nama`, field kanopi, dst) cuma
+   update `dataset`/atribut di DOM, gak ada satupun yang manggil
+   `jadwalkanHitung()`/`autoSave()`. Cuma DenahEditor (`onChange`) & tombol
+   wizard yang punya jalur simpan; field form biasa tidak. Fix: tambah
+   `jadwalkanHitung(pane)` di listener `opsiNama`(input)/`opsiFinishing`
+   (change), dan di listener `change` level-kartu `tambahBlok()` (satu
+   listener delegated ini nangkep SEMUA field di dalam kartu -- nama blok,
+   field kanopi, dst -- sekali pasang). Diverifikasi canopi-check --full
+   (Blade compile). Belum ada laporan validasi manual HP utk kedua fix
+   "hilang saat refresh" ini (hapus opsi/blok & rename opsi/blok).
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 

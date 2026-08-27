@@ -427,10 +427,12 @@ document.getElementById('opsiNama').addEventListener('input', function(){
     pane.dataset.nama=this.value;
     const tab=document.querySelector('.tab[data-opsi="'+pane.id+'"]');
     if(tab) tab.textContent=this.value||'Opsi';
+    jadwalkanHitung(pane); // tanpa ini nama opsi cuma nempel di layar, ilang lagi kalau refresh
 });
 document.getElementById('opsiFinishing').addEventListener('change', function(){
     const pane=paneAktif(); if(!pane) return;
     pane.dataset.finishing=this.value;
+    jadwalkanHitung(pane);
 });
 
 function duplikatOpsi(){
@@ -565,7 +567,11 @@ function tambahBlok(pane, tipe, data){
         if(a.querySelector('.acc-b .row3') || (a.dataset.acc==='rangka' && card.querySelector('.b-jk'))) a.classList.add('open');
     });
     updateAccSum(card);
-    card.addEventListener('change', function(){ updateAccSum(card); });
+    // Delegated -- nangkep 'change' dari SEMUA field di kartu ini (nama blok, field kanopi,
+    // dst). Tanpa jadwalkanHitung di sini, ganti nama blok/field kanopi cuma nempel di layar,
+    // ilang lagi kalau refresh sebelum ada autosave lain kepicu (laporan Elvan 27 Ags malam:
+    // sama pola bug-nya kayak hapusOpsi/hapusBlok yang tadi -- mutasi tanpa jalur simpan).
+    card.addEventListener('change', function(){ updateAccSum(card); jadwalkanHitung(pane); });
     return card;
 }
 
