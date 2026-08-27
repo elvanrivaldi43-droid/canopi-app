@@ -427,6 +427,20 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    3 assert baru utk parameter `mem`. Diverifikasi node --check + 13 test
    .mjs rangka (tanpa FAIL) + canopi-check --full. Belum ada laporan
    validasi manual HP.
+   (h) **Preview pindah Support (permintaan Elvan 27 Ags malam, langsung
+   nyusul poin g):** form "Terapkan" pindah Support (Arah+cm, berlaku
+   utk manual MAUPUN grid/bawaan -- satu editRow yang sama) dulu commit
+   LANGSUNG begitu tombol ditekan, tanpa lihat dulu -- beda dari pola
+   Tiang (ghost preview nempel kursor sebelum Tambah). Ditambah live
+   preview: tiap ganti Arah/ketik cm, `moveManualReclip` (fungsi MURNI,
+   sudah ada) dipanggil tanpa commit, hasilnya digambar ghost dashed cyan
+   lewat `drawSupJalurPreview` (dipakai bareng form "+ Garis support" --
+   satu fungsi, dua pemakai). Preview dibersihkan otomatis tiap
+   `renderSupportPanel` beneran di-render-ulang (ganti pilihan/tab/dst)
+   supaya gak nyangkut nempel salah entri; TIDAK dibersihkan tiap
+   keystroke (biar fokus input gak ilang tiap huruf, pola sama form
+   tambah). Diverifikasi node --check + 13 test .mjs rangka + canopi-check
+   --full. Belum ada laporan validasi manual HP.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.

@@ -1777,6 +1777,12 @@ body,.page-content{overscroll-behavior-y:contain}
   renderSupportPanel(mem) {
     const panel = this._q('[data-role=supportPanel]');
     if (!panel) return;
+    // Preview pindah (ditambah di bawah) digambar LANGSUNG ke svg tanpa lewat renderSupportPanel
+    // lagi (ketik tiap huruf gak boleh render-ulang panel, ilang fokus input -- pola sama
+    // drawSupJalurPreview form tambah). Makanya harus dibersihkan manual di sini tiap panel ini
+    // BENERAN di-render-ulang (ganti pilihan/tab/dst) -- kalau tidak, preview lama nyangkut di
+    // kanvas walau form-nya udah gak ada/ganti entri.
+    this.drawSupJalurPreview([]);
     if (this.mode !== 'support') { panel.style.display = 'none'; panel.innerHTML = ''; return; }
     const locked = DenahConv.isLocked(this.S);
 
@@ -1909,6 +1915,23 @@ body,.page-content{overscroll-behavior-y:contain}
       this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
       this.render();   // render() menyorot garis di kanvas (Task 4) + melebarkan baris ini (dropdown ikut sinkron)
     });
+    // Preview pindah (permintaan Elvan 27 Ags: samain pola sama Tiang -- lihat dulu baru
+    // Terapkan). moveManualReclip MURNI (tak memutasi S), aman dipanggil tiap ketik/ganti arah;
+    // hasilnya cuma digambar ghost dashed cyan (drawSupJalurPreview, pola sama form tambah),
+    // BUKAN di-commit -- commit sungguhan tetap cuma lewat tombol Terapkan di bawah.
+    const dirEl = this._q('[data-role=slDir]'), cmEl = this._q('[data-role=slCm]');
+    if (dirEl && cmEl) {
+      const updateMovePreview = () => {
+        const e2 = entries.find(x => x.no === this.selSup);
+        const cmVal = DenahConv.parseCmValue(cmEl.value);
+        const r = e2 && cmVal != null ? DenahConv.moveManualReclip(this.S, e2, dirEl.value, cmVal) : null;
+        this.drawSupJalurPreview(r ? r.entries : []);
+        this._q('[data-role=slMsg]').textContent =
+          (cmVal != null && r && !r.entries.length) ? 'Posisi baru di luar frame — pindah akan dibatalkan.' : '';
+      };
+      dirEl.onchange = updateMovePreview;
+      cmEl.oninput = updateMovePreview;
+    }
     const applyBtn = this._q('[data-role=slApply]');
     if (applyBtn) applyBtn.onclick = () => {
       const e2 = entries.find(x => x.no === this.selSup);
