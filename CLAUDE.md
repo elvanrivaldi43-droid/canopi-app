@@ -285,9 +285,10 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    `tests/guardrail/manifest.json` di commit yang sama (deploy #127/#128 merah
    karena ini, bukan FTP flaky — cek Actions/reproduksi `php scripts/canopi-check`
    dulu sebelum nyalahin FTP).
-   **Redesign Support ID Stabil — LIVE, SEBAGIAN BESAR TERVALIDASI Bos di HP
-   (23-24 Ags).** Dua fase pratinjau→kunci otomatis, garis grid nyimpan JALUR
-   bukan ujung, toggle move quickbar, pindah=ketik angka relatif, panel ceklis.
+   **Redesign Support ID Stabil — LIVE & TERVALIDASI TUNTAS Bos di HP
+   (23-27 Ags 2026, seluruh checklist lolos).** Dua fase pratinjau→kunci
+   otomatis, garis grid nyimpan JALUR bukan ujung, toggle move quickbar,
+   pindah=ketik angka relatif, panel ceklis.
    Spec bagian 3 = batasan disengaja — jangan salah lapor bug. Spec/plan:
    `docs/superpowers/{specs,plans}/2026-08-23-denah-support-id-stabil*`.
    **Gelombang lanjutan 23-24 Ags yang juga LIVE (semua via SDD + review):**
@@ -310,23 +311,23 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    (e) **Fix jari hantu pinch** — pointermove kini refresh stempel `t`;
    sebelumnya 1 pointerup hilang (swipe notifikasi iOS) = SELURUH kanvas mati
    permanen di semua tab sampai reload (kasus nyata 24 Ags malam).
-   **Validasi manual yang SUDAH lolos:** kunci/undo-redo/sorot/pindah angka/
-   ceklis/coakan-terbelah (poin 1-7 checklist lama), label rapi, balok
-   tiang↔tiang + hapus-tiang-cascade + undo, ganti besi balok, hapus balok,
-   titik bebas, bracing diagonal, custom bebas↔bebas, legend batang WF.
-   **Validasi yang MASIH tersisa (lanjutkan dari sini):**
-   1. Tap tak nyangkut saat balok menimpa frame (tes A-E; percobaan pertama
-      gagal BUKAN karena fitur — kena jari hantu (e); ulangi setelah fix).
-   2. + Support manual fase terkunci: nomor lanjutan, tarik ujung saat
-      tersorot+move nyala, Hapus beneran (Undo balikin).
-   3. "Susun Ulang": konfirmasi, spacing hidup lagi, kunci ulang nomor lanjut.
-   4. Ganti besi garis grid → ubah bentuk frame → besi tetap nempel ke garis
-      yang sama (inti ID stabil).
-   5. Tombol "Pecah jadi manual" dipakai beneran (kasus S2 coakan).
-   6. Pindah garis manual masuk coakan → terbelah (ulang kasus S16).
-   Tombol "Pulihkan yang dihapus" masih hidup khusus fase pratinjau — pensiun
-   setelah validasi tuntas. Nomor S/B tak pernah dipakai ulang (hapus B2 →
-   berikutnya B3) = disengaja, bukan bug.
+   (f) **Polesan hasil validasi 25-27 Ags (semua LIVE & tervalidasi):** pita
+   sentuh frame digating mode bentuk/besi (ujung support di tepi frame bisa
+   ditarik); garis ikut jari live saat tarik ujung terkunci; panel Support
+   TIDAK auto-buka dari tap kanvas (layout loncat bikin tap meleset); balok
+   tersorot = halo kuning (warna besi tetap tampil) + Fokus balok jadi toggle;
+   form titik bebas balok pakai konversi X-dari-kiri/Y-dari-depan.
+   **VALIDASI MANUAL TUNTAS 27 Ags — seluruh checklist lolos:** kunci/undo/
+   sorot/pindah angka/ceklis/coakan-terbelah, label rapi, semua skenario balok
+   (tiang↔tiang, bracing, custom, cascade, ganti besi, batang WF, tap tak
+   nyangkut A-E), + support manual terkunci, Pecah jadi manual, pindah manual
+   re-clip (masuk coakan terbelah / keluar frame ditolak), besi nempel ke
+   garis saat frame berubah (inti ID stabil), Susun Ulang + nomor lanjut.
+   **Perilaku disengaja (jangan salah lapor):** nomor S/B tak pernah dipakai
+   ulang; entri manual TIDAK ikut frame saat bentuk berubah (patuh tangan
+   user; penyesuaian = pindah 1x utk memicu re-clip); tombol "Pulihkan yang
+   dihapus" tetap hidup KHUSUS fase pratinjau sesuai spec 2.5 (fase terkunci
+   pakai ceklis + toggle Semua — bukan utang lagi, jangan dihapus).
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
