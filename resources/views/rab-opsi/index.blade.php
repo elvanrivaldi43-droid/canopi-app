@@ -861,7 +861,10 @@ async function simpanKeLead(harga, mode){
     if(!LEAD){ return; }
     var url = (mode==='final') ? '{{ url("/rab-opsi/simpan-final") }}' : '{{ url("/rab-opsi/simpan-estimasi") }}';
     var labelMode = (mode==='final') ? 'Harga Final' : 'Estimasi Awal';
-    if(!confirm('Simpan '+rp(harga)+' sebagai '+labelMode+' ke Lead #'+LEAD.id+' ('+LEAD.nama_customer+')?')) return;
+    // Konflik dua tab masih bisa ditimpa lewat jalur ini (aksi eksplisit ber-confirm, sengaja
+    // tak diblokir 409 di sini) -- minimal beri peringatan keras (fix round 1 #5).
+    var pesanKonflik = _asKonflik ? '\n\nPERINGATAN: tab ini terdeteksi KONFLIK — data server lebih baru. Menyimpan final akan MENIMPANYA.' : '';
+    if(!confirm('Simpan '+rp(harga)+' sebagai '+labelMode+' ke Lead #'+LEAD.id+' ('+LEAD.nama_customer+')?'+pesanKonflik)) return;
     try{
         var body={ lead_id:LEAD.id, harga:harga };
         if(mode==='final') body.snapshot = JSON.stringify({ panes: bacaSemuaOpsi() });
@@ -870,6 +873,9 @@ async function simpanKeLead(harga, mode){
             body:JSON.stringify(body)});
         var res=await r.json();
         if(!res || !res.success){ alert('Gagal simpan: '+((res&&res.message)||'error')); return; }
+        // rab_snapshot server berubah lewat jalur ini juga -- update basis tab supaya autosave
+        // berikutnya tak 409 palsu (fix round 1 #2).
+        if(res.snap_md5) BASE_MD5 = res.snap_md5;
         var info=document.getElementById('leadInfoHarga');
         if(mode==='final'){
             if(info) info.innerHTML='Harga final tersimpan: <b style="color:#fbbf24">'+rp(res.harga_final)+'</b>';
@@ -888,6 +894,7 @@ function bacaSemuaOpsi(){
 // mulai: muat snapshot RAB kalau lead sudah punya, kalau tidak buat 1 opsi default
 (function(){
     var loaded=false;
+    var _draftDipakai=false;
     // LAPIS 1 (pemulihan): draft lokal yang MASIH ADA saat load = pernah gagal tersimpan
     // (sukses selalu menghapusnya) -> tawarkan lanjut dari draft. BASE_MD5 TIDAK diubah
     // (basis tetap snapshot server; save berikutnya cocok dgn yang tersimpan di server).
@@ -898,7 +905,7 @@ function bacaSemuaOpsi(){
             if(_dr && _dr.snapshot && _dr.snapshot !== _snapSrc){
                 if(confirm('Ada DRAFT LOKAL yang belum sempat tersimpan ke server ('+new Date(_dr.t).toLocaleString('id-ID')+').\n\nOK = lanjut dari draft itu\nBatal = buang draft, pakai data server')){
                     _snapSrc = _dr.snapshot;
-                    setTimeout(function(){ jadwalkanHitung(null); }, 1500); // dorong draft ke server segera
+                    _draftDipakai = true;
                 } else {
                     try{ localStorage.removeItem('rab_draft_'+LEAD.id); }catch(e){}
                 }
@@ -915,6 +922,9 @@ function bacaSemuaOpsi(){
         }catch(e){ loaded=false; }
     }
     if(!loaded) tambahOpsi('Standar');
+    // draft baru didorong ke server SETELAH benar-benar berhasil dipulihkan -- draft korup/gagal parse
+    // jatuh ke opsi 'Standar' kosong dan TIDAK boleh menimpa snapshot server yang masih valid.
+    if(_draftDipakai && loaded){ setTimeout(function(){ jadwalkanHitung(null); }, 1500); }
     if(LEAD){
         var _pn=document.getElementById('projNama'); if(_pn) _pn.value=LEAD.nama_customer;
         var _oj=document.getElementById('opJarak'); if(_oj && LEAD.lokasi_jarak_km) _oj.value=LEAD.lokasi_jarak_km;
@@ -1055,17 +1065,21 @@ function simpanStatus(msg, ok){
     el.textContent=msg; el.style.background=ok?'#16a34a':'#b45309'; el.style.display='block';
     clearTimeout(el._t); el._t=setTimeout(function(){ el.style.display='none'; }, 2500);
 }
-var _asRetryTimer=null, _asKonflik=false;
+var _asRetryTimer=null, _asKonflik=false, _asBusy=false, _asPending=false;
 async function autoSave(){
     if(!LEAD){ simpanStatus('Belum tersimpan — buka RAB dari lead/pipeline dulu', false); return; }
-    if(_asKonflik) return; // konflik dua tab: tab ini berhenti menimpa sampai di-reload
-    clearTimeout(_asRetryTimer);
     var snap;
     try{
         snap = JSON.stringify({ panes: bacaSemuaOpsi() });
         // LAPIS 1: draft lokal DULU sebelum kirim — sinyal putus/halaman ketutup, kerja tak hilang.
+        // Ditulis SELALU, termasuk saat konflik/sibuk di bawah -- draft cuma cadangan lokal,
+        // tak pernah menimpa siapa pun, jadi aman ditulis lebih dulu (fix round 1 #3).
         try{ localStorage.setItem('rab_draft_'+LEAD.id, JSON.stringify({ t: Date.now(), snapshot: snap })); }catch(e){}
     }catch(e){ simpanStatus('Gagal simpan', false); return; }
+    if(_asKonflik) return; // konflik dua tab: tab ini berhenti menimpa sampai di-reload
+    if(_asBusy){ _asPending=true; return; } // fetch sebelumnya masih jalan -- jangan tembak paralel (409 palsu, fix round 1 #1)
+    _asBusy=true;
+    clearTimeout(_asRetryTimer);
     var body = { lead_id: LEAD.id, snapshot: snap, base_md5: BASE_MD5 };
     try{
         var r = await fetch('{{ url("/rab-opsi/autosave") }}', {method:'POST',
@@ -1078,7 +1092,15 @@ async function autoSave(){
             if(confirm('Data di server LEBIH BARU (ada tab/perangkat lain yang menyimpan duluan).\n\nOK = muat ulang halaman ini (kerjaan di tab ini tetap ada cadangan draft lokal)\nBatal = tab ini BERHENTI menyimpan otomatis (baca-saja) sampai dimuat ulang')) location.reload();
             return;
         }
-        if(!r.ok) throw new Error('HTTP '+r.status);
+        if(!r.ok){
+            if(r.status>=500) throw new Error('HTTP '+r.status); // error server sementara -> retry (LAPIS 2)
+            // 4xx selain 409 = error permanen (retry tak akan menolong) -- pesan jelas, TANPA retry.
+            var pesan4xx = (r.status===419) ? 'Sesi habis — muat ulang halaman untuk lanjut menyimpan'
+                          : (r.status===404) ? 'Lead tidak ditemukan di server — cek link/pipeline'
+                          : ('Gagal simpan (HTTP '+r.status+')');
+            simpanStatus(pesan4xx, false);
+            return;
+        }
         var j = await r.json().catch(function(){ return null; });
         if(j && j.snap_md5) BASE_MD5 = j.snap_md5;
         if(j && j.success){
@@ -1086,9 +1108,12 @@ async function autoSave(){
             simpanStatus('Tersimpan', true);
         }
     }catch(e){
-        // LAPIS 2: retry otomatis — snapshot TERBARU diambil ulang saat retry (bukan yang lama).
+        // LAPIS 2: retry otomatis (jaringan putus / 5xx) — snapshot TERBARU diambil ulang saat retry.
         simpanStatus('Gagal simpan (jaringan) — dicoba ulang otomatis…', false);
         _asRetryTimer = setTimeout(autoSave, 6000);
+    }finally{
+        _asBusy=false;
+        if(_asPending){ _asPending=false; autoSave(); } // ada permintaan simpan menumpuk saat fetch tadi jalan
     }
 }
 function lanjutFinalisasi(){
