@@ -601,6 +601,7 @@ class DenahEditor {
     this.supPanelOpen = false; // lipatan panel daftar Support (dilipat default, spec 2.4)
     this.selBalok = null;      // no balok yang tersorot (null = tak ada)
     this.balokPanelOpen = false; // lipatan panel daftar Balok Melintang
+    this.selSisi = null;       // index sisi (F{n}) yang kotak Ukur-nya sedang dibuka (null = semua terlipat)
     this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
     // Blok pinch-zoom HALAMAN (WebKit/iOS event gesturestart) selama ada editor di halaman --
@@ -629,7 +630,7 @@ class DenahEditor {
     this.el.addEventListener('selectstart', (e) => {
       if (!(e.target.closest && e.target.closest('input,select,textarea'))) e.preventDefault();
     });
-    this._fillMatSelects();
+    this._wireMatCombos();
     this._wireControls();
     this._wireRibbon();
     this._wireZoom();
@@ -728,7 +729,19 @@ body,.page-content{overscroll-behavior-y:contain}
 .de-legend b{font-weight:600}
 .de-sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:middle}
 .de-matmenu{position:fixed;z-index:9999;display:none;background:#fff;border:1px solid #334155;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:8px}
-.de-matmenu select{width:150px}
+.de-matmenu .de-combo-input{width:150px}
+/* Combobox besi: input teks biasa + daftar hasil filter di bawahnya (tap pilih).
+   Dipakai di 4 titik (Frame/Support/Tiang default + popup Ganti Material) --
+   native <select> diganti krn Elvan minta bisa DIKETIK cari besinya, dan
+   <input list=datalist> TIDAK dipakai krn dukungan visualnya di iOS Safari
+   tak konsisten (resiko "kelihatan ada, gak jalan" di HP -- app ini nyaris
+   semua dipakai di iPhone). */
+.de-combo-input{width:100%;box-sizing:border-box}
+.de-combo-list{position:absolute;top:100%;left:0;right:0;z-index:40;background:#fff;border:1px solid #cbd5e1;border-radius:6px;max-height:180px;overflow-y:auto;display:none;box-shadow:0 4px 10px rgba(0,0,0,.15);margin-top:2px}
+.de-combo-item{padding:8px 10px;font-size:13px;cursor:pointer;border-bottom:1px solid #f1f5f9}
+.de-combo-item:last-child{border-bottom:none}
+.de-combo-item:active{background:#f1f5f9}
+.de-combo-empty{padding:8px 10px;font-size:12px;color:#94a3b8}
 .de-matmenu .de-mrow{display:flex;gap:6px;margin-top:6px}
 .de-tiangmenu{position:fixed;z-index:9999;display:none;flex-direction:column;gap:4px;background:#fff;border:1px solid #334155;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:6px}
 .de-tiangmenu.show{display:flex}
@@ -758,7 +771,12 @@ body,.page-content{overscroll-behavior-y:contain}
         <label>Lebar (cm)<input type="number" data-role="inL" value="400" step="10"></label>
         <label>Panjang (cm)<input type="number" data-role="inP" value="300" step="10"></label>
         <label>Tinggi tiang (cm)<input type="number" data-role="inT" value="300" step="10"></label>
-        <label>Besi frame<select data-role="matFrame"></select></label>
+      </div>
+      <div class="de-row" style="margin-top:8px;align-items:flex-end">
+        <label style="position:relative;flex:0 1 170px">Besi frame
+          <input type="text" class="de-combo-input" data-role="matFrame" autocomplete="off" placeholder="Ketik/pilih besi">
+          <div class="de-combo-list" data-role="matFrameList"></div>
+        </label>
         <span class="de-mini" data-role="btnReset" title="Reset kotak dari Lebar×Panjang"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>Reset</span>
       </div>
       <div class="de-row" style="margin-top:8px">
@@ -792,7 +810,10 @@ body,.page-content{overscroll-behavior-y:contain}
         <span class="de-sup-cm" data-role="hintV"></span>
       </div>
       <div class="de-row" style="margin-top:8px">
-        <label>Besi support<select data-role="matSupport"></select></label>
+        <label style="position:relative;flex:0 1 170px">Besi support
+          <input type="text" class="de-combo-input" data-role="matSupport" autocomplete="off" placeholder="Ketik/pilih besi">
+          <div class="de-combo-list" data-role="matSupportList"></div>
+        </label>
         <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
         <span class="de-mini" data-role="btnRestoreSup">Pulihkan yang dihapus</span>
         <span class="de-mini" data-role="btnSusunUlang" style="display:none">Susun Ulang</span>
@@ -800,7 +821,10 @@ body,.page-content{overscroll-behavior-y:contain}
     </div>
     <div class="de-ribbon-panel" data-panel="tiang">
       <div class="de-row">
-        <label>Besi tiang<select data-role="matTiang"></select></label>
+        <label style="position:relative;flex:0 1 170px">Besi tiang
+          <input type="text" class="de-combo-input" data-role="matTiang" autocomplete="off" placeholder="Ketik/pilih besi">
+          <div class="de-combo-list" data-role="matTiangList"></div>
+        </label>
       </div>
     </div>
   </div>
@@ -838,7 +862,10 @@ body,.page-content{overscroll-behavior-y:contain}
 </div>
 <div class="de-matmenu" data-role="matMenu">
   <div data-role="matMenuLabel" style="font-size:12px;font-weight:700;color:#334155;margin-bottom:6px"></div>
-  <select data-role="matPick"></select>
+  <div style="position:relative">
+    <input type="text" class="de-combo-input" data-role="matPick" autocomplete="off" placeholder="Ketik/pilih besi">
+    <div class="de-combo-list" data-role="matPickList"></div>
+  </div>
   <div class="de-mrow"><span class="de-mini" data-role="matApply">Ganti</span><span class="de-mini" data-role="matClear">Pakai default</span><span class="de-mini" data-role="matCancel">Batal</span></div>
 </div>
 <div class="de-tiangmenu" data-role="tiangMenu">
@@ -859,11 +886,59 @@ body,.page-content{overscroll-behavior-y:contain}
   _q(sel) { return this.el.querySelector(sel); }
   _qa(sel) { return this.el.querySelectorAll(sel); }
 
-  _fillMatSelects() {
-    const optsHtml = this.besi.map(b => `<option>${b.nama}</option>`).join('');
-    ['matFrame', 'matSupport', 'matTiang', 'matPick'].forEach(role => {
-      const sel = this._q(`[data-role=${role}]`);
-      if (sel) sel.innerHTML = optsHtml;
+  _wireMatCombos() {
+    const matKeys = { matFrame: 'frame', matSupport: 'support', matTiang: 'tiang' };
+    Object.keys(matKeys).forEach(role => {
+      const input = this._q(`[data-role=${role}]`), list = this._q(`[data-role=${role}List]`);
+      if (input && list) this._wireBesiCombo(input, list, v => { this.pushUndo(); this.S.matDefault[matKeys[role]] = v; this.render(); });
+    });
+    // matPick (popup Ganti Material): pilih di combobox cuma isi kotaknya -- komit sungguhan
+    // lewat tombol "Ganti" (matApply, baca .value persis seperti waktu masih <select>).
+    const pickInput = this._q('[data-role=matPick]'), pickList = this._q('[data-role=matPickList]');
+    if (pickInput && pickList) this._wireBesiCombo(pickInput, pickList, () => {});
+  }
+
+  // Combobox besi: input teks + daftar hasil filter (tap pilih). SATU implementasi dipakai di
+  // 4 titik (Frame/Support/Tiang default + popup Ganti Material) -- native <select> diganti krn
+  // Elvan minta bisa DIKETIK cari besinya; <input list=datalist> dihindari krn dukungan visualnya
+  // di iOS Safari tak konsisten (app ini nyaris semua dipakai di iPhone, resiko "kelihatan ada,
+  // gak jalan"). onPick dipanggil HANYA saat nilai valid (ada di this.besi) -- baik lewat tap
+  // item maupun ketik nama PERSIS lalu blur. Nilai tak valid saat blur -> revert ke nilai
+  // terakhir yang valid -- native <select> tak pernah bisa nyimpan nilai tak valid, kombobox
+  // custom ini WAJIB jaga invariant yang sama, kalau tidak nama besi ngaco masuk ke
+  // matDefault/matOverride -> hargaOf() gak ketemu -> harga RAB salah diam-diam.
+  _wireBesiCombo(input, listEl, onPick) {
+    let lastGood = input.value;
+    const filterList = (q) => {
+      const needle = (q || '').toLowerCase();
+      const matches = this.besi.filter(b => b.nama.toLowerCase().includes(needle)).slice(0, 40);
+      listEl.innerHTML = matches.length
+        ? matches.map(b => `<div class="de-combo-item" data-nama="${b.nama.replace(/"/g, '&quot;')}">${b.nama}</div>`).join('')
+        : '<div class="de-combo-empty">Tak ditemukan</div>';
+      listEl.style.display = 'block';
+    };
+    input.addEventListener('focus', () => { lastGood = input.value; input.select(); filterList(''); });
+    input.addEventListener('input', () => filterList(input.value));
+    // pointerdown (bukan click) + preventDefault: cegah input blur duluan sebelum tap kebaca
+    // (pola combobox standar -- blur akan nutup listEl sebelum click sempat jalan kalau tidak).
+    listEl.addEventListener('pointerdown', e => {
+      const item = e.target.closest('.de-combo-item');
+      if (!item) return;
+      e.preventDefault();
+      input.value = item.dataset.nama;
+      lastGood = item.dataset.nama;
+      listEl.style.display = 'none';
+      onPick(item.dataset.nama);
+    });
+    input.addEventListener('blur', () => {
+      setTimeout(() => {
+        listEl.style.display = 'none';
+        if (this.besi.some(b => b.nama === input.value)) {
+          if (input.value !== lastGood) { lastGood = input.value; onPick(input.value); }
+        } else {
+          input.value = lastGood;
+        }
+      }, 150);
     });
   }
 
@@ -981,11 +1056,7 @@ body,.page-content{overscroll-behavior-y:contain}
     this._q('[data-role=btnSaran]').onclick = () => this.applySaran();
     this._q('[data-role=btnReset]').onclick = () => { this.resetBox(); this._closeRibbon(); };
 
-    const matKeys = { matFrame: 'frame', matSupport: 'support', matTiang: 'tiang' };
-    Object.keys(matKeys).forEach(role => {
-      const sel = this._q(`[data-role=${role}]`);
-      sel.onchange = e => { this.pushUndo(); this.S.matDefault[matKeys[role]] = e.target.value; this.render(); };
-    });
+    // matFrame/matSupport/matTiang: dikawat lewat _wireMatCombos() (combobox besi).
 
     this._q('[data-role=matApply]').onclick = () => {
       if (this.menuId) { this.pushUndo(); this.S.matOverride[this.menuId] = this._q('[data-role=matPick]').value; this._q('[data-role=matMenu]').style.display = 'none'; this.render(); }
@@ -1305,6 +1376,7 @@ body,.page-content{overscroll-behavior-y:contain}
     this.boxPreview = null; this.addSupportPt = null;
     this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
     this.selBalok = null;
+    this.selSisi = null;
     if (!this.undoStack.length) { this.setHint('Tak ada langkah untuk di-undo'); return; }
     this.redoStack.push(JSON.stringify(this.S)); if (this.redoStack.length > 40) this.redoStack.shift();
     // Assignment wholesale (bukan Object.assign): snapshot = state utuh, Object.assign tak
@@ -1318,6 +1390,7 @@ body,.page-content{overscroll-behavior-y:contain}
     this.boxPreview = null; this.addSupportPt = null;
     this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
     this.selBalok = null;
+    this.selSisi = null;
     if (!this.redoStack.length) { this.setHint('Tak ada langkah untuk di-redo'); return; }
     this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift();
     // Sama seperti undo(): assignment wholesale, bukan Object.assign (lihat catatan di atas).
@@ -1491,14 +1564,32 @@ body,.page-content{overscroll-behavior-y:contain}
     const val = prompt(`Panjang sisi F${i + 1} (cm):`, Math.round(dist(a, b) * 10) / 10);
     if (val != null) this.setSideLength(i, val);
   }
-  // Panel input sisi (mudah di HP — tak perlu tap garis)
+  // Panel input sisi (mudah di HP — tak perlu tap garis). Chip F1..Fn dulu (pilih sisi),
+  // kotak ketik angka baru muncul utk sisi yang dipilih -- dulu SEMUA sisi tergambar
+  // sekaligus, makan banyak baris di bentuk berlekuk (permintaan Elvan 27 Ags: pilih dulu
+  // baru tampil, pola sama panel Support S1..Sn yang sudah ada).
   renderSides(mem) {
     const fr = mem.filter(m => m.jenis === 'frame');
     const panel = this._q('[data-role=sisiPanel]');
+    if (this.selSisi != null && !fr[this.selSisi]) this.selSisi = null; // sisi dihapus/Undo -> lepas sorotan
+    const chips = fr.map((m, i) => `<span class="de-mini${this.selSisi === i ? ' on' : ''}" data-role="sisiChip" data-i="${i}">F${i + 1}</span>`).join('');
+    const editRow = this.selSisi == null ? '' : (() => {
+      const i = this.selSisi, m = fr[i];
+      return `<div style="width:100%;display:flex;align-items:center;gap:6px;margin-top:6px">
+        <b style="font-size:12px;color:#334155">F${i + 1}</b>
+        <input type="text" inputmode="decimal" value="${m.panjang}" data-role="sisiInput" style="width:74px;box-sizing:border-box;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px">
+        <span style="font-size:11px;color:#64748b">cm</span>
+      </div>`;
+    })();
     panel.innerHTML =
-      '<b style="width:100%;font-size:12px;color:#334155">Ukur sisi (cm) — ketik angka pasti:</b>' +
-      fr.map((m, i) => `<label style="font-size:11px;color:#475569">F${i + 1}<input type="text" inputmode="decimal" value="${m.panjang}" data-side="${i}" style="width:58px;box-sizing:border-box;margin-left:4px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px"></label>`).join('');
-    panel.querySelectorAll('input').forEach(inp => inp.onchange = e => this.setSideLength(+e.target.dataset.side, e.target.value));
+      '<b style="width:100%;font-size:12px;color:#334155">Ukur sisi — pilih sisi, lalu ketik angka pasti:</b>' +
+      chips + editRow;
+    panel.querySelectorAll('[data-role=sisiChip]').forEach(chip => chip.onclick = () => {
+      this.selSisi = (this.selSisi === +chip.dataset.i) ? null : +chip.dataset.i; // tap lagi = tutup
+      this.renderSides(mem);
+    });
+    const inp = panel.querySelector('[data-role=sisiInput]');
+    if (inp) inp.onchange = e => this.setSideLength(this.selSisi, e.target.value);
   }
 
   // Panel daftar tiang numerik (Task 2) — jalur input angka X/Y selain drag/tekan-tahan di kanvas.
@@ -3038,7 +3129,7 @@ body,.page-content{overscroll-behavior-y:contain}
   getModel() { return JSON.parse(JSON.stringify(this.S)); }
   getMembers() { return DenahConv.buildMembers(this.S); }
   getLuas() { return DenahConv.luasM2(this.S); }
-  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.selBalok = null; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
+  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.selBalok = null; this.selSisi = null; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
 }
 
 // ---- self-check ringkas, browser-only (guard: tak jalan di produksi/Node) ----
