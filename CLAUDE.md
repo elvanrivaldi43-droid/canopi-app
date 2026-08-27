@@ -536,6 +536,37 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    field kanopi, dst -- sekali pasang). Diverifikasi canopi-check --full
    (Blade compile). Belum ada laporan validasi manual HP utk kedua fix
    "hilang saat refresh" ini (hapus opsi/blok & rename opsi/blok).
+   **Bug UX ditemukan Bos 27 Ags malam (2 dialog beruntun bikin bingung &
+   bahaya) & sudah difix:** konflik 409 -> dialog "Data di server LEBIH
+   BARU, OK=reload" -> abis reload, dialog KEDUA otomatis muncul "Ada
+   DRAFT LOKAL, OK=lanjut dari draft itu" -- padahal draft itu PERSIS
+   versi yg BARU SAJA ditolak server (kalah baru dari tab/device lain).
+   Kalau OK-OK tanpa baca (gampang, sama-sama mulai kata "OK"), efeknya
+   nimpa BALIK data server yang lebih baru pakai draft basi -- bisa bikin
+   hasil survei lapangan (device lain) hilang kalau ke-timpa admin/owner
+   yang edit lead yang sama di device lain (skenario nyata: surveyor
+   sedang survei pakai HP, admin/owner edit lead yang sama di kantor).
+   Fix: `sessionStorage` flag ditulis sebelum `location.reload()` di
+   dialog konflik; IIFE pemuatan baca flag itu -- kalau reload KARENA
+   konflik, draft dibuang diam-diam (toast info singkat via
+   `simpanStatus`, bukan dialog interaktif lagi), data server yang
+   dipakai TANPA konfirmasi kedua. Reload biasa (bukan dari konflik,
+   mis. abis ditutup paksa/sinyal putus) tetap dapat dialog draft-
+   restore seperti biasa -- tak berubah. Diverifikasi canopi-check --full
+   (Blade compile). Belum ada laporan validasi manual HP (butuh 2
+   device/tab beneran + sinyal 409 asli buat tes ulang).
+   **Diskusi arsitektur (BELUM diputuskan, BUKAN dikerjakan) muncul dari
+   laporan ini:** Elvan tanya kenapa gak bisa multi-user edit bareng
+   kayak Trello/Google Sheets. Skenario nyata pemicu: surveyor input
+   hasil survei di HP di lapangan, admin/owner edit lead yang sama di
+   kantor -> last-write-wins sekarang (1 kolom `rab_snapshot` JSON besar
+   per lead) bikin salah satu KETIMPA, bukan digabung. Solusi beneran
+   (granularitas simpan per-Opsi/per-Blok, bukan 1 blob) = perubahan
+   arsitektur data besar, BUKAN quick-fix -- sudah dijelaskan ke Elvan,
+   direkomendasikan lewat sesi `/plan`/brainstorm terpisah, BELUM
+   disepakati kapan/apakah dikerjakan. Jangan asumsi ini sudah jadi
+   rencana resmi kalau disinggung lagi -- cek dulu apa sudah ada sesi
+   `/plan` follow-up sebelum menganggap arahnya sudah fix.
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 

@@ -968,10 +968,20 @@ function bacaSemuaOpsi(){
     // (basis tetap snapshot server; save berikutnya cocok dgn yang tersimpan di server).
     var _snapSrc = (LEAD && LEAD.rab_snapshot) ? LEAD.rab_snapshot : null;
     if(LEAD){
+        // Reload akibat konflik (409, lihat autoSave) tandai dulu di sessionStorage sebelum
+        // reload -- draft di bawah PERSIS versi yg baru saja ditolak server krn kalah baru dari
+        // tab/device lain. JANGAN ditawarkan restore (2 dialog beruntun gampang ke-OK tanpa
+        // sadar & nimpa balik kerjaan mereka) -- buang diam-diam, pakai data server (permintaan
+        // Elvan 27 Ags: pas ada konflik, data server yang menang, bukan draft lokal yg kalah).
+        var _fromConflict = false;
+        try{ _fromConflict = sessionStorage.getItem('rab_conflict_reload_'+LEAD.id) === '1'; sessionStorage.removeItem('rab_conflict_reload_'+LEAD.id); }catch(e){}
         try{
             var _dr = JSON.parse(localStorage.getItem('rab_draft_'+LEAD.id) || 'null');
             if(_dr && _dr.snapshot && _dr.snapshot !== _snapSrc){
-                if(confirm('Ada DRAFT LOKAL yang belum sempat tersimpan ke server ('+new Date(_dr.t).toLocaleString('id-ID')+').\n\nOK = lanjut dari draft itu\nBatal = buang draft, pakai data server')){
+                if(_fromConflict){
+                    try{ localStorage.removeItem('rab_draft_'+LEAD.id); }catch(e){}
+                    simpanStatus('Ada perubahan lebih baru dari tab/perangkat lain -- draft lokal lama dibuang', false);
+                } else if(confirm('Ada DRAFT LOKAL yang belum sempat tersimpan ke server ('+new Date(_dr.t).toLocaleString('id-ID')+').\n\nOK = lanjut dari draft itu\nBatal = buang draft, pakai data server')){
                     _snapSrc = _dr.snapshot;
                     _draftDipakai = true;
                 } else {
@@ -1157,7 +1167,14 @@ async function autoSave(){
         if(r.status===409){
             _asKonflik = true;
             simpanStatus('KONFLIK: tab lain menyimpan duluan — TIDAK ditimpa', false);
-            if(confirm('Data di server LEBIH BARU (ada tab/perangkat lain yang menyimpan duluan).\n\nOK = muat ulang halaman ini (kerjaan di tab ini tetap ada cadangan draft lokal)\nBatal = tab ini BERHENTI menyimpan otomatis (baca-saja) sampai dimuat ulang')) location.reload();
+            if(confirm('Data di server LEBIH BARU (ada tab/perangkat lain yang menyimpan duluan).\n\nOK = muat ulang halaman ini (kerjaan di tab ini tetap ada cadangan draft lokal)\nBatal = tab ini BERHENTI menyimpan otomatis (baca-saja) sampai dimuat ulang')){
+                // Tandai reload ini KARENA konflik -- dibaca IIFE pemuatan di bawah biar draft
+                // lokal (yg PERSIS versi yg baru saja ditolak server) tak ditawarkan lagi jadi
+                // dialog ke-2 yg gampang ke-OK 2x tanpa sadar & nimpa balik kerjaan tab/device
+                // lain (laporan Elvan 27 Ags: 2 dialog beruntun membingungkan, gampang salah tap).
+                try{ sessionStorage.setItem('rab_conflict_reload_'+LEAD.id, '1'); }catch(e){}
+                location.reload();
+            }
             return;
         }
         if(!r.ok){
