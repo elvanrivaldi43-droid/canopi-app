@@ -352,14 +352,23 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    lalu direvisi lagi jadi **dropdown** pilih F1..Fn + checkbox "Tampilkan
    semua" di sampingnya (checked = semua kotak ketik F1..Fn muncul
    sekaligus, unchecked = cuma yang dipilih di dropdown) — permintaan Elvan
-   27 Ags malam setelah lihat versi chip. (e) Panel Support: tombol
-   "Buka/Lipat" diganti checkbox "Tampilkan semua" (fungsi identik, cuma
-   ganti bentuk kontrol biar konsisten dgn Ukur Sisi) — checklist
-   aktif/nonaktif per baris & tombol Fokus/edit TIDAK disentuh (sengaja,
-   biar tak merusak alur bulk-toggle yang sudah tervalidasi). Diverifikasi
-   node --check + 13 test .mjs rangka + canopi-check --full sebelum tiap
-   push; commit `540dbcd..HEAD`. Belum ada laporan validasi manual HP dari
-   Bos untuk gelombang ini.
+   27 Ags malam setelah lihat versi chip. (e) Panel Support & Tiang: versi
+   pertama cuma ganti tombol "Buka/Lipat" jadi checkbox "Tampilkan semua"
+   — DICOBA Bos di HP, DITOLAK (14 support numpuk begitu dicentang, gak
+   ada cara pilih satu tanpa nyisir daftar panjang). Direvisi jadi
+   **dropdown pilih S#/T# dulu → baris edit baru muncul utk yang dipilih**,
+   checkbox "Tampilkan semua" tetap di sampingnya buat balik ke daftar
+   penuh kalau perlu. Dropdown pakai `this.selSup`/`this.selTiang` yang
+   sama dipakai tombol Fokus & tap-canvas (Support) biar 2 jalur pilih itu
+   sinkron. Checklist aktif/nonaktif per baris Support & tombol
+   Fokus/Hapus/Ganti besi/Pecah TIDAK disentuh. Tiang sebelumnya TIDAK
+   punya konsep "pilih satu" sama sekali (semua T1..Tn selalu full-
+   expand) — sekarang nambah `selTiang`/`tiangShowAll` pola identik
+   Support (hapus tiang → `selTiang` direset null krn indeks ikut geser;
+   tambah tiang baru → auto-terpilih). Diverifikasi node --check + 13 test
+   .mjs rangka + canopi-check --full sebelum tiap push; commit
+   `540dbcd..HEAD`. **Belum ada laporan validasi manual HP** utk versi
+   dropdown ini.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.

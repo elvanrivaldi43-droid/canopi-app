@@ -603,6 +603,8 @@ class DenahEditor {
     this.balokPanelOpen = false; // lipatan panel daftar Balok Melintang
     this.selSisi = null;       // index sisi (F{n}) yang kotak Ukur-nya sedang dibuka (null = semua terlipat)
     this.sisiShowAll = false;  // checklist "Tampilkan semua" panel Ukur Sisi -- semua F1..Fn diketik sekaligus
+    this.selTiang = null;      // index tiang (T{n}) yang baris edit-nya sedang dibuka (null = dropdown kosong)
+    this.tiangShowAll = false; // checklist "Tampilkan semua" panel Tiang -- semua T1..Tn diedit sekaligus
     this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
     // Blok pinch-zoom HALAMAN (WebKit/iOS event gesturestart) selama ada editor di halaman --
@@ -1378,6 +1380,7 @@ body,.page-content{overscroll-behavior-y:contain}
     this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
     this.selBalok = null;
     this.selSisi = null;
+    this.selTiang = null;
     if (!this.undoStack.length) { this.setHint('Tak ada langkah untuk di-undo'); return; }
     this.redoStack.push(JSON.stringify(this.S)); if (this.redoStack.length > 40) this.redoStack.shift();
     // Assignment wholesale (bukan Object.assign): snapshot = state utuh, Object.assign tak
@@ -1392,6 +1395,7 @@ body,.page-content{overscroll-behavior-y:contain}
     this._lastPickPt = null;   // cycling tap-ganti-kandidat direset; selSup divalidasi di render()
     this.selBalok = null;
     this.selSisi = null;
+    this.selTiang = null;
     if (!this.redoStack.length) { this.setHint('Tak ada langkah untuk di-redo'); return; }
     this.undoStack.push(JSON.stringify(this.S)); if (this.undoStack.length > 40) this.undoStack.shift();
     // Sama seperti undo(): assignment wholesale, bukan Object.assign (lihat catatan di atas).
@@ -1612,8 +1616,9 @@ body,.page-content{overscroll-behavior-y:contain}
     panel.style.display = this.mode === 'tiang' ? '' : 'none';
     if (this.mode !== 'tiang') { panel.innerHTML = ''; return; }
     const tiangMem = mem.filter(m => m.jenis === 'tiang');
-    const rows = tiangMem.map((m, i) => {
-      const off = DenahConv.tiangToOffset(this.S, m.geom.p);
+    if (this.selTiang != null && !tiangMem[this.selTiang]) this.selTiang = null; // tiang dihapus/Undo -> lepas pilihan
+    const rowFor = i => {
+      const m = tiangMem[i], off = DenahConv.tiangToOffset(this.S, m.geom.p);
       return `<div class="de-tiang-item" data-trow="${i}">
         <div class="de-tiang-head">
           <b style="font-size:12px">T${i + 1}</b>
@@ -1625,9 +1630,27 @@ body,.page-content{overscroll-behavior-y:contain}
           <span class="de-mini de-tiang-apply" data-role="tApply" data-i="${i}">Terapkan</span>
         </div>
       </div>`;
-    }).join('');
+    };
+    // Dropdown pilih T# dulu, baru baris edit muncul -- pola sama Support (Elvan 27 Ags malam:
+    // daftar penuh langsung tampil susah dicari-edit di HP kalau tiang banyak). Checklist
+    // "Tampilkan semua" balikin ke daftar penuh (perilaku lama).
+    const picker = this.tiangShowAll ? '' : `<div style="width:100%;margin:6px 0">
+      <select data-role="tPick" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
+        <option value="">Pilih tiang…</option>
+        ${tiangMem.map((m, i) => `<option value="${i}"${this.selTiang === i ? ' selected' : ''}>T${i + 1}</option>`).join('')}
+      </select>
+    </div>`;
+    const rows = this.tiangShowAll
+      ? tiangMem.map((m, i) => rowFor(i)).join('')
+      : (this.selTiang == null ? '' : rowFor(this.selTiang));
     panel.innerHTML =
-      '<b style="font-size:12px;color:#334155">Posisi Tiang (cm dari kiri-depan)</b>' +
+      `<div class="de-tiang-head">
+        <b style="font-size:12px;color:#334155">Posisi Tiang (cm dari kiri-depan)</b>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#334155">
+          <input type="checkbox" data-role="tShowAll"${this.tiangShowAll ? ' checked' : ''}> Tampilkan semua
+        </label>
+      </div>` +
+      picker +
       '<div data-role="tiangPanelMsg" style="font-size:11px;color:#dc2626;margin:3px 0"></div>' +
       rows +
       `<div class="de-tiang-item" style="border-bottom:0">
@@ -1638,6 +1661,10 @@ body,.page-content{overscroll-behavior-y:contain}
           <div class="de-tiang-actions"><span class="de-mini de-tiang-apply" data-role="tTambah">Tambah</span><span class="de-mini" data-role="tPreviewBatal">Batal</span></div>
         </div>
       </div>`;
+
+    const tPickEl = this._q('[data-role=tPick]');
+    if (tPickEl) tPickEl.onchange = e => { this.selTiang = e.target.value === '' ? null : +e.target.value; this.renderTiangPanel(mem); };
+    this._q('[data-role=tShowAll]').onchange = e => { this.tiangShowAll = e.target.checked; this.renderTiangPanel(mem); };
 
     const msgEl = () => this._q('[data-role=tiangPanelMsg]');
     const showMsg = (txt) => { const el = msgEl(); if (el) el.textContent = txt; };
@@ -1668,6 +1695,7 @@ body,.page-content{overscroll-behavior-y:contain}
     panel.querySelectorAll('[data-role=tFokus]').forEach(btn => {
       btn.onclick = () => {
         const i = +btn.dataset.i;
+        this.selTiang = i;
         const tc = this.el.querySelector('#tc' + i);
         if (!tc) return;
         this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -1682,6 +1710,7 @@ body,.page-content{overscroll-behavior-y:contain}
         this.pushUndo();
         const affected = (this.S.balok || []).filter(b => (b.a.t === i) || (b.b.t === i)).length;
         Object.assign(this.S, DenahConv.cascadeTiangRemoval(this.S, i));
+        this.selTiang = null; // indeks tiang lain ikut geser -- jangan nebak, biar dipilih ulang dari dropdown
         if (affected) this.setHint(`${affected} balok terhubung dibekukan.`);
         this.render();
       };
@@ -1704,6 +1733,7 @@ body,.page-content{overscroll-behavior-y:contain}
       this.clearTiangPreview();
       this.pushUndo();
       this.S.tiang.push(this.clampTiang(DenahConv.tiangFromOffset(this.S, dx, dy)));
+      this.selTiang = this.S.tiang.length - 1;
       this.render();
     };
   }
@@ -1774,7 +1804,17 @@ body,.page-content{overscroll-behavior-y:contain}
           </label>
         </div>
       </div>`;
-    const rows = !this.supPanelOpen ? '' : entries.map(e2 => {
+    // Tak "Tampilkan semua": dropdown pilih S# dulu (list panjang susah dicari-edit di HP,
+    // laporan Elvan 27 Ags malam), baru baris edit-nya muncul -- pakai this.selSup yang sama
+    // dipakai tap-canvas/Fokus, biar 2 jalur pilih itu saling sinkron.
+    const picker = this.supPanelOpen ? '' : `<div style="width:100%;margin-top:6px">
+      <select data-role="slPick" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
+        <option value="">Pilih support…</option>
+        ${entries.map(e2 => `<option value="${e2.no}"${this.selSup === e2.no ? ' selected' : ''}>S${e2.no} — ${DenahConv.describeLockedSupport(this.S, e2)}${e2.aktif === false ? ' (nonaktif)' : ''}</option>`).join('')}
+      </select>
+    </div>`;
+    const list = this.supPanelOpen ? entries : entries.filter(e2 => e2.no === this.selSup);
+    const rows = list.map(e2 => {
       const sel = e2.no === this.selSup;
       const desc = DenahConv.describeLockedSupport(this.S, e2);
       // Arah difilter per tipe (spec 2.3): h cuma atas/bawah, v cuma kiri/kanan, manual 4 arah —
@@ -1815,8 +1855,10 @@ body,.page-content{overscroll-behavior-y:contain}
           <div class="de-tiang-actions"><span class="de-mini de-tiang-apply" data-role="sjTambah">Tambah</span><span class="de-mini" data-role="sjBatal">Batal</span></div>
         </div>
       </div>`;
-    panel.innerHTML = head + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows + formTambah;
+    panel.innerHTML = head + picker + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows + formTambah;
 
+    const pickEl = this._q('[data-role=slPick]');
+    if (pickEl) pickEl.onchange = e => { this.selSup = e.target.value === '' ? null : +e.target.value; this.renderSupportPanel(mem); };
     this._q('[data-role=slLipat]').onchange = e => { this.drawSupJalurPreview([]); this.supPanelOpen = e.target.checked; this.renderSupportPanel(mem); };
     this._q('[data-role=slSemua]').onclick = () => {
       this.pushUndo();
@@ -1830,9 +1872,8 @@ body,.page-content{overscroll-behavior-y:contain}
     });
     panel.querySelectorAll('[data-role=slFokus]').forEach(btn => btn.onclick = () => {
       this.selSup = +btn.dataset.no;
-      this.supPanelOpen = true;
       this._q('[data-role=canvasWrap]').scrollIntoView({ block: 'center', behavior: 'smooth' });
-      this.render();   // render() menyorot garis di kanvas (Task 4) + melebarkan baris ini
+      this.render();   // render() menyorot garis di kanvas (Task 4) + melebarkan baris ini (dropdown ikut sinkron)
     });
     const applyBtn = this._q('[data-role=slApply]');
     if (applyBtn) applyBtn.onclick = () => {
@@ -3142,7 +3183,7 @@ body,.page-content{overscroll-behavior-y:contain}
   getModel() { return JSON.parse(JSON.stringify(this.S)); }
   getMembers() { return DenahConv.buildMembers(this.S); }
   getLuas() { return DenahConv.luasM2(this.S); }
-  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.selBalok = null; this.selSisi = null; this.sisiShowAll = false; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
+  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.selBalok = null; this.selSisi = null; this.sisiShowAll = false; this.selTiang = null; this.tiangShowAll = false; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
 }
 
 // ---- self-check ringkas, browser-only (guard: tak jalan di produksi/Node) ----
