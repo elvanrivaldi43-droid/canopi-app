@@ -1921,11 +1921,18 @@ body,.page-content{overscroll-behavior-y:contain}
     // BUKAN di-commit -- commit sungguhan tetap cuma lewat tombol Terapkan di bawah.
     const dirEl = this._q('[data-role=slDir]'), cmEl = this._q('[data-role=slCm]');
     if (dirEl && cmEl) {
+      // moveManualReclip utk entri GRID (bukan manual/miring) balikin {axis,pos} MENTAH, bukan
+      // {a,b} -- itu memang bentuk penyimpanan grid yang benar (lihat buildMembers, a/b dihitung
+      // ulang saat render dari axis+pos), tapi drawSupJalurPreview butuh titik a/b buat gambar.
+      // Tanpa konversi ini preview CRASH DIAM-DIAM (uncaught, gak kelihatan efeknya) khusus utk
+      // support bawaan/grid -- laporan Elvan 27 Ags: preview gak nongol pas mindahin support.
+      // jalurSegments = fungsi sama yg dipakai form "+ Garis support" buat hal serupa.
+      const toSegs = list => list.flatMap(en => (en.a && en.b) ? [{ a: en.a, b: en.b }] : DenahConv.jalurSegments(this.S, en.axis, en.pos));
       const updateMovePreview = () => {
         const e2 = entries.find(x => x.no === this.selSup);
         const cmVal = DenahConv.parseCmValue(cmEl.value);
         const r = e2 && cmVal != null ? DenahConv.moveManualReclip(this.S, e2, dirEl.value, cmVal) : null;
-        this.drawSupJalurPreview(r ? r.entries : []);
+        this.drawSupJalurPreview(r ? toSegs(r.entries) : []);
         this._q('[data-role=slMsg]').textContent =
           (cmVal != null && r && !r.entries.length) ? 'Posisi baru di luar frame — pindah akan dibatalkan.' : '';
       };

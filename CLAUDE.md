@@ -165,6 +165,16 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 - Besi Bagian B denah interaktif — ditunda
 - Pindah kondisi lokasi dari blok ke Profil Lokasi (luar kota/malam/beban berat) — perlu hati-hati, terpisah
 - WhatsApp Business API resmi untuk customer — karyawan sudah memakai bot Telegram masing-masing; Telegram tetap jangan dipaksakan ke customer
+- **RAB Multi-Opsi: edit bareng multi-user (kayak Trello/Google Sheets)** — muncul 27 Ags 2026
+  dari laporan Elvan soal dialog konflik-autosave yang bahaya (lihat Utang aktif #9). Skenario
+  bisnis nyata: surveyor input hasil survei di HP di lapangan, admin/owner edit lead yang sama
+  di kantor bersamaan → last-write-wins sekarang (1 kolom `rab_snapshot` JSON besar per lead,
+  lihat Autosave RAB #9) bikin salah satu KETIMPA, bukan digabung otomatis. Solusi beneran =
+  granularitas simpan per-Opsi/per-Blok (bukan 1 blob JSON), itu perubahan arsitektur data
+  besar — BUKAN quick-fix. **Sengaja BELUM diputuskan kapan/apakah dikerjakan** — Elvan
+  eksplisit bilang "simpan di roadmap dulu" (bukan approval buat langsung mulai). Butuh sesi
+  `/plan`/brainstorm terpisah sebelum eksekusi apa pun, sesuai aturan kerja standar perubahan
+  besar.
 
 ---
 
@@ -555,18 +565,11 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    restore seperti biasa -- tak berubah. Diverifikasi canopi-check --full
    (Blade compile). Belum ada laporan validasi manual HP (butuh 2
    device/tab beneran + sinyal 409 asli buat tes ulang).
-   **Diskusi arsitektur (BELUM diputuskan, BUKAN dikerjakan) muncul dari
-   laporan ini:** Elvan tanya kenapa gak bisa multi-user edit bareng
-   kayak Trello/Google Sheets. Skenario nyata pemicu: surveyor input
-   hasil survei di HP di lapangan, admin/owner edit lead yang sama di
-   kantor -> last-write-wins sekarang (1 kolom `rab_snapshot` JSON besar
-   per lead) bikin salah satu KETIMPA, bukan digabung. Solusi beneran
-   (granularitas simpan per-Opsi/per-Blok, bukan 1 blob) = perubahan
-   arsitektur data besar, BUKAN quick-fix -- sudah dijelaskan ke Elvan,
-   direkomendasikan lewat sesi `/plan`/brainstorm terpisah, BELUM
-   disepakati kapan/apakah dikerjakan. Jangan asumsi ini sudah jadi
-   rencana resmi kalau disinggung lagi -- cek dulu apa sudah ada sesi
-   `/plan` follow-up sebelum menganggap arahnya sudah fix.
+   **Diskusi arsitektur multi-user (Trello/Sheets-style) muncul dari
+   laporan ini** -- dicatat penuh di ROADMAP bagian "Ditunda/belum
+   diputuskan", BUKAN di sini (biar gak dobel + gak drift kalau salah
+   satu diupdate). Intinya: BELUM diputuskan kapan/apakah dikerjakan,
+   Elvan eksplisit minta "simpan di roadmap dulu".
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 

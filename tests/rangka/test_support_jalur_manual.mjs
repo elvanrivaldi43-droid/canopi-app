@@ -152,6 +152,12 @@ check('numerik: NaN -> null',
   const r = DenahConv.moveManualReclip(S, S.supportsLocked[0], 'atas', 20);
   check('reclip grid: passthrough pos', [r.entries.length, r.entries[0].pos, r.lockSeq], [1, 130, 6]);
   check('reclip: arah invalid -> null', DenahConv.moveManualReclip(S, S.supportsLocked[0], 'kiri', 20), null);
+  // Regresi preview panel (Elvan 27 Ags: garis preview gak nongol pas mindahin support bawaan) --
+  // hasil grid TIDAK punya a/b (baris di atas), UI convert lewat jalurSegments(S, axis, pos)
+  // sebelum digambar. Kalau lupa convert, drawSupJalurPreview crash diam-diam baca e.a.x
+  // undefined -- kunci di sini bahwa jalurSegments tetap bisa isi ulang titiknya dari pos.
+  check('reclip grid: jalurSegments(S, axis, pos hasil pindah) balikin titik gambar yang valid',
+    DenahConv.jalurSegments(S, r.entries[0].axis, r.entries[0].pos), [{ a: { x: 0, y: 130 }, b: { x: 400, y: 130 } }]);
 }
 {
   // Entri manual nonaktif dipindah -> potongan mewarisi nonaktif
