@@ -348,7 +348,7 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    diganti combobox custom ketik-cari (`_wireBesiCombo()`, 1 implementasi
    4 titik pakai; nilai tak valid saat blur direvert, native `<input
    list=datalist>` sengaja dihindari — dukungan iOS Safari tak konsisten).
-   **2 bug ditemukan Bos 27 Ags malam & sudah difix keduanya:** (1) fokus
+   **3 bug ditemukan Bos 27 Ags malam & sudah difix semua:** (1) fokus
    ke input tadinya manggil `input.select()` -- di iOS Safari itu memicu
    menu sistem "Potong/Salin/Tempel/Isi-Auto" yang nutupin & rebutan
    sentuhan sama dropdown custom di bawahnya. Fix: kosongkan `.value`
@@ -361,7 +361,12 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    (fire setelah touchend/scroll selesai), blur tetap nunda tutup list
    150ms (logika lama) jadi cukup waktu buat click kebaca. `.de-combo-list`
    sudah punya `max-height:180px;overflow-y:auto` dari awal, scroll kini
-   jalan normal.
+   jalan normal. (3) Besi support cuma nongol 1 baris dropdown-nya --
+   baris "Besi support" itu paling bawah di panel `.de-ribbon-strip`
+   (panel Rangka/Support/Tiang, `overflow-y:auto;max-height:45vh`),
+   dropdown absolute-nya ikut kepotong batas panel itu. Fix: saat fokus,
+   panel digeser (`strip.scrollTop`) biar input mepet ke atas, nyisain
+   ruang penuh 180px (~5 baris) di bawahnya buat dropdown.
    (d) Ukur Sisi: awalnya chip F1..Fn (tap dulu baru kotak ketik muncul),
    lalu direvisi lagi jadi **dropdown** pilih F1..Fn + checkbox "Tampilkan
    semua" di sampingnya (checked = semua kotak ketik F1..Fn muncul

@@ -925,7 +925,19 @@ body,.page-content{overscroll-behavior-y:contain}
     // bawahnya (laporan Elvan 27 Ags: dropdown "selalu hilang" pas mau tap pilih -- bukan bug
     // tap-nya). Set .value langsung (bukan seleksi) tidak memicu menu itu, dan blur tetap balik
     // ke lastGood otomatis kalau dikosongin lalu ditinggal tanpa pilih apa-apa.
-    input.addEventListener('focus', () => { lastGood = input.value; input.value = ''; filterList(''); });
+    input.addEventListener('focus', () => {
+      lastGood = input.value; input.value = ''; filterList('');
+      // Panel Rangka/Support/Tiang (.de-ribbon-strip) scroll sendiri (overflow-y:auto, max-
+      // height 45vh) -- dropdown absolute ini ikut kepotong batas box itu kalau inputnya deket
+      // bawah panel (laporan Elvan: Besi support cuma nongol 1 baris, krn baris itu paling
+      // bawah panel Support). Geser panel biar input mepet ke atas -> nyisain ruang buat daftar
+      // (180px, ~5 baris) di bawahnya. setTimeout nunggu scroll-ke-fokus bawaan browser (kalau
+      // ada) beres duluan sebelum kita ukur & geser sendiri.
+      setTimeout(() => {
+        const strip = input.closest('.de-ribbon-strip');
+        if (strip) strip.scrollTop += input.getBoundingClientRect().top - strip.getBoundingClientRect().top - 8;
+      }, 50);
+    });
     input.addEventListener('input', () => filterList(input.value));
     // click (bukan pointerdown): pointerdown+preventDefault dulu dipakai cegah blur nutup
     // listEl duluan, tapi preventDefault di pointerdown juga MEMBATALKAN gestur scroll dari
