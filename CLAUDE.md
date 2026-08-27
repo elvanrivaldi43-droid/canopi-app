@@ -381,14 +381,25 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
      identitas garis (sekelas perilaku field `kotak` tunggal lama).
    - Checklist manual A-D (laporan Task 5) belum tentu sudah dijalankan Elvan
      tuntas di device; kalau ada anomali baru, cek ke sana dulu.
-9. **Autosave RAB rawan tabrakan dua tab (KASUS NYATA 24 Ags malam: data denah
-   Elvan ke-rollback).** `rab-opsi` autosave = last-writer-wins tanpa guard:
-   tab kedua yang megang data lama, sekali disentuh, menimpa data baru di
-   server. Perlu task terpisah (nyentuh backend, JANGAN dikebut): snapshot
-   bawa penanda versi/stempel muat, endpoint autosave menolak simpanan yang
-   basisnya lebih tua dari yang tersimpan (409) + UI kasih peringatan "ada
-   data lebih baru, muat ulang". Sampai fix ini ada, ATURAN OPERASIONAL:
-   buka RAB cukup 1 tab, perhatikan toast "Tersimpan" hijau tiap habis edit.
+9. **Autosave RAB — SELESAI & LIVE 27 Ags 2026** (dipicu 2 kasus nyata:
+   tabrakan dua tab 24 Ags + kerja hilang karena sinyal putus). Tiga lapis:
+   (1) draft lokal localStorage per-lead, ditulis sebelum tiap kirim, dihapus
+   hanya saat sukses; draft tersisa saat load = ditawarkan "lanjut dari
+   draft?"; (2) retry otomatis 6 dtk untuk gagal jaringan/5xx (4xx non-409 =
+   pesan jelas tanpa retry, 419 = sesi habis); (3) guard konflik: klien bawa
+   `base_md5`, server (`SnapshotGuard::conflict`, test
+   `tests/rab/test_snapshot_guard.php`) balas 409 kalau snapshot tersimpan
+   sudah berubah -> tab basi berhenti menimpa (baca-saja) + confirm reload.
+   Guard busy `_asBusy`/`_asPending` mencegah fetch paralel 409-palsu;
+   `simpanKeLead` ikut update `BASE_MD5`. Kompat mundur penuh (klien lama
+   tanpa base_md5 tetap jalan), nol perubahan skema DB.
+   **Residual sadar (bukan bug, dicatat dari review):** (a) Simpan Final di
+   tab yang sudah konflik masih BISA menimpa (aksi eksplisit; confirm-nya
+   sudah diberi peringatan keras); (b) race autoSave vs simpanFinal bisa
+   bikin 1x dialog 409 palsu — draft aman, reload memulihkan. **Perlu cek
+   Bos 1x di phpMyAdmin:** kolom `pipeline_leads.rab_snapshot` idealnya
+   LONGTEXT + utf8mb4 — kalau TEXT 64KB, snapshot besar kepotong diam-diam
+   (bahaya lama yang kini juga bikin guard md5 selalu konflik).
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 
