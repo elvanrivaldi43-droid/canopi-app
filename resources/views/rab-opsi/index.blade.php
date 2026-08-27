@@ -32,7 +32,11 @@
 .opsi-pane.act { display:block; }
 .opsi-bar { display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
 .opsi-lbl { flex:1; min-width:110px; display:flex; flex-direction:column; gap:3px; font-size:11px; color:#94a3b8; }
-.opsi-bar .nm { width:100%; box-sizing:border-box; background:#0f172a; border:1px solid #475569; border-radius:7px; padding:7px 8px; color:#f1f5f9; font-size:12px; font-weight:700; min-height:36px; }
+/* font-size input/select TAK BISA di bawah 16px -- ada aturan global
+   "input,select,textarea{font-size:16px!important}" di layouts/app.blade.php
+   sengaja mencegah iOS Safari auto-zoom halaman saat tap kolom. Kompak lewat
+   padding/tinggi kotak saja, jangan lawan aturan itu. */
+.opsi-bar .nm { width:100%; box-sizing:border-box; background:#0f172a; border:1px solid #475569; border-radius:7px; padding:6px 8px; color:#f1f5f9; font-weight:700; min-height:34px; }
 .opsi-bar .nm::placeholder { color:#64748b; font-weight:400; }
 .ckf { font-size:13px; color:#cbd5e1; display:flex; align-items:center; gap:6px; cursor:pointer; }
 .ckf input { width:20px; height:20px; }
@@ -48,8 +52,8 @@
 .tag.denah { background:#38bdf8; }
 .blok-body { padding:12px; }
 .subhead { font-size:12px; color:#fbbf24; margin:12px 0 8px; }
-.iconbtn { background:none; border:none; cursor:pointer; font-size:14px; padding:0; min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; color:#cbd5e1; flex:none; }
-.iconbtn svg { width:16px; height:16px; }
+.iconbtn { background:none; border:none; cursor:pointer; font-size:13px; padding:0; min-width:34px; min-height:34px; display:inline-flex; align-items:center; justify-content:center; color:#cbd5e1; flex:none; }
+.iconbtn svg { width:15px; height:15px; }
 .iconbtn.danger { color:#f87171; }
 /* Hint di balik ikon "i" kecil — teks petunjuk baru muncul saat di-tap, tak makan layar */
 .hintbtn { background:none; border:1px solid #475569; border-radius:50%; width:22px; height:22px; padding:0; display:inline-flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:700; font-style:italic; cursor:pointer; flex:none; }
@@ -182,15 +186,15 @@
     <div class="wz-step" id="step1">
     <div class="tabbar" id="tabbar"></div>
 
-    <div class="ro-card" style="padding:8px 10px;margin-bottom:10px">
+    <div class="ro-card" style="padding:7px 9px;margin-bottom:9px">
         <div class="opsi-bar" style="margin-bottom:0">
             <label class="opsi-lbl">Nama opsi aktif
                 <input type="text" class="nm" id="opsiNama" placeholder="mis. Standar / Premium">
             </label>
-            <button class="btn-grey" style="border:none;border-radius:7px;padding:0 10px;min-height:36px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;flex:none" title="Duplikat opsi ini" onclick="duplikatOpsi()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplikat</button>
+            <button class="btn-grey" style="border:none;border-radius:6px;padding:0 9px;min-height:34px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex:none" title="Duplikat opsi ini" onclick="duplikatOpsi()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplikat</button>
             <button class="iconbtn danger" title="Hapus opsi" onclick="hapusOpsi()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg></button>
         </div>
-        <label class="opsi-lbl" style="margin-top:6px">Finishing opsi ini
+        <label class="opsi-lbl" style="margin-top:5px">Finishing opsi ini
             <select class="nm" id="opsiFinishing" style="font-weight:400">
                 <option value="standar">Standar (cat/duco — sudah termasuk)</option>
                 <option value="powder">Powder coating (tambah biaya per m² rangka)</option>
