@@ -469,10 +469,27 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    + label pendek ("Manual"/"Pulihkan"/"Susun Ulang"), pola SAMA persis
    Reset/Sudut/Kotak di tab Rangka (`.de-mini` + `.de-ico`, title=tooltip
    penjelasan). **Bukan bug** kalau tab Support kelihatan cuma ada
-   3 tombol itu -- kontrol arah/mode/kotak grid (`rowSupSpacing`/
-   `rowSupH`/`rowSupV`) SENGAJA cuma tampil di fase PRATINJAU (sebelum
-   dikunci); begitu terkunci (S1..Sn sudah ada, kasus Elvan), yang
+   3 tombol itu -- kontrol arah/mode/kotak grid (`rowSupArah`/
+   `rowSupH`/`rowSupV`, nama `rowSupArah` per poin (j) di bawah) SENGAJA
+   cuma tampil di fase PRATINJAU (sebelum dikunci); begitu terkunci
+   (S1..Sn sudah ada, kasus Elvan), yang
    relevan cuma edit per-garis lewat panel "Support (N)" di bawahnya.
+   Diverifikasi node --check + 13 test .mjs rangka + canopi-check --full.
+   (j) **Panel Support fase PRATINJAU dipadatkan (Elvan lihat langsung
+   fase ini, bukan cuma fase terkunci):** dulu 1 baris gabungan Arah+
+   Ideal-per-kotak+Saran+hint (`rowSupSpacing`) bikin wrap jadi 2-3 baris
+   di HP + label "Horizontal"/"Vertikal" full-text makan tempat. Dipecah
+   & dipadatkan: (1) `rowSupSpacing` dibelah jadi `rowSupArah` (dropdown
+   Arah + tombol "Saran" [ikon lampu] 1 baris) dan `rowSupIdeal` (input
+   Ideal per kotak + hint, baris terpisah). (2) **`rowSupIdeal` cuma
+   tampil kalau arah BUKAN "2 arah"** (1 arah h/v saja) -- permintaan
+   eksplisit Elvan, alasan: pas 2 arah sudah ada 2 baris Kotak(cm)
+   sendiri-sendiri (H dan V) buat diisi manual, "Ideal+Saran" jadi kurang
+   perlu; Saran sendiri tetap SELALU ada di baris Arah (mengisi H & V
+   sekaligus dari nilai Ideal terakhir, logika `applySaran()` TIDAK
+   diubah). (3) Label "Horizontal"/"Vertikal" diganti ikon garis + huruf
+   "H"/"V" (title=tooltik nama lengkap), `.de-sup-axname` min-width
+   diperkecil drastis -- baris Mode+Kotak(cm) kini muat 1 baris di HP.
    Diverifikasi node --check + 13 test .mjs rangka + canopi-check --full.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki

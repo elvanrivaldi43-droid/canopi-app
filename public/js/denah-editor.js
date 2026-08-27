@@ -679,7 +679,7 @@ class DenahEditor {
 .de-mini.on{background:#1e293b;color:#fff;border-color:#1e293b}
 .de-hint{font-size:12px;color:#64748b;margin:6px 2px;min-height:16px}
 .de-sup-axis{align-items:flex-end;gap:8px}
-.de-sup-axname{font-size:12px;font-weight:600;color:#334155;min-width:66px;padding-bottom:7px}
+.de-sup-axname{font-size:12px;font-weight:600;color:#334155;min-width:0;padding-bottom:7px;display:inline-flex;align-items:center;gap:3px}
 .de-sup-axis>label{flex:0 1 auto}
 .de-sup-cm{font-size:12px;font-weight:700;color:#0369a1;padding-bottom:7px;white-space:nowrap}
 /* Wrapper sticky ribbon+quickbar: dulu cuma .de-ribbon yang sticky, jadi pas scroll/zoom dalam
@@ -804,23 +804,25 @@ body,.page-content{overscroll-behavior-y:contain}
       <div class="de-legend" data-role="sisiPanel" style="margin-top:8px"></div>
     </div>
     <div class="de-ribbon-panel" data-panel="support">
-      <div class="de-row" data-role="rowSupSpacing">
-        <label>Arah support
+      <div class="de-row" data-role="rowSupArah">
+        <label style="flex:1 1 auto">Arah support
           <select data-role="inArah"><option value="2">Grid 2 arah</option><option value="h">1 arah horizontal (melintang)</option><option value="v">1 arah vertikal (membujur)</option></select>
         </label>
+        <span class="de-mini" data-role="btnSaran" title="Isi Kotak (cm) otomatis dari Ideal per kotak"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2Z"/></svg>Saran</span>
+      </div>
+      <div class="de-row" data-role="rowSupIdeal" style="margin-top:8px">
         <label>Ideal per kotak (cm)<input type="number" data-role="inIdeal" value="100" step="5" min="1"></label>
-        <span class="de-mini" data-role="btnSaran">Pakai saran</span>
         <span class="de-hint" data-role="saranHint"></span>
       </div>
       <div class="de-row de-sup-axis" data-role="rowSupH" style="margin-top:10px">
-        <span class="de-sup-axname">Horizontal</span>
+        <span class="de-sup-axname" title="Horizontal"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16M4 16h16"/></svg>H</span>
         <label>Mode<select data-role="modeH"><option value="cm">cm per kotak</option><option value="kolom">jumlah kolom</option></select></label>
         <label data-role="lblKotakH">Kotak (cm)<input type="number" data-role="inKotakH" step="5" min="1"></label>
         <label data-role="lblKolomH" style="display:none">Jumlah kolom<input type="number" data-role="inKolomH" step="1" min="1" max="200"></label>
         <span class="de-sup-cm" data-role="hintH"></span>
       </div>
       <div class="de-row de-sup-axis" data-role="rowSupV" style="margin-top:8px">
-        <span class="de-sup-axname">Vertikal</span>
+        <span class="de-sup-axname" title="Vertikal"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v16M16 4v16"/></svg>V</span>
         <label>Mode<select data-role="modeV"><option value="cm">cm per kotak</option><option value="kolom">jumlah kolom</option></select></label>
         <label data-role="lblKotakV">Kotak (cm)<input type="number" data-role="inKotakV" step="5" min="1"></label>
         <label data-role="lblKolomV" style="display:none">Jumlah kolom<input type="number" data-role="inKolomV" step="1" min="1" max="200"></label>
@@ -1463,7 +1465,11 @@ body,.page-content{overscroll-behavior-y:contain}
     const locked = DenahConv.isLocked(this.S);
     const arah = this.S.arah;
     // Terkunci: input spacing disembunyikan total, diganti tombol Susun Ulang (spec 2.1).
-    this._q('[data-role=rowSupSpacing]').style.display = locked ? 'none' : '';
+    this._q('[data-role=rowSupArah]').style.display = locked ? 'none' : '';
+    // "Ideal per kotak" cuma berguna kalau cuma 1 sumbu yang dipakai (2 arah sudah punya 2 baris
+    // Kotak(cm) sendiri-sendiri buat diisi manual) -- permintaan Elvan 27 Ags: sembunyikan biar
+    // gak numpuk pas Grid 2 arah dipilih.
+    this._q('[data-role=rowSupIdeal]').style.display = (!locked && arah !== '2') ? '' : 'none';
     this._q('[data-role=btnSusunUlang]').style.display = locked ? '' : 'none';
     this._q('[data-role=btnRestoreSup]').style.display = locked ? 'none' : '';
     this._q('[data-role=rowSupH]').style.display = (!locked && (arah === 'h' || arah === '2')) ? '' : 'none';
