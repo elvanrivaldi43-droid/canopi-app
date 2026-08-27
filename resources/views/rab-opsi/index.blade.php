@@ -88,25 +88,27 @@
         <button type="button" class="hintbtn" title="Petunjuk" onclick="hintToggle('hintWizard')">i</button>
     </div>
     <p class="ro-sub hintbox" id="hintWizard" style="margin:0 0 14px">Wizard 3 langkah: isi item RAB → finalisasi (durasi, nginap, layanan) → harga keluar.</p>
-    <div style="display:flex;gap:6px;margin-bottom:14px">
-        <div id="wzDot1" style="flex:1;text-align:center;padding:8px;border-radius:8px;background:#fbbf24;color:#0f172a;font-size:12px;font-weight:700">1. Item RAB</div>
-        <div id="wzDot2" style="flex:1;text-align:center;padding:8px;border-radius:8px;background:#334155;color:#cbd5e1;font-size:12px;font-weight:700">2. Finalisasi</div>
-        <div id="wzDot3" style="flex:1;text-align:center;padding:8px;border-radius:8px;background:#334155;color:#cbd5e1;font-size:12px;font-weight:700">3. Harga</div>
+    <div style="display:flex;gap:5px;margin-bottom:12px">
+        <div id="wzDot1" style="flex:1;text-align:center;padding:6px;border-radius:7px;background:#fbbf24;color:#0f172a;font-size:11px;font-weight:700">1. Item RAB</div>
+        <div id="wzDot2" style="flex:1;text-align:center;padding:6px;border-radius:7px;background:#334155;color:#cbd5e1;font-size:11px;font-weight:700">2. Finalisasi</div>
+        <div id="wzDot3" style="flex:1;text-align:center;padding:6px;border-radius:7px;background:#334155;color:#cbd5e1;font-size:11px;font-weight:700">3. Harga</div>
     </div>
 
     @if(isset($lead) && $lead)
-    <div class="ro-card" style="border:1px solid #fbbf24">
+    <div class="ro-card" style="border:1px solid #fbbf24;padding:11px">
         <div style="display:flex;align-items:center;gap:8px">
             <div style="font-size:13px;color:#fbbf24;font-weight:700;flex:1">RAB untuk Lead #{{ $lead->id }} — {{ $lead->nama_customer }}</div>
             @if($lihatHarga)<button type="button" class="hintbtn" title="Petunjuk" onclick="hintToggle('hintSimpanLead')">i</button>@endif
         </div>
-        <div style="font-size:12px;color:#94a3b8;margin-top:4px">
-            {{ $lead->produk ?? '-' }}@if(!empty($lead->atap_diminati)) · atap: {{ $lead->atap_diminati }}@endif @if(!empty($lead->no_hp)) · {{ $lead->no_hp }}@endif
-        </div>
-        @if($lihatHarga)
-        <div style="font-size:12px;color:#cbd5e1;margin-top:6px" id="leadInfoHarga">
-            @if(!empty($lead->estimasi_max))Estimasi admin: Rp {{ number_format($lead->estimasi_min ?? 0,0,',','.') }}–{{ number_format($lead->estimasi_max,0,',','.') }}@else Belum ada estimasi admin.@endif
-            @if(!empty($lead->harga_final)) · Harga final tersimpan: Rp {{ number_format($lead->harga_final,0,',','.') }}@endif
+        <div style="display:flex;flex-wrap:wrap;gap:2px 6px;font-size:12px;color:#94a3b8;margin-top:4px">
+            <span>{{ $lead->produk ?? '-' }}@if(!empty($lead->atap_diminati)) · atap: {{ $lead->atap_diminati }}@endif @if(!empty($lead->no_hp)) · {{ $lead->no_hp }}@endif</span>
+            @if($lihatHarga)
+            <span>·</span>
+            <span id="leadInfoHarga" style="color:#cbd5e1">
+                @if(!empty($lead->estimasi_max))Estimasi admin: Rp {{ number_format($lead->estimasi_min ?? 0,0,',','.') }}–{{ number_format($lead->estimasi_max,0,',','.') }}@else Belum ada estimasi admin.@endif
+                @if(!empty($lead->harga_final)) · Harga final tersimpan: Rp {{ number_format($lead->harga_final,0,',','.') }}@endif
+            </span>
+            @endif
         </div>
         <div class="hintbox" id="hintSimpanLead" style="margin-top:6px">Setelah Bandingkan, tiap opsi punya tombol untuk disimpan ke lead ini sebagai Estimasi (admin) atau Harga Final (surveyor).</div>
         @endif
@@ -188,12 +190,20 @@
     <div class="wz-step" id="step1">
     <div class="tabbar" id="tabbar"></div>
 
-    <div class="opsi-bar">
-        <label class="opsi-lbl">Nama opsi aktif
-            <input type="text" class="nm" id="opsiNama" placeholder="mis. Standar / Premium">
+    <div class="ro-card" style="padding:11px;margin-bottom:12px">
+        <div class="opsi-bar" style="margin-bottom:0">
+            <label class="opsi-lbl">Nama opsi aktif
+                <input type="text" class="nm" id="opsiNama" placeholder="mis. Standar / Premium">
+            </label>
+            <button class="btn-grey" style="border:none;border-radius:8px;padding:0 12px;min-height:46px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex:none" title="Duplikat opsi ini" onclick="duplikatOpsi()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplikat</button>
+            <button class="iconbtn danger" style="min-height:46px" title="Hapus opsi" onclick="hapusOpsi()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg></button>
+        </div>
+        <label class="opsi-lbl" style="margin-top:8px">Finishing opsi ini
+            <select class="nm" id="opsiFinishing" style="font-weight:400">
+                <option value="standar">Standar (cat/duco — sudah termasuk)</option>
+                <option value="powder">Powder coating (tambah biaya per m² rangka)</option>
+            </select>
         </label>
-        <button class="btn-grey" style="border:none;border-radius:8px;padding:0 12px;min-height:46px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex:none" title="Duplikat opsi ini" onclick="duplikatOpsi()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplikat</button>
-        <button class="iconbtn danger" style="min-height:46px" title="Hapus opsi" onclick="hapusOpsi()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg></button>
     </div>
 
     <div id="panes"></div>
@@ -398,13 +408,7 @@ function tambahOpsi(nama, bloks, finishing){
     const pane=document.createElement('div');
     pane.className='opsi-pane'; pane.id=id; pane.dataset.nama=nama||('Opsi '+opsiSeq);
     pane.dataset.finishing=(finishing==='powder')?'powder':'standar';
-    var finBox='<div style="background:#1e293b;border-radius:10px;padding:10px;margin-bottom:10px">'+
-        '<div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:6px">Finishing opsi ini</div>'+
-        '<select class="opsi-finishing" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;padding:10px;font-size:13px" onchange="this.closest(\'.opsi-pane\').dataset.finishing=this.value">'+
-        '<option value="standar"'+(pane.dataset.finishing==='standar'?' selected':'')+'>Standar (cat/duco — sudah termasuk)</option>'+
-        '<option value="powder"'+(pane.dataset.finishing==='powder'?' selected':'')+'>Powder coating (tambah biaya per m² rangka)</option>'+
-        '</select></div>';
-    pane.innerHTML=finBox+'<div class="blok-list"></div>';
+    pane.innerHTML='<div class="blok-list"></div>';
     document.getElementById('panes').appendChild(pane);
 
     switchOpsi(id);
@@ -419,6 +423,7 @@ function switchOpsi(id){
     [].slice.call(document.querySelectorAll('.opsi-pane')).forEach(function(p){ p.classList.toggle('act', p.id===id); });
     const pane=document.getElementById(id);
     document.getElementById('opsiNama').value = pane ? pane.dataset.nama : '';
+    document.getElementById('opsiFinishing').value = pane ? pane.dataset.finishing : 'standar';
 }
 
 document.getElementById('opsiNama').addEventListener('input', function(){
@@ -426,6 +431,10 @@ document.getElementById('opsiNama').addEventListener('input', function(){
     pane.dataset.nama=this.value;
     const tab=document.querySelector('.tab[data-opsi="'+pane.id+'"]');
     if(tab) tab.textContent=this.value||'Opsi';
+});
+document.getElementById('opsiFinishing').addEventListener('change', function(){
+    const pane=paneAktif(); if(!pane) return;
+    pane.dataset.finishing=this.value;
 });
 
 function duplikatOpsi(){
