@@ -456,6 +456,18 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    `pipeline_leads.rab_snapshot` SUDAH DICEK Bos 27 Ags: LONGTEXT — aman,
    tak ada risiko snapshot kepotong. Seluruh #9 TERVALIDASI di HP 27 Ags
    (tes mode pesawat + draft pulih + konflik dua tab ditolak).
+   **Bug lanjutan ditemukan Bos 27 Ags malam & sudah difix:** `hapusOpsi()`
+   (hapus tab Opsi) dan `hapusBlok()` (hapus kartu blok) cuma nyopot
+   elemen dari DOM, TIDAK PERNAH manggil `autoSave()` -- beda dari semua
+   aksi lain yang pada akhirnya lewat jalur autosave (denah onChange
+   didebounce ke `jadwalkanHitung`, navigasi wizard manggil `autoSave()`
+   langsung). Efeknya: hapus opsi/blok kelihatan hilang di layar, tapi
+   server gak pernah tau -- refresh sebelum ada autosave lain kepicu
+   (mis. ganti step wizard) balikin lagi opsi/blok yang tadi dihapus,
+   BUKAN bug database duplikat/gagal hapus. Fix: tambah `autoSave();` di
+   akhir kedua fungsi itu (`resources/views/rab-opsi/index.blade.php`).
+   Diverifikasi canopi-check --full (Blade compile). Belum ada laporan
+   validasi manual HP.
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 

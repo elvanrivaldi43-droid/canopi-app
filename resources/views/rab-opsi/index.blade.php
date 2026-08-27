@@ -451,6 +451,7 @@ function hapusOpsi(){
     pane.remove();
     const first=document.querySelector('.opsi-pane');
     if(first) switchOpsi(first.id);
+    autoSave(); // tanpa ini hapus cuma di layar -- refresh balikin versi server yang belum tau opsi ini hilang
 }
 
 // ================= BLOK =================
@@ -575,6 +576,7 @@ function hapusBlok(btn){
     var ed=DENAH.get(card);
     if(ed){ ed.destroy(); DENAH.delete(card); }
     card.remove();
+    autoSave(); // sama pola hapusOpsi -- tanpa ini blok yg dihapus balik lagi pas refresh
 }
 
 function isiBlok(card, d){
