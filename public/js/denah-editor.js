@@ -906,14 +906,16 @@ body,.page-content{overscroll-behavior-y:contain}
     this._q('[data-role=btnAddV]').onclick = () => {
       if (this.mode !== 'bentuk') return;
       this.armed = (this.armed === 'addV') ? null : 'addV'; this.boxPreview = null;
-      this.setHint(this.armed === 'addV' ? 'Mode Tambah Sudut aktif — klik sisi frame berkali-kali. Tap "+ Sudut" lagi untuk berhenti.' : '');
+      this.setHint(this.armed === 'addV' ? 'Mode Tambah Sudut aktif — klik sisi frame berkali-kali. Buka tab Rangka lagi lalu tap "Sudut" untuk berhenti.' : '');
       this._syncVertBtns(); this.renderBoxPanel();
+      this._closeRibbon();
     };
     this._q('[data-role=btnDelV]').onclick = () => {
       if (this.mode !== 'bentuk') return;
       this.armed = (this.armed === 'delV') ? null : 'delV'; this.boxPreview = null;
-      this.setHint(this.armed === 'delV' ? 'Mode Hapus Sudut aktif — klik sudut berkali-kali (min 3 sudut). Tap "− Sudut" lagi untuk berhenti.' : '');
+      this.setHint(this.armed === 'delV' ? 'Mode Hapus Sudut aktif — klik sudut berkali-kali (min 3 sudut). Buka tab Rangka lagi lalu tap "Sudut" untuk berhenti.' : '');
       this._syncVertBtns(); this.renderBoxPanel();
+      this._closeRibbon();
     };
     this._q('[data-role=btnUndo]').onclick = () => this.undo();
     this._q('[data-role=btnRedo]').onclick = () => this.redo();
@@ -959,6 +961,7 @@ body,.page-content{overscroll-behavior-y:contain}
       this.setHint('Ketuk sisi lurus tempat kotak mau nempel.');
       this._syncVertBtns();  // Tambah Kotak nggak lewat render() -> matikan tanda +Sudut/-Sudut manual
       this.renderBoxPanel();
+      this._closeRibbon();
     };
 
     this._q('[data-role=inArah]').onchange = e => { this.S.arah = e.target.value; this._syncSupportRows(); this.render(); };
@@ -976,7 +979,7 @@ body,.page-content{overscroll-behavior-y:contain}
     this._q('[data-role=inL]').onchange = () => this.resizeBox();
     this._q('[data-role=inP]').onchange = () => this.resizeBox();
     this._q('[data-role=btnSaran]').onclick = () => this.applySaran();
-    this._q('[data-role=btnReset]').onclick = () => this.resetBox();
+    this._q('[data-role=btnReset]').onclick = () => { this.resetBox(); this._closeRibbon(); };
 
     const matKeys = { matFrame: 'frame', matSupport: 'support', matTiang: 'tiang' };
     Object.keys(matKeys).forEach(role => {
@@ -1063,6 +1066,11 @@ body,.page-content{overscroll-behavior-y:contain}
       tabs.forEach(x => { if (x.dataset.tab === openTab) x.classList.remove('on'); });
       openTab = null;
     };
+    // Dipanggil dari tombol aksi (Reset/+Sudut/-Sudut/+Kotak, lihat _wireControls) supaya
+    // panel langsung terlipat begitu ditekan -- kanvas kelihatan tanpa tap tab lagi
+    // (permintaan Elvan 27 Ags). Mode armed (+/-Sudut, +Kotak) TETAP aktif walau panel
+    // tertutup -- keadaan armed independen dari visibilitas panel.
+    this._closeRibbon = closeRibbon;
     tabs.forEach(t => t.onclick = () => {
       const name = t.dataset.tab;
       if (openTab === name) { closeRibbon(); return; }
