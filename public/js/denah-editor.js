@@ -651,14 +651,18 @@ class DenahEditor {
   static shellHTML() {
     return `
 <style>
-.de-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.de-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.de-row>label{font-size:12px;display:flex;flex-direction:column;gap:3px}
-.de-card input[type=number],.de-card input[type=text]{width:78px;padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px}
-.de-card select{padding:5px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;background:#fff}
-.de-tool{padding:10px 14px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #334155;background:#fff;border-radius:8px;font-size:13px;cursor:pointer;user-select:none}
+.de-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.de-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.de-row>label{font-size:11px;display:flex;flex-direction:column;gap:2px}
+/* font-size input/select TAK BISA di bawah 16px -- aturan global
+   "input,select,textarea{font-size:16px!important}" di layouts/app.blade.php
+   sengaja mencegah iOS Safari auto-zoom halaman saat tap kolom. Kompak lewat
+   padding/lebar kotak saja. */
+.de-card input[type=number],.de-card input[type=text]{width:64px;box-sizing:border-box;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px}
+.de-card select{padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;background:#fff}
+.de-tool{padding:6px 10px;min-height:34px;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;border:1px solid #334155;background:#fff;border-radius:7px;font-size:12px;cursor:pointer;user-select:none}
 .de-tool.on{background:#1e293b;color:#fff}
-.de-mini{padding:9px 13px;min-height:40px;box-sizing:border-box;display:inline-flex;align-items:center;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:12px;cursor:pointer}
+.de-mini{padding:6px 10px;min-height:34px;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd5e1;background:#fff;border-radius:7px;font-size:11px;cursor:pointer}
 .de-mini.on{background:#1e293b;color:#fff;border-color:#1e293b}
 .de-hint{font-size:12px;color:#64748b;margin:6px 2px;min-height:16px}
 .de-sup-axis{align-items:flex-end;gap:8px}
@@ -755,12 +759,12 @@ body,.page-content{overscroll-behavior-y:contain}
         <label>Panjang (cm)<input type="number" data-role="inP" value="300" step="10"></label>
         <label>Tinggi tiang (cm)<input type="number" data-role="inT" value="300" step="10"></label>
         <label>Besi frame<select data-role="matFrame"></select></label>
-        <span class="de-mini" data-role="btnReset">Reset kotak dari Lebar×Panjang</span>
+        <span class="de-mini" data-role="btnReset" title="Reset kotak dari Lebar×Panjang"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>Reset</span>
       </div>
       <div class="de-row" style="margin-top:8px">
-        <span class="de-mini" data-role="btnAddV">+ Sudut</span>
-        <span class="de-mini" data-role="btnDelV">− Sudut</span>
-        <span class="de-mini" data-role="btnAddBox">+ Tambah Kotak</span>
+        <span class="de-mini" data-role="btnAddV" title="Tambah Sudut — sisipkan titik baru di sisi"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 12l10 10 10-10z"/><path d="M12 8v8M8 12h8"/></svg>Sudut</span>
+        <span class="de-mini" data-role="btnDelV" title="Hapus Sudut"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 12l10 10 10-10z"/><path d="M8 12h8"/></svg>Sudut</span>
+        <span class="de-mini" data-role="btnAddBox" title="Tambah Kotak — lekukan/tonjolan di sisi"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="11" height="11" rx="1.5"/><path d="M18 9v6M15 12h6"/></svg>Kotak</span>
       </div>
       <div class="de-legend" data-role="sisiPanel" style="margin-top:8px"></div>
     </div>
@@ -1485,7 +1489,7 @@ body,.page-content{overscroll-behavior-y:contain}
     const panel = this._q('[data-role=sisiPanel]');
     panel.innerHTML =
       '<b style="width:100%;font-size:12px;color:#334155">Ukur sisi (cm) — ketik angka pasti:</b>' +
-      fr.map((m, i) => `<label style="font-size:11px;color:#475569">F${i + 1}<input type="text" inputmode="decimal" value="${m.panjang}" data-side="${i}" style="width:66px;margin-left:4px;padding:6px 6px;border:1px solid #cbd5e1;border-radius:6px"></label>`).join('');
+      fr.map((m, i) => `<label style="font-size:11px;color:#475569">F${i + 1}<input type="text" inputmode="decimal" value="${m.panjang}" data-side="${i}" style="width:58px;box-sizing:border-box;margin-left:4px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px"></label>`).join('');
     panel.querySelectorAll('input').forEach(inp => inp.onchange = e => this.setSideLength(+e.target.dataset.side, e.target.value));
   }
 
