@@ -28,6 +28,11 @@ body { font-family:'Segoe UI', Arial, sans-serif; color:#1e293b; background:#e2e
 .blok .bnama { font-size:14px; font-weight:700; color:#1e3a8a; margin-bottom:3px; }
 .blok .brow { font-size:12.5px; color:#475569; margin:1px 0; }
 .blok .brow b { color:#1e293b; }
+/* Gambar denah (tampak atas). Dipasang sebagai <img> data-URI, bukan SVG tempel-langsung:
+   di dalam <img> browser mematikan script & sumber luar, jadi gambar dari klien aman
+   ditampilkan tanpa kode pembersih sendiri. */
+.blok .bdenah { margin:6px 0 2px; }
+.blok .bdenah img { display:block; max-width:100%; height:auto; border:1px solid #e2e8f0; border-radius:6px; }
 .catatan { margin-top:18px; }
 .catatan .ct-title { font-size:13px; font-weight:700; color:#1e3a8a; border-bottom:1px solid #cbd5e1; padding-bottom:4px; margin-bottom:8px; }
 .catatan ol { margin-left:18px; font-size:12.5px; color:#334155; }
@@ -70,6 +75,8 @@ body { font-family:'Segoe UI', Arial, sans-serif; color:#1e293b; background:#e2e
     .sheet { box-shadow:none; max-width:100%; padding:10px 6px; }
     .toolbar { display:none; }
     .terms .editable { border-bottom:none; }
+    /* Gambar denah jangan terbelah dua halaman */
+    .blok { break-inside:avoid; page-break-inside:avoid; }
 }
 </style>
 </head>
@@ -132,6 +139,9 @@ body { font-family:'Segoe UI', Arial, sans-serif; color:#1e293b; background:#e2e
                 @endif
                 @if(!empty($b->frame))
                 <div class="brow">Rangka: <b>{{ $b->frame }}</b>@if(!empty($b->support)) · Support: <b>{{ $b->support }}</b>@endif @if(!empty($b->tiang)) · Tiang: <b>{{ $b->tiang }}</b>@endif</div>
+                @endif
+                @if(!empty($b->denah_svg))
+                <div class="bdenah"><img src="data:image/svg+xml;base64,{{ base64_encode($b->denah_svg) }}" alt="Denah {{ $b->nama ?? 'blok' }} (tampak atas)"></div>
                 @endif
                 @if(!empty($b->atap) && count($b->atap))
                 <div class="brow">Atap: <b>{{ implode(', ', (array)$b->atap) }}</b></div>

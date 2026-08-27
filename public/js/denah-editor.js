@@ -420,6 +420,26 @@ const DenahConv = {
     if (shortText && lenSvg >= shortText.length * 5.5 + 8) return shortText;
     return '';
   },
+  // Denah versi KERTAS untuk penawaran cetak: palet layar (latar biru gelap) dipetakan ke
+  // palet putih. Bukan sekadar tukar background -- warna besi PALET dirancang untuk latar
+  // gelap; kuning/lime/tosca nyaris hilang di kertas putih, jadi tiap warna butuh pasangan
+  // gelapnya sendiri. Sengaja fungsi MURNI string (bukan DOM) supaya bisa dites headless;
+  // pembuangan elemen bantu editor (titik sudut, area sentuh) dikerjakan pemanggil lewat DOM.
+  // Satu kali pass regex, bukan replace berantai -- kalau berantai, hasil replace pertama
+  // (mis. teks jadi #ffffff) bisa kena aturan replace berikutnya.
+  svgCetak(html) {
+    if (typeof html !== 'string') return '';
+    const map = {
+      '#0f2740': '#ffffff', // latar kanvas + halo teks
+      '#1e3a5f': '#e5e7eb', // garis grid
+      '#e2e8f0': '#111827', // teks label frame/balok
+      '#93c5fd': '#1d4ed8', // teks label support
+      '#fbbf24': '#b45309', // teks label tiang
+      '#f59e0b': '#b45309', '#38bdf8': '#0369a1', '#a3e635': '#4d7c0f', '#f472b6': '#be185d',
+      '#c084fc': '#7e22ce', '#fb7185': '#be123c', '#2dd4bf': '#0f766e', '#facc15': '#a16207',
+    };
+    return html.replace(/#[0-9a-fA-F]{6}\b/g, m => map[m.toLowerCase()] || m);
+  },
   // Potongan jalur (axis+pos absolut) dari polygon SAAT INI. Tiap potongan BERHENTI di
   // perpotongan frame — TIDAK menyeberangi coakan (keputusan Elvan 23 Ags: potongan yang
   // tak diperlukan harus bisa dibuang sendiri-sendiri). Dasar bersama utk form "+ Garis

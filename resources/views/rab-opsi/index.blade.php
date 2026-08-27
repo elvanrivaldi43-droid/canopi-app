@@ -1080,12 +1080,39 @@ function tampilDanger(list){
 }
 function sembunyiDanger(){ var b=document.getElementById('wzDanger'); if(b) b.style.display='none'; }
 function namaAtap(id){ for(var i=0;i<ATAP.length;i++){ if(+ATAP[i].id===+id) return ATAP[i].nama; } return 'Atap'; }
+// Gambar denah untuk penawaran cetak: pakai SVG yang SUDAH ada di layar (satu-satunya
+// generator gambar denah ada di DenahEditor.render(); tak ada versi server/PHP), lalu
+// (1) buang alat bantu editor -- pita sentuh transparan, bulatan titik sudut, handle ujung
+// support, garis bantu snap, tooltip -- dan (2) petakan warnanya ke palet kertas.
+// CATATAN: lingkaran tiang yang TAMPAK juga ber-class "hit", jadi jangan pernah menyaring
+// pakai class itu; patokannya warna transparan (murni alat bantu, tak pernah tampil).
+// Hasilnya jadi FOTO BEKU: penawaran yang sudah dibuat tak ikut berubah kalau RAB diedit lagi.
+function denahCetak(card){
+    var ed=card?DENAH.get(card):null; if(!ed) return '';
+    // Sorotan garis (support/balok, kuning tebal) juga alat bantu -- di dokumen customer bikin
+    // satu batang kelihatan "beda sendiri" tanpa alasan. Sorotan balok sengaja awet by design,
+    // jadi cukup sering masih menyala saat tombol ini ditekan. Dilepas sementara lalu
+    // dipulihkan, supaya tampilan editor yang dilihat surveyor tidak berubah.
+    var sSup=ed.selSup, sBal=ed.selBalok, sorot=(sSup!=null||sBal!=null);
+    if(sorot){ ed.selSup=null; ed.selBalok=null; ed.render(); }
+    var svg=card.querySelector('.de-canvas svg');
+    var out='';
+    if(svg){
+        var k=svg.cloneNode(true);
+        [].slice.call(k.querySelectorAll('[stroke="transparent"],[fill="transparent"],.vh,[id^=smh],[id^=slh],[id^=agx],[id^=agy],[data-boxprev],title')).forEach(function(e){ e.remove(); });
+        out=DenahConv.svgCetak(k.outerHTML);
+    }
+    if(sorot){ ed.selSup=sSup; ed.selBalok=sBal; ed.render(); }
+    return out;
+}
 function buildPenawaran(){
     if(!window.CMP || !window.CMP.length){ alert('Tekan "Hitung Harga" dulu supaya harga tiap opsi keluar.'); return null; }
     var panes=[].slice.call(document.querySelectorAll('.opsi-pane'));
     var opsiOut=[];
     for(var i=0;i<panes.length;i++){
         var pd=bacaPane(panes[i]);
+        // urutan kartu = urutan pd.blok (bacaPane memetakan .blok-card apa adanya)
+        var cards=[].slice.call(panes[i].querySelectorAll('.blok-card'));
         var cmp=window.CMP[i]||{};
         var blokOut=[];
         for(var b=0;b<pd.blok.length;b++){
@@ -1104,7 +1131,8 @@ function buildPenawaran(){
                 for(var ad=0;ad<ajD.length;ad++){ atapArrD.push(namaAtap(ajD[ad])+' ('+alD[ad]+' m2)'); }
                 var md=(bl.denah&&bl.denah.matDefault)||{};
                 blokOut.push({ nama:bl.nama||('Blok '+(b+1)), ukuran:(bl.luas_m2||0)+' m2 (denah)',
-                    frame:md.frame, support:md.support, tiang:md.tiang, atap:atapArrD });
+                    frame:md.frame, support:md.support, tiang:md.tiang, atap:atapArrD,
+                    denah_svg:denahCetak(cards[b]) });
             } else {
                 var items=(bl.manual_items||[]).map(function(m){ return m.nama+' x'+m.qty; });
                 blokOut.push({ nama:bl.nama||('Blok '+(b+1)), manual:items });
