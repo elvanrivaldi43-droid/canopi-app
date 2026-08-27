@@ -1095,7 +1095,7 @@ async function autoSave(){
         if(!r.ok){
             if(r.status>=500) throw new Error('HTTP '+r.status); // error server sementara -> retry (LAPIS 2)
             // 4xx selain 409 = error permanen (retry tak akan menolong) -- pesan jelas, TANPA retry.
-            var pesan4xx = (r.status===419) ? 'Sesi habis — muat ulang halaman untuk lanjut menyimpan'
+            var pesan4xx = (r.status===419 || r.status===401) ? 'SESI LOGIN HABIS — muat ulang halaman lalu login lagi. Kerjaan aman di draft lokal.'
                           : (r.status===404) ? 'Lead tidak ditemukan di server — cek link/pipeline'
                           : ('Gagal simpan (HTTP '+r.status+')');
             simpanStatus(pesan4xx, false);
