@@ -149,9 +149,11 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 6. SWE (Smart Work Engine) — diloncat maju atas keputusan Bos (16 Agustus), kalibrasi RAB (#1) menyusul belakangan. **Fase 1 (Fondasi Tahap Produksi) LIVE. Fase 2 (Skill Karyawan + Rekomendasi PIC) LIVE per 21 Agustus 2026, belum ditest langsung di web — lihat Utang aktif #7.** Sisa: Fase 3 (kapasitas tim), Fase 4 (evaluasi produktivitas) — lihat `docs/superpowers/specs/2026-08-16-swe-smart-work-engine-design.md`
 7. Multi-produk (pagar/tralis) — setelah kanopi matang+kalibrasi tuntas
 
-**Ditunda/belum diputuskan:**
+**SEDANG DIKERJAKAN (lompat urutan, diputuskan Elvan 27 Ags 2026):**
 - **Antrean polesan DenahEditor pasca-kalibrasi** (hasil audit menyeluruh 27 Ags 2026, urut nilai;
-  auditnya bersih — tak ada bug baru, hampir semua fitur terpakai):
+  auditnya bersih — tak ada bug baru, hampir semua fitur terpakai). **Sengaja dikerjakan
+  SEBELUM kalibrasi (#1) tuntas** — item ini UI/polish saja, tidak menyentuh angka kalibrasi RAB;
+  kalibrasi tetap prioritas #1 dan masih berjalan paralel:
   1. Gambar denah ikut ke penawaran cetak (`penawaran/show.blade.php` nol jejak denah — padahal
      SVG-nya tinggal dirender baca-saja; cocok digandeng Portal Customer roadmap #5).
   2. Legend editor hitung batang 6m untuk SEMUA material, bukan cuma WF (`hitungBatangWF` tinggal
@@ -160,6 +162,8 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
      ketik-sisi jadi UI sendiri.
   4. Bersih-bersih: field model mati `target`/`autoKotak` di `defaultModel()`, blok tipe KANOPI
      lama di wizard (kompat mundur — pensiunkan hanya kalau RAB lama sudah tak relevan).
+
+**Ditunda/belum diputuskan:**
 - **Blok "× N unit" untuk order volume/massal** (disetujui Elvan 27 Ags 2026, dikerjakan SETELAH kalibrasi) — kasus: 60 kanopi = 2-3 tipe unik × jumlah, bukan 60 blok. Gambar denah 1x, besi/upah/durasi dikali N (nginap otomatis ikut benar karena baca durasi total). PR bisnis yang harus diputuskan saat bangun: efisiensi produksi massal (per-unit lebih cepat dari satuan) supaya tak kalah harga di project volume — jangan cuma "harga satuan × N"
 - C2b video link (Drive/YouTube) — ditunda ke Sesi Media R2
 - Besi Bagian B denah interaktif — ditunda
@@ -397,8 +401,9 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    tambah tiang baru → auto-terpilih). Diverifikasi node --check + 13 test
    .mjs rangka + canopi-check --full sebelum tiap push; commit
    `540dbcd..HEAD`. **Dropdown Support/Tiang & Ukur Sisi SUDAH dicoba Bos
-   di HP dan OK** ("sudah berhasil semua"); yang tersisa cuma bug combobox
-   besi di atas (poin c) -- fix-nya belum dicoba ulang di HP.
+   di HP dan OK** ("sudah berhasil semua"). Fix combobox besi (poin c)
+   **TERVALIDASI Bos di HP 27 Ags malam** -- list bisa di-scroll jari tanpa
+   langsung kepilih, menu Paste iOS tak nongol, dropdown besi Support penuh.
    (f) **Bug ditemukan Bos 27 Ags malam & sudah difix:** semua tulisan di
    panel editor denah (Rangka/Support/Tiang, label, tombol) "jadi
    transparan" begitu APP dipindah ke mode gelap. Root cause: elemen
@@ -414,8 +419,8 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    ada buat anti-seleksi-teks) -- 1 baris nutup ke-4 kontainer panel
    sekaligus (termasuk popup Ganti Material/menu Tiang/Support yang
    belum sempat dilaporkan tapi kena bug sama). Diverifikasi node
-   --check + 13 test .mjs rangka + canopi-check --full. Belum ada
-   laporan validasi manual HP.
+   --check + 13 test .mjs rangka + canopi-check --full. **TERVALIDASI Bos
+   di HP 27 Ags malam** (mode gelap, teks panel kebaca normal).
    (g) **Permintaan Elvan 27 Ags malam — konvensi posisi Support disamakan
    ke Tiang + panjang ditambahkan ke deskripsi:** sumbu H (`datar`) di
    `describeLockedSupport` dulu "Ncm dari atas" diukur dari `bb.y0` (tepi
@@ -435,8 +440,8 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    diubah (sudah tampilkan panjang dari awal, tanpa posisi). Test lama
    `test_support_pick.mjs`/`test_support_jalur_manual.mjs` disesuaikan +
    3 assert baru utk parameter `mem`. Diverifikasi node --check + 13 test
-   .mjs rangka (tanpa FAIL) + canopi-check --full. Belum ada laporan
-   validasi manual HP.
+   .mjs rangka (tanpa FAIL) + canopi-check --full. **TERVALIDASI Bos di HP
+   27 Ags malam** (deskripsi baca "Ncm dari depan" + panjangnya).
    (h) **Preview pindah Support (permintaan Elvan 27 Ags malam, langsung
    nyusul poin g):** form "Terapkan" pindah Support (Arah+cm, berlaku
    utk manual MAUPUN grid/bawaan -- satu editRow yang sama) dulu commit
@@ -584,8 +589,9 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    (change), dan di listener `change` level-kartu `tambahBlok()` (satu
    listener delegated ini nangkep SEMUA field di dalam kartu -- nama blok,
    field kanopi, dst -- sekali pasang). Diverifikasi canopi-check --full
-   (Blade compile). Belum ada laporan validasi manual HP utk kedua fix
-   "hilang saat refresh" ini (hapus opsi/blok & rename opsi/blok).
+   (Blade compile). **TERVALIDASI Bos di HP 27 Ags malam** -- kedua fix
+   "hilang saat refresh" (hapus opsi/blok & rename opsi/blok) sudah benar:
+   hapus blok lalu refresh tetap hilang, rename opsi bertahan.
    **Bug UX ditemukan Bos 27 Ags malam (2 dialog beruntun bikin bingung &
    bahaya) & sudah difix:** konflik 409 -> dialog "Data di server LEBIH
    BARU, OK=reload" -> abis reload, dialog KEDUA otomatis muncul "Ada
