@@ -110,8 +110,7 @@
             </span>
             @endif
         </div>
-        <div class="hintbox" id="hintSimpanLead" style="margin-top:6px">Setelah Bandingkan, tiap opsi punya tombol untuk disimpan ke lead ini sebagai Estimasi (admin) atau Harga Final (surveyor).</div>
-        @endif
+        @if($lihatHarga)<div class="hintbox" id="hintSimpanLead" style="margin-top:6px">Setelah Bandingkan, tiap opsi punya tombol untuk disimpan ke lead ini sebagai Estimasi (admin) atau Harga Final (surveyor).</div>@endif
     </div>
     @endif
 
