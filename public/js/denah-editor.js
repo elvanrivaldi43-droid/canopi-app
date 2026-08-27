@@ -702,7 +702,12 @@ body{touch-action:manipulation}
    long-press bisa munculin Google Lens. Kanvas udah anti-seleksi dari dulu; ratakan ke seluruh
    kartu editor. Input/select DIKECUALIKAN -- user-select:none di input bisa blok fokus/ketik di
    iOS lama. */
-.de-card,.de-matmenu,.de-tiangmenu,.de-supportmenu{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* color eksplisit -- tanpa ini, teks yang gak diset warnanya sendiri WARIS warna dari <body>
+   halaman (mode gelap app nyetel itu jadi abu-abu terang, buat latar gelap). Editor denah
+   SELALU berlatar terang apapun mode app-nya, jadi warisan itu bikin teksnya nyaris tak
+   keliatan di atas latar terang ini (laporan Elvan 27 Ags: "semua tulisan jadi transparan"
+   pas app di mode gelap -- ternyata bukan animasi/CSS transparan, murni warna teks ke-inherit). */
+.de-card,.de-matmenu,.de-tiangmenu,.de-supportmenu{color:#334155;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .de-card input,.de-card select,.de-card textarea{-webkit-user-select:auto;user-select:auto}
 /* Cegah pull-to-refresh (tarik-bawah = reload halaman) nyamber di tengah ngedit -- Chrome
    Android & iOS 16+. Scroll biasa tetap normal, cuma "mantul di ujung atas" yang gak lagi

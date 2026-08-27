@@ -389,6 +389,23 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    `540dbcd..HEAD`. **Dropdown Support/Tiang & Ukur Sisi SUDAH dicoba Bos
    di HP dan OK** ("sudah berhasil semua"); yang tersisa cuma bug combobox
    besi di atas (poin c) -- fix-nya belum dicoba ulang di HP.
+   (f) **Bug ditemukan Bos 27 Ags malam & sudah difix:** semua tulisan di
+   panel editor denah (Rangka/Support/Tiang, label, tombol) "jadi
+   transparan" begitu APP dipindah ke mode gelap. Root cause: elemen
+   panel (`.de-card` dkk) set `background:#fff` tapi TIDAK pernah set
+   `color` sendiri -- teks warisan warna dari `<body>` halaman, dan mode
+   gelap app nyetel `body` jadi abu-abu terang (`text-slate-200`, buat
+   latar gelap `app.blade.php`). Panel denah SELALU berlatar terang
+   apapun mode app-nya (gak ada varian gelapnya sendiri), jadi teks abu-
+   abu-terang-di-atas-putih itu nyaris tak kebaca -- bukan CSS transparan
+   beneran, murni warna teks ke-inherit salah. Fix: tambah
+   `color:#334155` eksplisit di selector gabungan
+   `.de-card,.de-matmenu,.de-tiangmenu,.de-supportmenu` (baris yang sudah
+   ada buat anti-seleksi-teks) -- 1 baris nutup ke-4 kontainer panel
+   sekaligus (termasuk popup Ganti Material/menu Tiang/Support yang
+   belum sempat dilaporkan tapi kena bug sama). Diverifikasi node
+   --check + 13 test .mjs rangka + canopi-check --full. Belum ada
+   laporan validasi manual HP.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
