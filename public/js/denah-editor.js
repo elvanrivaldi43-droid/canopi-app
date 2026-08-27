@@ -831,9 +831,9 @@ body,.page-content{overscroll-behavior-y:contain}
           <input type="text" class="de-combo-input" data-role="matSupport" autocomplete="off" placeholder="Ketik/pilih besi">
           <div class="de-combo-list" data-role="matSupportList"></div>
         </label>
-        <span class="de-mini" data-role="btnAddSupport">+ Support manual</span>
-        <span class="de-mini" data-role="btnRestoreSup">Pulihkan yang dihapus</span>
-        <span class="de-mini" data-role="btnSusunUlang" style="display:none">Susun Ulang</span>
+        <span class="de-mini" data-role="btnAddSupport" title="Support manual — tap 2 titik di kanvas buat gambar garis sendiri"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18 18 4"/><path d="M18 7v6M15 10h6"/></svg>Manual</span>
+        <span class="de-mini" data-role="btnRestoreSup" title="Pulihkan garis yang sudah dihapus"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>Pulihkan</span>
+        <span class="de-mini" data-role="btnSusunUlang" style="display:none" title="Susun ulang grid support dari awal"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>Susun Ulang</span>
       </div>
     </div>
     <div class="de-ribbon-panel" data-panel="tiang">

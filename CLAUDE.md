@@ -449,8 +449,31 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    `renderSupportPanel` beneran di-render-ulang (ganti pilihan/tab/dst)
    supaya gak nyangkut nempel salah entri; TIDAK dibersihkan tiap
    keystroke (biar fokus input gak ilang tiap huruf, pola sama form
-   tambah). Diverifikasi node --check + 13 test .mjs rangka + canopi-check
-   --full. Belum ada laporan validasi manual HP.
+   tambah). **Bug ditemukan Bos & sudah difix (dibuktikan lewat
+   reproduksi `node -e` langsung, bukan tebakan):** utk entri GRID/
+   bawaan (bukan manual), `moveManualReclip` balikin `{axis,pos}` mentah
+   tanpa `a`/`b` -- `drawSupJalurPreview` butuh titik gambar, jadi crash
+   diam-diam (preview manual sendiri sudah benar dari awal, cuma grid yg
+   rusak). Fix: convert lewat `jalurSegments(S,axis,pos)` kalau entri gak
+   punya `a`/`b`. Dikunci 1 assert regresi baru di
+   `test_support_jalur_manual.mjs`. **Lalu ketahuan fix ini GAGAL DEPLOY
+   diam-diam (FTP flaky, insiden sama kayak dulu)** -- diverifikasi via
+   `curl` langsung ke file live vs lokal (beda, server ketinggalan 2
+   commit), di-re-trigger via commit kosong, diverifikasi lagi sampai
+   `diff` live vs lokal IDENTICAL. **TERVALIDASI Bos di HP** setelah
+   redeploy -- garis preview sudah muncul normal, termasuk utk support
+   bawaan/grid.
+   (i) **Tombol Support jadi ikon + compact (permintaan Elvan 27 Ags
+   malam):** "+ Support manual"/"Pulihkan yang dihapus"/"Susun Ulang"
+   (teks panjang, gampang wrap jadi banyak baris di HP) diganti ikon SVG
+   + label pendek ("Manual"/"Pulihkan"/"Susun Ulang"), pola SAMA persis
+   Reset/Sudut/Kotak di tab Rangka (`.de-mini` + `.de-ico`, title=tooltip
+   penjelasan). **Bukan bug** kalau tab Support kelihatan cuma ada
+   3 tombol itu -- kontrol arah/mode/kotak grid (`rowSupSpacing`/
+   `rowSupH`/`rowSupV`) SENGAJA cuma tampil di fase PRATINJAU (sebelum
+   dikunci); begitu terkunci (S1..Sn sudah ada, kasus Elvan), yang
+   relevan cuma edit per-garis lewat panel "Support (N)" di bawahnya.
+   Diverifikasi node --check + 13 test .mjs rangka + canopi-check --full.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
