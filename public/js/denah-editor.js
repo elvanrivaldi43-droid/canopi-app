@@ -602,6 +602,7 @@ class DenahEditor {
     this.selBalok = null;      // no balok yang tersorot (null = tak ada)
     this.balokPanelOpen = false; // lipatan panel daftar Balok Melintang
     this.selSisi = null;       // index sisi (F{n}) yang kotak Ukur-nya sedang dibuka (null = semua terlipat)
+    this.sisiShowAll = false;  // checklist "Tampilkan semua" panel Ukur Sisi -- semua F1..Fn diketik sekaligus
     this.uid = ++DenahEditor._n;   // id unik per instance (pattern grid dirujuk url(#..) yg resolve se-dokumen)
 
     // Blok pinch-zoom HALAMAN (WebKit/iOS event gesturestart) selama ada editor di halaman --
@@ -1564,32 +1565,42 @@ body,.page-content{overscroll-behavior-y:contain}
     const val = prompt(`Panjang sisi F${i + 1} (cm):`, Math.round(dist(a, b) * 10) / 10);
     if (val != null) this.setSideLength(i, val);
   }
-  // Panel input sisi (mudah di HP — tak perlu tap garis). Chip F1..Fn dulu (pilih sisi),
-  // kotak ketik angka baru muncul utk sisi yang dipilih -- dulu SEMUA sisi tergambar
-  // sekaligus, makan banyak baris di bentuk berlekuk (permintaan Elvan 27 Ags: pilih dulu
-  // baru tampil, pola sama panel Support S1..Sn yang sudah ada).
+  // Panel input sisi (mudah di HP — tak perlu tap garis). Dropdown pilih sisi (F1..Fn) ->
+  // kotak ketik angka muncul utk sisi terpilih; checklist "Tampilkan semua" di sampingnya
+  // membuka semua kotak F1..Fn sekaligus (permintaan Elvan 27 Ags malam: dropdown gantikan
+  // deretan chip F1..Fn yang selalu tampil penuh, tapi tetap sediakan jalan lihat semua).
   renderSides(mem) {
     const fr = mem.filter(m => m.jenis === 'frame');
     const panel = this._q('[data-role=sisiPanel]');
     if (this.selSisi != null && !fr[this.selSisi]) this.selSisi = null; // sisi dihapus/Undo -> lepas sorotan
-    const chips = fr.map((m, i) => `<span class="de-mini${this.selSisi === i ? ' on' : ''}" data-role="sisiChip" data-i="${i}">F${i + 1}</span>`).join('');
-    const editRow = this.selSisi == null ? '' : (() => {
-      const i = this.selSisi, m = fr[i];
-      return `<div style="width:100%;display:flex;align-items:center;gap:6px;margin-top:6px">
+    const editRow = (i, m) => `<div style="width:100%;display:flex;align-items:center;gap:6px;margin-top:6px">
         <b style="font-size:12px;color:#334155">F${i + 1}</b>
-        <input type="text" inputmode="decimal" value="${m.panjang}" data-role="sisiInput" style="width:74px;box-sizing:border-box;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px">
+        <input type="text" inputmode="decimal" value="${m.panjang}" data-role="sisiInput" data-i="${i}" style="width:74px;box-sizing:border-box;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px">
         <span style="font-size:11px;color:#64748b">cm</span>
       </div>`;
-    })();
+    const rows = this.sisiShowAll
+      ? fr.map((m, i) => editRow(i, m)).join('')
+      : (this.selSisi == null ? '' : editRow(this.selSisi, fr[this.selSisi]));
     panel.innerHTML =
-      '<b style="width:100%;font-size:12px;color:#334155">Ukur sisi — pilih sisi, lalu ketik angka pasti:</b>' +
-      chips + editRow;
-    panel.querySelectorAll('[data-role=sisiChip]').forEach(chip => chip.onclick = () => {
-      this.selSisi = (this.selSisi === +chip.dataset.i) ? null : +chip.dataset.i; // tap lagi = tutup
+      `<b style="width:100%;font-size:12px;color:#334155">Ukur sisi:</b>
+      <div style="width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <select data-role="sisiSelect" style="padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
+          <option value="">Pilih sisi…</option>
+          ${fr.map((m, i) => `<option value="${i}"${this.selSisi === i ? ' selected' : ''}>F${i + 1} (${m.panjang} cm)</option>`).join('')}
+        </select>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#334155">
+          <input type="checkbox" data-role="sisiShowAll"${this.sisiShowAll ? ' checked' : ''}> Tampilkan semua
+        </label>
+      </div>` + rows;
+    panel.querySelector('[data-role=sisiSelect]').onchange = e => {
+      this.selSisi = e.target.value === '' ? null : +e.target.value;
       this.renderSides(mem);
-    });
-    const inp = panel.querySelector('[data-role=sisiInput]');
-    if (inp) inp.onchange = e => this.setSideLength(this.selSisi, e.target.value);
+    };
+    panel.querySelector('[data-role=sisiShowAll]').onchange = e => {
+      this.sisiShowAll = e.target.checked;
+      this.renderSides(mem);
+    };
+    panel.querySelectorAll('[data-role=sisiInput]').forEach(inp => inp.onchange = e => this.setSideLength(+inp.dataset.i, e.target.value));
   }
 
   // Panel daftar tiang numerik (Task 2) — jalur input angka X/Y selain drag/tekan-tahan di kanvas.
@@ -1758,7 +1769,9 @@ body,.page-content{overscroll-behavior-y:contain}
         <b style="font-size:12px">Support (${entries.length})</b>
         <div class="de-tiang-actions">
           <span class="de-mini" data-role="slSemua">${anyOff ? 'Aktifkan semua' : 'Nonaktifkan semua'}</span>
-          <span class="de-mini" data-role="slLipat">${this.supPanelOpen ? 'Lipat' : 'Buka'}</span>
+          <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#334155">
+            <input type="checkbox" data-role="slLipat"${this.supPanelOpen ? ' checked' : ''}> Tampilkan semua
+          </label>
         </div>
       </div>`;
     const rows = !this.supPanelOpen ? '' : entries.map(e2 => {
@@ -1804,7 +1817,7 @@ body,.page-content{overscroll-behavior-y:contain}
       </div>`;
     panel.innerHTML = head + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows + formTambah;
 
-    this._q('[data-role=slLipat]').onclick = () => { this.drawSupJalurPreview([]); this.supPanelOpen = !this.supPanelOpen; this.renderSupportPanel(mem); };
+    this._q('[data-role=slLipat]').onchange = e => { this.drawSupJalurPreview([]); this.supPanelOpen = e.target.checked; this.renderSupportPanel(mem); };
     this._q('[data-role=slSemua]').onclick = () => {
       this.pushUndo();
       entries.forEach(e2 => { e2.aktif = anyOff; });
@@ -3129,7 +3142,7 @@ body,.page-content{overscroll-behavior-y:contain}
   getModel() { return JSON.parse(JSON.stringify(this.S)); }
   getMembers() { return DenahConv.buildMembers(this.S); }
   getLuas() { return DenahConv.luasM2(this.S); }
-  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.selBalok = null; this.selSisi = null; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
+  setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.selBalok = null; this.selSisi = null; this.sisiShowAll = false; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
 }
 
 // ---- self-check ringkas, browser-only (guard: tak jalan di produksi/Node) ----

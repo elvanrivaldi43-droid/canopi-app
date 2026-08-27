@@ -339,6 +339,27 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    user; penyesuaian = pindah 1x utk memicu re-clip); tombol "Pulihkan yang
    dihapus" tetap hidup KHUSUS fase pratinjau sesuai spec 2.5 (fase terkunci
    pakai ceklis + toggle Semua — bukan utang lagi, jangan dihapus).
+   **Gelombang UI polish tambahan 27 Ags malam (LIVE, belum dikonfirmasi Bos
+   di HP):** (a) Padatkan kartu lead/tab opsi/opsi-bar/header blok denah +
+   kartu Nama Opsi & Finishing RAB Multi-Opsi, batas 16px input/select
+   (cegah auto-zoom iOS Safari). (b) Panel Rangka dipadatkan + tombol teks
+   diganti ikon, panel auto-lipat setelah tap Reset/+Sudut/-Sudut/+Kotak.
+   (c) Besi frame/Support/Tiang + popup Ganti Material: `<select>` native
+   diganti combobox custom ketik-cari (`_wireBesiCombo()`, 1 implementasi
+   4 titik pakai; nilai tak valid saat blur direvert, native `<input
+   list=datalist>` sengaja dihindari — dukungan iOS Safari tak konsisten).
+   (d) Ukur Sisi: awalnya chip F1..Fn (tap dulu baru kotak ketik muncul),
+   lalu direvisi lagi jadi **dropdown** pilih F1..Fn + checkbox "Tampilkan
+   semua" di sampingnya (checked = semua kotak ketik F1..Fn muncul
+   sekaligus, unchecked = cuma yang dipilih di dropdown) — permintaan Elvan
+   27 Ags malam setelah lihat versi chip. (e) Panel Support: tombol
+   "Buka/Lipat" diganti checkbox "Tampilkan semua" (fungsi identik, cuma
+   ganti bentuk kontrol biar konsisten dgn Ukur Sisi) — checklist
+   aktif/nonaktif per baris & tombol Fokus/edit TIDAK disentuh (sengaja,
+   biar tak merusak alur bulk-toggle yang sudah tervalidasi). Diverifikasi
+   node --check + 13 test .mjs rangka + canopi-check --full sebelum tiap
+   push; commit `540dbcd..HEAD`. Belum ada laporan validasi manual HP dari
+   Bos untuk gelombang ini.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
