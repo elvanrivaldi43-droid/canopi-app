@@ -150,6 +150,17 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 7. Multi-produk (pagar/tralis) — setelah kanopi matang+kalibrasi tuntas
 
 **Ditunda/belum diputuskan:**
+- **Antrean polesan DenahEditor pasca-kalibrasi** (hasil audit menyeluruh 27 Ags 2026, urut nilai;
+  auditnya bersih — tak ada bug baru, hampir semua fitur terpakai):
+  1. Gambar denah ikut ke penawaran cetak (`penawaran/show.blade.php` nol jejak denah — padahal
+     SVG-nya tinggal dirender baca-saja; cocok digandeng Portal Customer roadmap #5).
+  2. Legend editor hitung batang 6m untuk SEMUA material, bukan cuma WF (`hitungBatangWF` tinggal
+     dibuka filter materialnya) — surveyor bisa sanity-check kebutuhan batang saat menggambar.
+  3. Backlog gestur sudut/sisi frame ikut pola drag=pindah/tahan=menu + sekalian ganti `prompt()`
+     ketik-sisi jadi UI sendiri.
+  4. Bersih-bersih: field model mati `target`/`autoKotak` di `defaultModel()`, blok tipe KANOPI
+     lama di wizard (kompat mundur — pensiunkan hanya kalau RAB lama sudah tak relevan).
+- **Blok "× N unit" untuk order volume/massal** (disetujui Elvan 27 Ags 2026, dikerjakan SETELAH kalibrasi) — kasus: 60 kanopi = 2-3 tipe unik × jumlah, bukan 60 blok. Gambar denah 1x, besi/upah/durasi dikali N (nginap otomatis ikut benar karena baca durasi total). PR bisnis yang harus diputuskan saat bangun: efisiensi produksi massal (per-unit lebih cepat dari satuan) supaya tak kalah harga di project volume — jangan cuma "harga satuan × N"
 - C2b video link (Drive/YouTube) — ditunda ke Sesi Media R2
 - Besi Bagian B denah interaktif — ditunda
 - Pindah kondisi lokasi dari blok ke Profil Lokasi (luar kota/malam/beban berat) — perlu hati-hati, terpisah

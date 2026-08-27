@@ -30,8 +30,10 @@
 .tab-add { flex:none; background:#334155; color:#e2e8f0; border:none; border-radius:10px; padding:10px 14px; min-height:44px; font-size:13px; font-weight:700; cursor:pointer; }
 .opsi-pane { display:none; }
 .opsi-pane.act { display:block; }
-.opsi-bar { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
-.opsi-bar .nm { flex:1; min-width:140px; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; color:#f1f5f9; font-weight:700; min-height:46px; }
+.opsi-bar { display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
+.opsi-lbl { flex:1; min-width:110px; display:flex; flex-direction:column; gap:3px; font-size:11px; color:#94a3b8; }
+.opsi-bar .nm { width:100%; box-sizing:border-box; background:#0f172a; border:1px solid #475569; border-radius:8px; padding:10px; color:#f1f5f9; font-weight:700; min-height:46px; }
+.opsi-bar .nm::placeholder { color:#64748b; font-weight:400; }
 .ckf { font-size:13px; color:#cbd5e1; display:flex; align-items:center; gap:6px; cursor:pointer; }
 .ckf input { width:20px; height:20px; }
 .row3 { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
@@ -46,7 +48,22 @@
 .tag.denah { background:#38bdf8; }
 .blok-body { padding:12px; }
 .subhead { font-size:12px; color:#fbbf24; margin:12px 0 8px; }
-.iconbtn { background:none; border:none; cursor:pointer; font-size:17px; padding:4px; }
+.iconbtn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; min-width:40px; min-height:40px; display:inline-flex; align-items:center; justify-content:center; color:#cbd5e1; flex:none; }
+.iconbtn svg { width:18px; height:18px; }
+.iconbtn.danger { color:#f87171; }
+/* Hint di balik ikon "i" kecil — teks petunjuk baru muncul saat di-tap, tak makan layar */
+.hintbtn { background:none; border:1px solid #475569; border-radius:50%; width:22px; height:22px; padding:0; display:inline-flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:700; font-style:italic; cursor:pointer; flex:none; }
+.hintbox { display:none; font-size:11px; color:#64748b; }
+.hintbox.show { display:block; }
+/* Accordion grup blok (Rangka/Atap/Add-on Lain) — kotak kosong tak lagi makan layar */
+.acc { margin-top:10px; background:#0f172a; border-radius:10px; }
+.acc-h { display:flex; align-items:center; gap:8px; padding:12px; min-height:48px; box-sizing:border-box; cursor:pointer; user-select:none; }
+.acc-h .t { font-size:12px; color:#fbbf24; font-weight:700; flex:none; }
+.acc-sum { margin-left:auto; font-size:11px; color:#94a3b8; text-align:right; }
+.acc-ch { flex:none; width:18px; height:18px; color:#94a3b8; transition:transform .15s; }
+.acc.open .acc-ch { transform:rotate(180deg); }
+.acc-b { display:none; padding:0 12px 12px; }
+.acc.open .acc-b { display:block; }
 .sw { position:relative; width:44px; height:26px; flex:none; }
 .sw input { opacity:0; width:0; height:0; }
 .sw .sl { position:absolute; inset:0; background:#475569; border-radius:26px; transition:.2s; }
@@ -66,8 +83,11 @@
 </style>
 
 <div class="ro-wrap">
-    <h1 class="ro-title">RAB Multi-Opsi</h1>
-    <p class="ro-sub">Wizard 3 langkah: isi item RAB → finalisasi (durasi, nginap, layanan) → harga keluar.</p>
+    <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px">
+        <h1 class="ro-title" style="margin:0;flex:1">RAB Multi-Opsi</h1>
+        <button type="button" class="hintbtn" title="Petunjuk" onclick="hintToggle('hintWizard')">i</button>
+    </div>
+    <p class="ro-sub hintbox" id="hintWizard" style="margin:0 0 14px">Wizard 3 langkah: isi item RAB → finalisasi (durasi, nginap, layanan) → harga keluar.</p>
     <div style="display:flex;gap:6px;margin-bottom:14px">
         <div id="wzDot1" style="flex:1;text-align:center;padding:8px;border-radius:8px;background:#fbbf24;color:#0f172a;font-size:12px;font-weight:700">1. Item RAB</div>
         <div id="wzDot2" style="flex:1;text-align:center;padding:8px;border-radius:8px;background:#334155;color:#cbd5e1;font-size:12px;font-weight:700">2. Finalisasi</div>
@@ -76,7 +96,10 @@
 
     @if(isset($lead) && $lead)
     <div class="ro-card" style="border:1px solid #fbbf24">
-        <div style="font-size:13px;color:#fbbf24;font-weight:700">RAB untuk Lead #{{ $lead->id }} — {{ $lead->nama_customer }}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:13px;color:#fbbf24;font-weight:700;flex:1">RAB untuk Lead #{{ $lead->id }} — {{ $lead->nama_customer }}</div>
+            @if($lihatHarga)<button type="button" class="hintbtn" title="Petunjuk" onclick="hintToggle('hintSimpanLead')">i</button>@endif
+        </div>
         <div style="font-size:12px;color:#94a3b8;margin-top:4px">
             {{ $lead->produk ?? '-' }}@if(!empty($lead->atap_diminati)) · atap: {{ $lead->atap_diminati }}@endif @if(!empty($lead->no_hp)) · {{ $lead->no_hp }}@endif
         </div>
@@ -85,7 +108,7 @@
             @if(!empty($lead->estimasi_max))Estimasi admin: Rp {{ number_format($lead->estimasi_min ?? 0,0,',','.') }}–{{ number_format($lead->estimasi_max,0,',','.') }}@else Belum ada estimasi admin.@endif
             @if(!empty($lead->harga_final)) · Harga final tersimpan: Rp {{ number_format($lead->harga_final,0,',','.') }}@endif
         </div>
-        <div style="font-size:11px;color:#64748b;margin-top:6px">Setelah Bandingkan, tiap opsi punya tombol untuk disimpan ke lead ini sebagai Estimasi (admin) atau Harga Final (surveyor).</div>
+        <div class="hintbox" id="hintSimpanLead" style="margin-top:6px">Setelah Bandingkan, tiap opsi punya tombol untuk disimpan ke lead ini sebagai Estimasi (admin) atau Harga Final (surveyor).</div>
         @endif
     </div>
     @endif
@@ -166,9 +189,11 @@
     <div class="tabbar" id="tabbar"></div>
 
     <div class="opsi-bar">
-        <input type="text" class="nm" id="opsiNama" placeholder="Nama opsi aktif">
-        <button class="btn-grey" style="border:none;border-radius:8px;padding:10px 14px;min-height:46px;font-weight:700;cursor:pointer" onclick="duplikatOpsi()">⎘ Duplikat opsi ini</button>
-        <button class="iconbtn" title="Hapus opsi" onclick="hapusOpsi()">🗑️</button>
+        <label class="opsi-lbl">Nama opsi aktif
+            <input type="text" class="nm" id="opsiNama" placeholder="mis. Standar / Premium">
+        </label>
+        <button class="btn-grey" style="border:none;border-radius:8px;padding:0 12px;min-height:46px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex:none" title="Duplikat opsi ini" onclick="duplikatOpsi()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplikat</button>
+        <button class="iconbtn danger" style="min-height:46px" title="Hapus opsi" onclick="hapusOpsi()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg></button>
     </div>
 
     <div id="panes"></div>
@@ -219,7 +244,39 @@ function besiSemuaOpts(){ return '<option value="">— pilih besi —</option>'+
 function jkOpts(){ return '<option value="0">— tidak hitung upah —</option>'+JK.map(function(j){return `<option value="${j.id}">${esc(j.nama)}</option>`;}).join(''); }
 function atapOpts(){ return '<option value="0">— pilih atap —</option>'+ATAP.map(function(a){return `<option value="${a.id}">${esc(a.nama)}</option>`;}).join(''); }
 function addonOpts(level){ var list = level ? ADDON.filter(function(a){return (a.level||'total')===level;}) : ADDON; return '<option value="0">— pilih —</option>'+list.map(function(a){return '<option value="'+a.id+'">'+esc(a.nama)+' ('+a.formula_type+')</option>';}).join(''); }
-function addonSection(judul, level){ return '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px"><div class="subhead" style="margin-top:0">'+judul+'</div><div class="b-addonRows-'+level+'"></div><button type="button" class="btn btn-grey" style="padding:9px" onclick="addAddonRow(this,\''+level+'\')">+ '+judul+'</button></div>'; }
+// Ikon SVG (jangan emoji di blade — bisa korup di server, pelajaran deploy lama)
+var SVG_TRASH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg>';
+var SVG_CHEV='<svg class="acc-ch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+function hintToggle(id){ var el=document.getElementById(id); if(el) el.classList.toggle('show'); }
+// Accordion grup dalam blok: header selalu tampil (judul + ringkasan isi), badan dilipat default.
+function accSection(key, judul, inner){
+    return '<div class="acc" data-acc="'+key+'">'+
+        '<div class="acc-h" onclick="accToggle(this)"><span class="t">'+judul+'</span><span class="acc-sum"></span>'+SVG_CHEV+'</div>'+
+        '<div class="acc-b">'+inner+'</div></div>';
+}
+function accToggle(h){ h.parentNode.classList.toggle('open'); }
+// Ringkasan di header accordion — keadaan isi kebaca tanpa perlu dibuka.
+function updateAccSum(card){
+    [].slice.call(card.querySelectorAll('.acc')).forEach(function(a){
+        var key=a.dataset.acc, s='';
+        if(key==='rangka'){
+            var jk=card.querySelector('.b-jk');
+            var jkTxt=(jk&&jk.selectedIndex>=0&&jk.options.length)?jk.options[jk.selectedIndex].text:'';
+            var nk=card.querySelectorAll('.b-kond:checked').length;
+            var nr=card.querySelectorAll('.b-addonRows-rangka .row3').length;
+            s=jkTxt+(nk?' · '+nk+' kondisi':'')+(nr?' · '+nr+' add-on':'');
+        } else if(key==='atap'){
+            var na=card.querySelectorAll('.b-atapRows .row3').length;
+            var nx=card.querySelectorAll('.b-addonRows-atap .row3').length;
+            s=(na||nx)?((na?na+' atap':'')+(na&&nx?' · ':'')+(nx?nx+' add-on':'')):'belum ada';
+        } else if(key==='lain'){
+            var nt=card.querySelectorAll('.b-addonRows-total .row3').length;
+            s=nt?nt+' item':'belum ada';
+        }
+        var el=a.querySelector('.acc-sum'); if(el) el.textContent=s;
+    });
+}
+function delRow(btn){ var card=btn.closest('.blok-card'); btn.closest('.row3').remove(); if(card) updateAccSum(card); }
 function addonFormula(id){ const a=ADDON.find(function(x){return x.id==id;}); return a?a.formula_type:''; }
 function kondHtml(){ return KOND.map(function(k){return `<label class="ckf"><input type="checkbox" class="b-kond" value="${k.id}"> ${esc(k.nama)}</label>`;}).join(''); }
 
@@ -429,22 +486,9 @@ function tambahBlok(pane, tipe, data){
           '<div class="b-besiExtra"></div>'+
           '<button type="button" class="btn btn-grey" style="padding:9px" onclick="addBesiRow(this)">+ Besi Tambahan</button>'+
           '<div style="font-size:10px;color:#64748b;margin-top:6px">Untuk hollow/besi yang tak tercakup rangka otomatis (mis. reng 3x3, gording 4x8, besi beton). Pilih jenis + jumlah batang.</div>'+
-        '</div>'+
-        (LIHAT_HARGA ? (
-        '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
-          '<div class="subhead" style="margin-top:0">Upah</div>'+
-          '<div class="ro-field"><label>Jenis Kerja</label><select class="b-jk">'+jkOpts()+'</select></div>'+
-          (KOND.length ? '<div style="margin-top:8px;font-size:11px;color:#94a3b8;margin-bottom:6px">Kondisi kerja</div><div style="display:flex;flex-wrap:wrap;gap:12px">'+kondHtml()+'</div>' : '')+
-        '</div>') : '');
+        '</div>';
     } else if(tipe==='denah'){
-        body=
-        '<div class="b-denah"></div>'+
-        (LIHAT_HARGA ? (
-        '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
-          '<div class="subhead" style="margin-top:0">Upah</div>'+
-          '<div class="ro-field"><label>Jenis Kerja</label><select class="b-jk">'+jkOpts()+'</select></div>'+
-          (KOND.length ? '<div style="margin-top:8px;font-size:11px;color:#94a3b8;margin-bottom:6px">Kondisi kerja</div><div style="display:flex;flex-wrap:wrap;gap:12px">'+kondHtml()+'</div>' : '')+
-        '</div>') : '');
+        body='<div class="b-denah"></div>';
     } else {
         body=
         '<div style="font-size:12px;color:#a78bfa;margin-bottom:8px">Mode manual — isi daftar besi/bahan langsung.</div>'+
@@ -458,14 +502,18 @@ function tambahBlok(pane, tipe, data){
         var hasR=ADDON.some(function(a){return (a.level||'total')==='rangka';});
         var hasA=ADDON.some(function(a){return (a.level||'total')==='atap';});
         var hasT=ADDON.some(function(a){return (a.level||'total')==='total';});
-        if(hasR){ extra+=addonSection('Add-on Rangka','rangka'); }
-        if(ATAP.length){
-            extra+='<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
-                   '<div class="subhead" style="margin-top:0">Atap</div><div class="b-atapRows"></div>'+
-                   '<button type="button" class="btn btn-grey" style="padding:9px" onclick="addAtapRow(this)">+ Atap</button></div>';
-        }
-        if(hasA){ extra+=addonSection('Add-on Atap','atap'); }
-        if(hasT){ extra+=addonSection('Add-on Lain','total'); }
+        // Grup accordion (permintaan Elvan 27 Ags): Upah+Add-on Rangka = grup Rangka,
+        // Atap+Add-on Atap = grup Atap, Add-on Lain sendiri. Kotak kosong tak lagi makan layar.
+        var upahHtml=(tipe==='kanopi'||tipe==='denah') ?
+            '<div class="ro-field"><label>Jenis Kerja</label><select class="b-jk">'+jkOpts()+'</select></div>'+
+            (KOND.length ? '<div style="margin-top:8px;font-size:11px;color:#94a3b8;margin-bottom:6px">Kondisi kerja</div><div style="display:flex;flex-wrap:wrap;gap:12px">'+kondHtml()+'</div>' : '') : '';
+        var addBtn=function(label,click){ return '<button type="button" class="btn btn-grey" style="padding:9px;margin-top:8px" onclick="'+click+'">+ '+label+'</button>'; };
+        var rangkaInner=upahHtml+(hasR?'<div class="subhead">Add-on Rangka</div><div class="b-addonRows-rangka"></div>'+addBtn('Add-on Rangka',"addAddonRow(this,'rangka')"):'');
+        if(rangkaInner) extra+=accSection('rangka', upahHtml?'Rangka — Upah & Add-on':'Add-on Rangka', rangkaInner);
+        var atapInner=(ATAP.length?'<div class="b-atapRows"></div>'+addBtn('Atap','addAtapRow(this)'):'')+
+            (hasA?'<div class="subhead">Add-on Atap</div><div class="b-addonRows-atap"></div>'+addBtn('Add-on Atap',"addAddonRow(this,'atap')"):'');
+        if(atapInner) extra+=accSection('atap','Atap',atapInner);
+        if(hasT) extra+=accSection('lain','Add-on Lain','<div class="b-addonRows-total"></div>'+addBtn('Add-on Lain',"addAddonRow(this,'total')"));
     }
 
     var tagCls=(tipe==='manual'?'manual':(tipe==='denah'?'denah':''));
@@ -476,8 +524,8 @@ function tambahBlok(pane, tipe, data){
           '<span class="tag '+tagCls+'">'+tagLbl+'</span>'+
           '<input type="text" class="b-nama" value="'+namaDefault+'">'+
           '<label class="sw"><input type="checkbox" class="b-aktif" checked><span class="sl"></span></label>'+
-          '<button class="iconbtn" onclick="lipat(this)">▾</button>'+
-          '<button class="iconbtn" onclick="hapusBlok(this)">🗑️</button>'+
+          '<button class="iconbtn" title="Lipat blok" onclick="lipat(this)">▾</button>'+
+          '<button class="iconbtn danger" title="Hapus blok" onclick="hapusBlok(this)">'+SVG_TRASH+'</button>'+
         '</div>'+
         '<div class="blok-body">'+body+extra+'</div>';
 
@@ -505,6 +553,13 @@ function tambahBlok(pane, tipe, data){
     card.querySelector('.b-aktif').addEventListener('change',function(){ card.classList.toggle('off', !this.checked); });
 
     if(data) isiBlok(card, data);
+    // Accordion: buka otomatis grup yang sudah ada isinya (data lama); grup Rangka dibuka default
+    // di blok kanopi/denah — jenis kerja wajib kepilih sadar, jangan kesembunyi di lipatan.
+    [].slice.call(card.querySelectorAll('.acc')).forEach(function(a){
+        if(a.querySelector('.acc-b .row3') || (a.dataset.acc==='rangka' && card.querySelector('.b-jk'))) a.classList.add('open');
+    });
+    updateAccSum(card);
+    card.addEventListener('change', function(){ updateAccSum(card); });
     return card;
 }
 
@@ -566,10 +621,10 @@ function addAtapRowTo(card){
     const r=document.createElement('div'); r.className='row3'; r.style.flexWrap='wrap';
     r.innerHTML='<select class="atap-jenis" style="flex:2;min-width:120px">'+atapOpts()+'</select>'+
                 '<input type="number" class="atap-luas" style="flex:1;min-width:70px" placeholder="luas m²" min="0" step="0.01">'+
-                '<button type="button" class="del" onclick="this.closest(\'.row3\').remove()">✕</button>'+
+                '<button type="button" class="del" onclick="delRow(this)">✕</button>'+
                 '<label style="flex-basis:100%;display:flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8;margin-top:2px">'+
                 '<input type="checkbox" class="atap-pasang"> Atap ini dipasang di rangka lama / reparasi (hitung upah pasang)</label>';
-    box.appendChild(r); return r;
+    box.appendChild(r); updateAccSum(card); return r;
 }
 function addAddonRowTo(card, level){
     level = level || 'total';
@@ -577,8 +632,8 @@ function addAddonRowTo(card, level){
     const r=document.createElement('div'); r.className='row3';
     r.innerHTML='<select class="addon-jenis" style="flex:2" onchange="addonSync(this)">'+addonOpts(level)+'</select>'+
                 '<input type="number" class="addon-qty" style="flex:1" placeholder="jumlah" min="0" step="0.01">'+
-                '<button type="button" class="del" onclick="this.parentNode.remove()">✕</button>';
-    box.appendChild(r); return r;
+                '<button type="button" class="del" onclick="delRow(this)">✕</button>';
+    box.appendChild(r); updateAccSum(card); return r;
 }
 function addManualRowTo(card){
     const box=card.querySelector('.b-manualRows'); if(!box) return document.createElement('div');
