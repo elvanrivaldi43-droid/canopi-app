@@ -124,22 +124,33 @@ class RabOpsiController extends Controller
             'message'     => 'Harga final tersimpan ke lead.',
             'harga_final' => $final,
             'warning'     => $warning,
+            'snap_md5'    => md5((string) $request->snapshot),
         ]);
     }
 
-    // AUTO-SAVE: simpan snapshot wizard diam-diam (TIDAK sentuh harga final)
+    // AUTO-SAVE: simpan snapshot wizard diam-diam (TIDAK sentuh harga final).
+    // base_md5 (opsional, klien baru): sidik jari snapshot yang jadi BASIS klien —
+    // kalau server sudah menyimpan snapshot lain sejak itu (tab/perangkat kedua),
+    // tolak 409 supaya data baru tak ketimpa data basi (Utang #9, kasus nyata 24 Ags).
     public function autosave(Request $request)
     {
         abort_if(!in_array(Auth::user()->level, [1, 2, 3]), 403);
         $request->validate([
             'lead_id'  => 'required|integer',
             'snapshot' => 'nullable|string',
+            'base_md5' => 'nullable|string',
         ]);
+        $lead = DB::table('pipeline_leads')->where('id', $request->lead_id)->first();
+        if (!$lead) return response()->json(['success' => false, 'message' => 'Lead tidak ditemukan'], 404);
+        if (\App\Services\SnapshotGuard::conflict($lead->rab_snapshot ?? null, $request->base_md5)) {
+            return response()->json(['success' => false, 'conflict' => true], 409);
+        }
         DB::table('pipeline_leads')->where('id', $request->lead_id)->update([
             'rab_snapshot' => $request->snapshot,
             'updated_at'   => now(),
         ]);
-        return response()->json(['success' => true]);
+        // snap_md5 dikembalikan supaya klien meng-update basisnya (save berikutnya tak false-conflict)
+        return response()->json(['success' => true, 'snap_md5' => md5((string) $request->snapshot)]);
     }
 
     // F1: simpan data penawaran (semua opsi + harga + rincian, sudah dihitung di layar)

@@ -197,6 +197,8 @@
 <script>
 const CSRF='{{ csrf_token() }}';
 const LEAD = @json($lead ?? null);
+// Sidik jari snapshot yang dimuat halaman ini — basis guard konflik dua tab (Utang #9).
+var BASE_MD5 = @json(isset($lead) && $lead && $lead->rab_snapshot ? md5($lead->rab_snapshot) : null);
 const DISKON_MAX = {{ $setting->diskon_max ?? 15 }};
 const LIHAT_HARGA = {{ $lihatHarga ? 'true' : 'false' }};
 const LIHAT_MODAL = {{ ($lihatModal ?? false) ? 'true' : 'false' }};
@@ -886,9 +888,26 @@ function bacaSemuaOpsi(){
 // mulai: muat snapshot RAB kalau lead sudah punya, kalau tidak buat 1 opsi default
 (function(){
     var loaded=false;
-    if(LEAD && LEAD.rab_snapshot){
+    // LAPIS 1 (pemulihan): draft lokal yang MASIH ADA saat load = pernah gagal tersimpan
+    // (sukses selalu menghapusnya) -> tawarkan lanjut dari draft. BASE_MD5 TIDAK diubah
+    // (basis tetap snapshot server; save berikutnya cocok dgn yang tersimpan di server).
+    var _snapSrc = (LEAD && LEAD.rab_snapshot) ? LEAD.rab_snapshot : null;
+    if(LEAD){
         try{
-            var snap=JSON.parse(LEAD.rab_snapshot);
+            var _dr = JSON.parse(localStorage.getItem('rab_draft_'+LEAD.id) || 'null');
+            if(_dr && _dr.snapshot && _dr.snapshot !== _snapSrc){
+                if(confirm('Ada DRAFT LOKAL yang belum sempat tersimpan ke server ('+new Date(_dr.t).toLocaleString('id-ID')+').\n\nOK = lanjut dari draft itu\nBatal = buang draft, pakai data server')){
+                    _snapSrc = _dr.snapshot;
+                    setTimeout(function(){ jadwalkanHitung(null); }, 1500); // dorong draft ke server segera
+                } else {
+                    try{ localStorage.removeItem('rab_draft_'+LEAD.id); }catch(e){}
+                }
+            }
+        }catch(e){}
+    }
+    if(_snapSrc){
+        try{
+            var snap=JSON.parse(_snapSrc);
             if(snap && snap.panes && snap.panes.length){
                 snap.panes.forEach(function(p){ tambahOpsi(p.nama||'Opsi', (p.blok||[]), p.finishing); });
                 loaded=true;
@@ -1036,16 +1055,41 @@ function simpanStatus(msg, ok){
     el.textContent=msg; el.style.background=ok?'#16a34a':'#b45309'; el.style.display='block';
     clearTimeout(el._t); el._t=setTimeout(function(){ el.style.display='none'; }, 2500);
 }
-function autoSave(){
+var _asRetryTimer=null, _asKonflik=false;
+async function autoSave(){
     if(!LEAD){ simpanStatus('Belum tersimpan — buka RAB dari lead/pipeline dulu', false); return; }
+    if(_asKonflik) return; // konflik dua tab: tab ini berhenti menimpa sampai di-reload
+    clearTimeout(_asRetryTimer);
+    var snap;
     try{
-        var body = { lead_id: LEAD.id, snapshot: JSON.stringify({ panes: bacaSemuaOpsi() }) };
-        fetch('{{ url("/rab-opsi/autosave") }}', {method:'POST',
+        snap = JSON.stringify({ panes: bacaSemuaOpsi() });
+        // LAPIS 1: draft lokal DULU sebelum kirim — sinyal putus/halaman ketutup, kerja tak hilang.
+        try{ localStorage.setItem('rab_draft_'+LEAD.id, JSON.stringify({ t: Date.now(), snapshot: snap })); }catch(e){}
+    }catch(e){ simpanStatus('Gagal simpan', false); return; }
+    var body = { lead_id: LEAD.id, snapshot: snap, base_md5: BASE_MD5 };
+    try{
+        var r = await fetch('{{ url("/rab-opsi/autosave") }}', {method:'POST',
             headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'Accept':'application/json'},
-            body: JSON.stringify(body)})
-        .then(function(r){ simpanStatus(r.ok?'Tersimpan':'Gagal simpan ('+r.status+')', r.ok); })
-        .catch(function(){ simpanStatus('Gagal simpan (jaringan)', false); });
-    }catch(e){ simpanStatus('Gagal simpan', false); }
+            body: JSON.stringify(body)});
+        // LAPIS 3: 409 = tab/perangkat lain sudah menyimpan duluan — jangan timpa.
+        if(r.status===409){
+            _asKonflik = true;
+            simpanStatus('KONFLIK: tab lain menyimpan duluan — TIDAK ditimpa', false);
+            if(confirm('Data di server LEBIH BARU (ada tab/perangkat lain yang menyimpan duluan).\n\nOK = muat ulang halaman ini (kerjaan di tab ini tetap ada cadangan draft lokal)\nBatal = tab ini BERHENTI menyimpan otomatis (baca-saja) sampai dimuat ulang')) location.reload();
+            return;
+        }
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        var j = await r.json().catch(function(){ return null; });
+        if(j && j.snap_md5) BASE_MD5 = j.snap_md5;
+        if(j && j.success){
+            try{ localStorage.removeItem('rab_draft_'+LEAD.id); }catch(e){}
+            simpanStatus('Tersimpan', true);
+        }
+    }catch(e){
+        // LAPIS 2: retry otomatis — snapshot TERBARU diambil ulang saat retry (bukan yang lama).
+        simpanStatus('Gagal simpan (jaringan) — dicoba ulang otomatis…', false);
+        _asRetryTimer = setTimeout(autoSave, 6000);
+    }
 }
 function lanjutFinalisasi(){
     var hasil=validasiStep1();
