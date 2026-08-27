@@ -24,15 +24,15 @@
 .btn-blue { background:#3b82f6; color:#fff; }
 /* tabs opsi */
 .tabbar { display:flex; gap:6px; overflow-x:auto; padding:4px 0 8px; -webkit-overflow-scrolling:touch; }
-.tab { flex:none; background:#0f172a; border:1px solid #334155; color:#cbd5e1; border-radius:10px 10px 0 0;
-       padding:10px 14px; min-height:44px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.tab { flex:none; background:#0f172a; border:1px solid #334155; color:#cbd5e1; border-radius:8px 8px 0 0;
+       padding:6px 12px; min-height:36px; box-sizing:border-box; display:inline-flex; align-items:center; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
 .tab.act { background:#fbbf24; color:#0f172a; border-color:#fbbf24; }
-.tab-add { flex:none; background:#334155; color:#e2e8f0; border:none; border-radius:10px; padding:10px 14px; min-height:44px; font-size:13px; font-weight:700; cursor:pointer; }
+.tab-add { flex:none; background:#334155; color:#e2e8f0; border:none; border-radius:8px; padding:6px 12px; min-height:36px; box-sizing:border-box; display:inline-flex; align-items:center; font-size:12px; font-weight:700; cursor:pointer; }
 .opsi-pane { display:none; }
 .opsi-pane.act { display:block; }
 .opsi-bar { display:flex; gap:8px; align-items:flex-end; margin-bottom:10px; }
 .opsi-lbl { flex:1; min-width:110px; display:flex; flex-direction:column; gap:3px; font-size:11px; color:#94a3b8; }
-.opsi-bar .nm { width:100%; box-sizing:border-box; background:#0f172a; border:1px solid #475569; border-radius:8px; padding:10px; color:#f1f5f9; font-weight:700; min-height:46px; }
+.opsi-bar .nm { width:100%; box-sizing:border-box; background:#0f172a; border:1px solid #475569; border-radius:7px; padding:7px 8px; color:#f1f5f9; font-size:12px; font-weight:700; min-height:36px; }
 .opsi-bar .nm::placeholder { color:#64748b; font-weight:400; }
 .ckf { font-size:13px; color:#cbd5e1; display:flex; align-items:center; gap:6px; cursor:pointer; }
 .ckf input { width:20px; height:20px; }
@@ -41,15 +41,15 @@
 .row3 .del { background:#7f1d1d; color:#fff; border:none; border-radius:8px; width:46px; min-height:46px; cursor:pointer; flex:none; }
 .blok-card { background:#1e293b; border:1px solid #334155; border-radius:12px; margin-bottom:12px; overflow:hidden; }
 .blok-card.off { opacity:.5; }
-.blok-head { display:flex; align-items:center; gap:8px; padding:10px 12px; background:#0f172a; }
-.blok-head .b-nama { flex:1; min-width:80px; background:#1e293b; border:1px solid #334155; border-radius:8px; padding:9px; color:#f1f5f9; font-size:13px; font-weight:700; min-height:42px; }
-.tag { font-size:10px; font-weight:700; padding:3px 7px; border-radius:6px; background:#fbbf24; color:#0f172a; flex:none; }
+.blok-head { display:flex; align-items:center; gap:6px; padding:7px 10px; background:#0f172a; }
+.blok-head .b-nama { flex:1; min-width:70px; box-sizing:border-box; background:#1e293b; border:1px solid #334155; border-radius:7px; padding:6px 8px; color:#f1f5f9; font-size:12px; font-weight:700; min-height:36px; }
+.tag { font-size:9px; font-weight:700; padding:2px 6px; border-radius:5px; background:#fbbf24; color:#0f172a; flex:none; }
 .tag.manual { background:#a78bfa; }
 .tag.denah { background:#38bdf8; }
 .blok-body { padding:12px; }
 .subhead { font-size:12px; color:#fbbf24; margin:12px 0 8px; }
-.iconbtn { background:none; border:none; cursor:pointer; font-size:15px; padding:0; min-width:40px; min-height:40px; display:inline-flex; align-items:center; justify-content:center; color:#cbd5e1; flex:none; }
-.iconbtn svg { width:18px; height:18px; }
+.iconbtn { background:none; border:none; cursor:pointer; font-size:14px; padding:0; min-width:36px; min-height:36px; display:inline-flex; align-items:center; justify-content:center; color:#cbd5e1; flex:none; }
+.iconbtn svg { width:16px; height:16px; }
 .iconbtn.danger { color:#f87171; }
 /* Hint di balik ikon "i" kecil — teks petunjuk baru muncul saat di-tap, tak makan layar */
 .hintbtn { background:none; border:1px solid #475569; border-radius:50%; width:22px; height:22px; padding:0; display:inline-flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:700; font-style:italic; cursor:pointer; flex:none; }
@@ -64,12 +64,12 @@
 .acc.open .acc-ch { transform:rotate(180deg); }
 .acc-b { display:none; padding:0 12px 12px; }
 .acc.open .acc-b { display:block; }
-.sw { position:relative; width:44px; height:26px; flex:none; }
+.sw { position:relative; width:38px; height:22px; flex:none; }
 .sw input { opacity:0; width:0; height:0; }
-.sw .sl { position:absolute; inset:0; background:#475569; border-radius:26px; transition:.2s; }
-.sw .sl:before { content:''; position:absolute; width:20px; height:20px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+.sw .sl { position:absolute; inset:0; background:#475569; border-radius:22px; transition:.2s; }
+.sw .sl:before { content:''; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
 .sw input:checked + .sl { background:#22c55e; }
-.sw input:checked + .sl:before { transform:translateX(18px); }
+.sw input:checked + .sl:before { transform:translateX(16px); }
 .sum-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid #334155; font-size:13px; }
 .sum-row b { color:#fbbf24; }
 /* banding */
@@ -95,22 +95,15 @@
     </div>
 
     @if(isset($lead) && $lead)
-    <div class="ro-card" style="border:1px solid #fbbf24;padding:11px">
-        <div style="display:flex;align-items:center;gap:8px">
-            <div style="font-size:13px;color:#fbbf24;font-weight:700;flex:1">RAB untuk Lead #{{ $lead->id }} — {{ $lead->nama_customer }}</div>
-            @if($lihatHarga)<button type="button" class="hintbtn" title="Petunjuk" onclick="hintToggle('hintSimpanLead')">i</button>@endif
+    <div class="ro-card" style="border:1px solid #fbbf24;padding:7px 10px;display:flex;align-items:center;gap:8px">
+        <div style="font-size:12px;font-weight:700;color:#fbbf24;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            Lead #{{ $lead->id }} — {{ $lead->nama_customer }} @if($lihatHarga) · <span id="leadInfoHarga" style="font-weight:400;color:#cbd5e1"> @if(!empty($lead->harga_final)) Final: Rp {{ number_format($lead->harga_final,0,',','.') }} @elseif(!empty($lead->estimasi_max)) Estimasi: Rp {{ number_format($lead->estimasi_min ?? 0,0,',','.') }}–{{ number_format($lead->estimasi_max,0,',','.') }} @else Belum ada estimasi @endif </span> @endif
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:2px 6px;font-size:12px;color:#94a3b8;margin-top:4px">
-            <span>{{ $lead->produk ?? '-' }}@if(!empty($lead->atap_diminati)) · atap: {{ $lead->atap_diminati }}@endif @if(!empty($lead->no_hp)) · {{ $lead->no_hp }}@endif</span>
-            @if($lihatHarga)
-            <span>·</span>
-            <span id="leadInfoHarga" style="color:#cbd5e1">
-                @if(!empty($lead->estimasi_max))Estimasi admin: Rp {{ number_format($lead->estimasi_min ?? 0,0,',','.') }}–{{ number_format($lead->estimasi_max,0,',','.') }}@else Belum ada estimasi admin.@endif
-                @if(!empty($lead->harga_final)) · Harga final tersimpan: Rp {{ number_format($lead->harga_final,0,',','.') }}@endif
-            </span>
-            @endif
-        </div>
-        @if($lihatHarga)<div class="hintbox" id="hintSimpanLead" style="margin-top:6px">Setelah Bandingkan, tiap opsi punya tombol untuk disimpan ke lead ini sebagai Estimasi (admin) atau Harga Final (surveyor).</div>@endif
+        <button type="button" class="hintbtn" title="Detail" onclick="hintToggle('hintSimpanLead')">i</button>
+    </div>
+    <div class="hintbox" id="hintSimpanLead" style="margin:4px 0 12px">
+        {{ $lead->produk ?? '-' }}@if(!empty($lead->atap_diminati)) · atap: {{ $lead->atap_diminati }}@endif @if(!empty($lead->no_hp)) · {{ $lead->no_hp }}@endif
+        @if($lihatHarga) — Setelah Bandingkan, tiap opsi punya tombol untuk disimpan ke lead ini sebagai Estimasi (admin) atau Harga Final (surveyor).@endif
     </div>
     @endif
 
@@ -189,15 +182,15 @@
     <div class="wz-step" id="step1">
     <div class="tabbar" id="tabbar"></div>
 
-    <div class="ro-card" style="padding:11px;margin-bottom:12px">
+    <div class="ro-card" style="padding:8px 10px;margin-bottom:10px">
         <div class="opsi-bar" style="margin-bottom:0">
             <label class="opsi-lbl">Nama opsi aktif
                 <input type="text" class="nm" id="opsiNama" placeholder="mis. Standar / Premium">
             </label>
-            <button class="btn-grey" style="border:none;border-radius:8px;padding:0 12px;min-height:46px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex:none" title="Duplikat opsi ini" onclick="duplikatOpsi()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplikat</button>
-            <button class="iconbtn danger" style="min-height:46px" title="Hapus opsi" onclick="hapusOpsi()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg></button>
+            <button class="btn-grey" style="border:none;border-radius:7px;padding:0 10px;min-height:36px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;flex:none" title="Duplikat opsi ini" onclick="duplikatOpsi()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplikat</button>
+            <button class="iconbtn danger" title="Hapus opsi" onclick="hapusOpsi()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></svg></button>
         </div>
-        <label class="opsi-lbl" style="margin-top:8px">Finishing opsi ini
+        <label class="opsi-lbl" style="margin-top:6px">Finishing opsi ini
             <select class="nm" id="opsiFinishing" style="font-weight:400">
                 <option value="standar">Standar (cat/duco — sudah termasuk)</option>
                 <option value="powder">Powder coating (tambah biaya per m² rangka)</option>
@@ -941,11 +934,11 @@ async function simpanKeLead(harga, mode){
         if(res.snap_md5) BASE_MD5 = res.snap_md5;
         var info=document.getElementById('leadInfoHarga');
         if(mode==='final'){
-            if(info) info.innerHTML='Harga final tersimpan: <b style="color:#fbbf24">'+rp(res.harga_final)+'</b>';
+            if(info) info.innerHTML='Final: <b style="color:#fbbf24">'+rp(res.harga_final)+'</b>';
             if(res.warning){ alert('⚠ '+res.warning); }
             else { alert('Harga final tersimpan ke lead.'); }
         } else {
-            if(info) info.innerHTML='Estimasi admin: <b style="color:#fbbf24">'+rp(res.estimasi_min)+'–'+rp(res.estimasi_max)+'</b>';
+            if(info) info.innerHTML='Estimasi: <b style="color:#fbbf24">'+rp(res.estimasi_min)+'–'+rp(res.estimasi_max)+'</b>';
             alert('Estimasi awal tersimpan (range '+rp(res.estimasi_min)+'–'+rp(res.estimasi_max)+').');
         }
     }catch(e){ alert('Error simpan: '+e.message); }
