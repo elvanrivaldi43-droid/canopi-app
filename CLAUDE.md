@@ -348,13 +348,20 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    diganti combobox custom ketik-cari (`_wireBesiCombo()`, 1 implementasi
    4 titik pakai; nilai tak valid saat blur direvert, native `<input
    list=datalist>` sengaja dihindari — dukungan iOS Safari tak konsisten).
-   **Bug ditemukan Bos 27 Ags malam & sudah difix:** fokus ke input tadinya
-   manggil `input.select()` -- di iOS Safari itu memicu menu sistem
-   "Potong/Salin/Tempel/Isi-Auto" yang nutupin & rebutan sentuhan sama
-   dropdown custom di bawahnya, jadi dropdown "selalu hilang" pas mau tap
-   pilih hasil pencarian. Fix: kosongkan `.value` langsung saat fokus
-   (bukan select-all) -- tak memicu menu sistem itu, blur tetap balik ke
-   nilai lama otomatis kalau ditinggal kosong tanpa pilih apa-apa.
+   **2 bug ditemukan Bos 27 Ags malam & sudah difix keduanya:** (1) fokus
+   ke input tadinya manggil `input.select()` -- di iOS Safari itu memicu
+   menu sistem "Potong/Salin/Tempel/Isi-Auto" yang nutupin & rebutan
+   sentuhan sama dropdown custom di bawahnya. Fix: kosongkan `.value`
+   langsung saat fokus (bukan select-all) -- blur tetap balik ke nilai
+   lama otomatis kalau ditinggal kosong. (2) Item dropdown dipilih lewat
+   `pointerdown`+`preventDefault()` (dulu buat cegah blur nutup list
+   duluan) -- ternyata preventDefault di pointerdown JUGA membatalkan
+   gestur scroll dari titik sentuh itu, jadi jari nyentuh list langsung
+   kepilih, gak sempat digeser cari dulu. Fix: pilih lewat event `click`
+   (fire setelah touchend/scroll selesai), blur tetap nunda tutup list
+   150ms (logika lama) jadi cukup waktu buat click kebaca. `.de-combo-list`
+   sudah punya `max-height:180px;overflow-y:auto` dari awal, scroll kini
+   jalan normal.
    (d) Ukur Sisi: awalnya chip F1..Fn (tap dulu baru kotak ketik muncul),
    lalu direvisi lagi jadi **dropdown** pilih F1..Fn + checkbox "Tampilkan
    semua" di sampingnya (checked = semua kotak ketik F1..Fn muncul

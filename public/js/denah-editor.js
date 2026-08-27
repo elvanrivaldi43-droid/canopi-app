@@ -927,12 +927,15 @@ body,.page-content{overscroll-behavior-y:contain}
     // ke lastGood otomatis kalau dikosongin lalu ditinggal tanpa pilih apa-apa.
     input.addEventListener('focus', () => { lastGood = input.value; input.value = ''; filterList(''); });
     input.addEventListener('input', () => filterList(input.value));
-    // pointerdown (bukan click) + preventDefault: cegah input blur duluan sebelum tap kebaca
-    // (pola combobox standar -- blur akan nutup listEl sebelum click sempat jalan kalau tidak).
-    listEl.addEventListener('pointerdown', e => {
+    // click (bukan pointerdown): pointerdown+preventDefault dulu dipakai cegah blur nutup
+    // listEl duluan, tapi preventDefault di pointerdown juga MEMBATALKAN gestur scroll dari
+    // titik sentuh itu -- di HP jari nyentuh langsung dianggap pilih, gak sempat digeser cari
+    // dulu (laporan Elvan 27 Ags: mau scroll dropdown dulu baru pilih). click tetap jalan
+    // normal abis blur karena blur SENGAJA nunda tutup listEl 150ms (lihat bawah) -- cukup buat
+    // click sempat kebaca, dan scroll di dalam list kini tidak lagi diblokir.
+    listEl.addEventListener('click', e => {
       const item = e.target.closest('.de-combo-item');
       if (!item) return;
-      e.preventDefault();
       input.value = item.dataset.nama;
       lastGood = item.dataset.nama;
       listEl.style.display = 'none';
