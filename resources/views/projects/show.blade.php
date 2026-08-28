@@ -23,6 +23,15 @@
             <h1 style="color:#e2e8f0; font-size:20px; font-weight:700; margin:0;">{{ $project->nama_customer }}</h1>
             <p style="color:#94a3b8; font-size:14px; margin:4px 0 0;">{{ $project->jenis_project }} @if($project->alamat_project) — {{ $project->alamat_project }} @endif</p>
         </div>
+        {{-- Cutting list produksi dari denah RAB (opsi yang di-deal). Hanya tampil kalau
+             project terhubung ke lead ber-blok denah — dokumen tukang, tanpa harga.
+             target=_blank aman: dibuka langsung dari sentuhan (bukan setelah await). --}}
+        @if($adaCuttingDenah ?? false)
+        <a href="{{ url('/projects/'.$project->id.'/cutting-list') }}" target="_blank"
+           style="background:#fbbf24; color:#0f172a; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:700; text-decoration:none; margin-top:4px;">
+            Cutting List Rangka
+        </a>
+        @endif
     </div>
 
     {{-- Alerts --}}

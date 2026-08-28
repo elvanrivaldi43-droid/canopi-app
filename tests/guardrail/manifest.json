@@ -378,6 +378,12 @@
       "runner": "php",
       "requires_db": false,
       "manual": false
+    },
+    {
+      "path": "tests/rangka/test_cutting_snapshot.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
     }
   ],
   "excluded": [

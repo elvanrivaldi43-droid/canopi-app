@@ -64,8 +64,18 @@ class CuttingController extends Controller
                 ->get(['id', 'nama', 'satuan', 'formula_type', 'harga_pokok_satuan', 'level']);
         } catch (\Throwable $e) {}
 
+        // Pemilih lead utk cutting list dari denah (kalibrasi). LIKE murah krn cuma
+        // menyaring kandidat; blok denah nonaktif/kosong disaring lagi saat render.
+        $leadDenah = collect();
+        try {
+            $leadDenah = DB::table('pipeline_leads')
+                ->where('rab_snapshot', 'like', '%"tipe":"denah"%')
+                ->orderByDesc('updated_at')
+                ->get(['id', 'nama_customer']);
+        } catch (\Throwable $e) { $leadDenah = collect(); }
+
         $lihatHarga = Auth::user()->level == 1;
-        return view('cutting.index', compact('besi', 'jenisKerja', 'kondisi', 'atap', 'addon', 'lihatHarga'));
+        return view('cutting.index', compact('besi', 'jenisKerja', 'kondisi', 'atap', 'addon', 'lihatHarga', 'leadDenah'));
     }
 
     private function ambilInput(Request $request): array
@@ -306,6 +316,72 @@ class CuttingController extends Controller
      * hitungSatuBlok): RangkaDesignService -> CuttingService, termasuk panjang batang
      * per material dari master_material. Satu mesin, satu angka.
      */
+    /**
+     * Cutting list PRODUKSI/KALIBRASI dari denah RAB Multi-Opsi (rab_snapshot lead).
+     * Dua pintu, satu halaman cetak:
+     * - /cutting-denah?lead=N  (kalibrasi, dari halaman Cutting List): semua opsi
+     * - /project/{id}/cutting-list (produksi, pasca-deal): hanya opsi di deal_json
+     * Dokumen produksi: TANPA harga. Gambar denah ikut kalau penawaran punya
+     * snapshot SVG-nya (dicocokkan nama opsi+blok).
+     */
+    private function renderCuttingDenah(object $lead, ?string $opsiDeal, string $judul)
+    {
+        $rd = new \App\Services\RangkaDesignService();
+        $snap = json_decode((string) $lead->rab_snapshot, true);
+        $bloks = is_array($snap) ? $rd->blokDenahDariSnapshot($snap, $opsiDeal) : [];
+
+        $peringatan = '';
+        if ($opsiDeal !== null && $bloks && $bloks[0]['opsi'] !== $opsiDeal
+            && !array_filter($bloks, fn ($b) => $b['opsi'] === $opsiDeal)) {
+            $peringatan = "Opsi deal \"{$opsiDeal}\" tidak ditemukan di RAB (mungkin diganti nama setelah deal) — menampilkan SEMUA opsi.";
+        }
+        if (!$bloks) {
+            $peringatan = 'Lead ini tidak punya blok Denah dengan batang besi. Cutting list hanya tersedia untuk blok yang digambar di editor denah.';
+        }
+
+        // Gambar denah dari snapshot penawaran (kalau sudah pernah Buat Penawaran).
+        $svgMap = [];
+        $pen = json_decode((string) ($lead->penawaran_json ?? ''), true);
+        foreach ((array) ($pen['opsi'] ?? []) as $po) {
+            foreach ((array) ($po['blok'] ?? []) as $pb) {
+                if (!empty($pb['denah_svg'])) $svgMap[($po['nama'] ?? '') . '|' . ($pb['nama'] ?? '')] = $pb['denah_svg'];
+            }
+        }
+
+        $stok = $this->stokMap();
+        foreach ($bloks as &$b) {
+            $b['hasil'] = $rd->hitung($b['members'], [], false, $stok);   // tanpa harga
+            $b['denah_svg'] = $svgMap[$b['opsi'] . '|' . $b['blok']] ?? null;
+        }
+        unset($b);
+
+        return view('cutting.print-denah', [
+            'judul'      => $judul,
+            'bloks'      => $bloks,
+            'peringatan' => $peringatan,
+            'tanggal'    => now()->format('d/m/Y H:i'),
+        ]);
+    }
+
+    public function cuttingDenahLead(Request $request)
+    {
+        abort_if(!$this->bolehAkses(), 403);
+        $lead = DB::table('pipeline_leads')->where('id', (int) $request->query('lead'))->first();
+        abort_if(!$lead, 404, 'Lead tidak ditemukan');
+        return $this->renderCuttingDenah($lead, null,
+            'Cutting List Denah — ' . ($lead->nama_customer ?? ('Lead #' . $lead->id)));
+    }
+
+    public function cuttingDenahProject(\App\Models\Project $project)
+    {
+        abort_if(!$this->bolehAkses(), 403);
+        $lead = $project->id_lead ? DB::table('pipeline_leads')->where('id', $project->id_lead)->first() : null;
+        abort_if(!$lead, 404, 'Project ini tidak terhubung ke lead RAB');
+        $deal = json_decode((string) ($lead->deal_json ?? ''), true);
+        return $this->renderCuttingDenah($lead, $deal['opsi'] ?? null,
+            'Cutting List Produksi — ' . ($project->nama_customer ?? $project->kode_project ?? ('Project #' . $project->id)));
+    }
+
     public function cuttingDenah(Request $request, \App\Services\RangkaDesignService $rd)
     {
         abort_if(!$this->bolehAkses(), 403);

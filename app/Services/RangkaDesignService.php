@@ -19,6 +19,52 @@ class RangkaDesignService
      * @param array $members  tiap: ['nama'=>string,'panjang'=>float,'material'=>string, ...]
      * @param array $harga    ['<material>' => <harga_pokok>]
      */
+    /**
+     * Ambil blok denah dari rab_snapshot lead (JSON autosave RAB Multi-Opsi).
+     * MURNI (tanpa DB) supaya bisa dites. Dipakai 2 pintu:
+     * - halaman Cutting List (kalibrasi): $opsiDeal null -> semua opsi
+     * - halaman Project (produksi): $opsiDeal = nama opsi dari deal_json
+     * Nama opsi deal yang tak ketemu (data diedit setelah deal) TIDAK membuat hasil
+     * kosong diam-diam -- semua opsi dikembalikan, biar pemanggil yang menandai.
+     * Blok nonaktif & blok tanpa members dilewati (tak ada yang bisa dipotong).
+     *
+     * @return array{opsi:string, blok:string, members:array}[]
+     */
+    public function blokDenahDariSnapshot(array $snap, ?string $opsiDeal = null): array
+    {
+        $panes = $snap['panes'] ?? null;
+        if (!is_array($panes)) return [];
+
+        $ambil = function (?string $filter) use ($panes): array {
+            $out = [];
+            foreach ($panes as $i => $p) {
+                $p = (array) $p;
+                $namaOpsi = trim((string) ($p['nama'] ?? '')) ?: ('Opsi ' . ($i + 1));
+                if ($filter !== null && $namaOpsi !== $filter) continue;
+                foreach ((array) ($p['blok'] ?? []) as $j => $b) {
+                    $b = (array) $b;
+                    if (($b['tipe'] ?? '') !== 'denah') continue;
+                    if (array_key_exists('aktif', $b) && filter_var($b['aktif'], FILTER_VALIDATE_BOOLEAN) === false) continue;
+                    $members = array_values(array_filter(
+                        array_map(fn ($m) => (array) $m, (array) ($b['members'] ?? [])),
+                        fn ($m) => trim((string) ($m['material'] ?? '')) !== '' && (float) ($m['panjang'] ?? 0) > 0
+                    ));
+                    if (!$members) continue;
+                    $out[] = [
+                        'opsi'    => $namaOpsi,
+                        'blok'    => trim((string) ($b['nama'] ?? '')) ?: ('Blok ' . ($j + 1)),
+                        'members' => $members,
+                    ];
+                }
+            }
+            return $out;
+        };
+
+        $out = $ambil($opsiDeal);
+        if ($opsiDeal !== null && !$out) $out = $ambil(null);
+        return $out;
+    }
+
     public function hitung(array $members, array $harga = [], bool $lihatHarga = false, array $stok = []): array
     {
         // Kelompokkan panjang per besi
@@ -62,6 +108,9 @@ class RangkaDesignService
                 'harga_pokok'   => $h,
                 'subtotal_besi' => $sub,
                 'jml_potong'    => count($pieces),
+                // Daftar potong per batang -- dipakai halaman cetak cutting list produksi/
+                // kalibrasi. Dulu dihitung lalu DIBUANG di sini (cuma jumlahnya yang keluar).
+                'bars'          => $bars,
             ];
             $totalBatang += $batang;
             if ($sub !== null) $totalBiaya += $sub;

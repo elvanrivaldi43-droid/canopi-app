@@ -57,6 +57,26 @@
     <h1 class="ct-title">Kalkulator Potong Besi</h1>
     <p class="ct-sub">Input ukuran → jumlah batang otomatis + cutting list bergaris. Batang 600cm. Potongan yang lebih panjang dari 1 batang wajib disambung (mis. 10 m = 600+200+200, disambung berurutan jadi SATU batang).</p>
 
+    {{-- Cutting list dari DENAH RAB Multi-Opsi (bentuk apa pun, bukan cuma kotak polos).
+         Pintu kalibrasi — pintu produksinya ada di halaman Project pasca-deal. --}}
+    <div class="ct-card" style="border-left:3px solid #fbbf24">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px">Cutting List dari Denah (RAB Multi-Opsi)</div>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">Untuk kanopi bentuk apa pun yang digambar di editor denah — pilih lead-nya, cutting list semua blok denahnya terbuka di halaman cetak. Tanpa harga (dokumen produksi/kalibrasi).</div>
+        @if($leadDenah->count())
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="leadDenahSel" style="flex:1;min-width:200px;padding:8px;border-radius:8px">
+                @foreach($leadDenah as $ld)
+                <option value="{{ $ld->id }}">#{{ $ld->id }} — {{ $ld->nama_customer ?: 'Tanpa nama' }}</option>
+                @endforeach
+            </select>
+            <button type="button" class="btn" style="background:#fbbf24;color:#0f172a;border:0;border-radius:8px;padding:9px 16px;font-weight:700;cursor:pointer"
+                onclick="window.open('{{ url('/cutting-denah') }}?lead='+document.getElementById('leadDenahSel').value,'_blank')">Buka Cutting List</button>
+        </div>
+        @else
+        <div style="font-size:12px;color:#64748b">Belum ada lead dengan blok Denah.</div>
+        @endif
+    </div>
+
     <div class="ct-card">
         <div class="ct-grid">
             <div class="ct-field"><label>Lebar (cm)</label><input type="number" id="lebar" value="500"></div>

@@ -156,8 +156,18 @@ class ProjectController extends Controller
         $materialPendingApproval = $project->materialAktual
             ->where('status_vs_rab', 'melebihi_rab');
 
+        // Tombol Cutting List Rangka: hanya kalau lead punya blok denah (LIKE murah;
+        // penyaringan detail terjadi saat halaman cetaknya dibuka).
+        $adaCuttingDenah = false;
+        if ($project->id_lead) {
+            try {
+                $adaCuttingDenah = DB::table('pipeline_leads')->where('id', $project->id_lead)
+                    ->where('rab_snapshot', 'like', '%"tipe":"denah"%')->exists();
+            } catch (\Throwable $e) {}
+        }
+
         return view('projects.show', compact(
-            'project', 'rateKondisi', 'masterMaterial', 'karyawan',
+            'project', 'rateKondisi', 'masterMaterial', 'karyawan', 'adaCuttingDenah',
             'totalRabPokok', 'totalRabCustomer', 'totalMaterialAktual',
             'totalUpahTim', 'selisihMaterial', 'materialPendingApproval'
         ));

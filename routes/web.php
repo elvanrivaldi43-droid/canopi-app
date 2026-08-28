@@ -450,6 +450,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cutting-test',        [\App\Http\Controllers\CuttingController::class, 'index']);
     Route::post('/cutting-test/hitung',[\App\Http\Controllers\CuttingController::class, 'hitung']);
     Route::post('/cutting-test/cetak', [\App\Http\Controllers\CuttingController::class, 'cetak']);
+    // Cutting list dari denah RAB Multi-Opsi (baca rab_snapshot lead; tanpa harga).
+    // Pintu kalibrasi: pilih lead dari halaman Cutting List. Pintu produksi: /projects/{id}/cutting-list.
+    Route::get('/cutting-denah', [\App\Http\Controllers\CuttingController::class, 'cuttingDenahLead']);
+    Route::get('/projects/{project}/cutting-list', [\App\Http\Controllers\CuttingController::class, 'cuttingDenahProject']);
 
     // Perancang Rangka (Fase 1) — halaman baru terpisah, owner-only
     Route::get('/rangka-desain',         [\App\Http\Controllers\RangkaDesainController::class, 'index']);
