@@ -717,8 +717,8 @@ class DenahEditor {
   static defaultModel() {
     return {
       verts: [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 300 }, { x: 0, y: 300 }],
-      grid: 20, target: 100,
-      kotak: 100, autoKotak: true, arah: '2', supportsManual: [], removed: {}, tiang: [],
+      grid: 20,
+      kotak: 100, arah: '2', supportsManual: [], removed: {}, tiang: [],
       balok: [], balokSeq: 1,
       tinggi: 300, matDefault: { frame: '', support: '', tiang: '', balok: '' }, matOverride: {}, combinedBoxes: [],
     };
@@ -3321,7 +3321,7 @@ if (globalThis.__DENAH_SELFCHECK) {
     const ed = new DenahEditor(div, { besi: [{ nama: 'Hollow 5x10', harga: 120000 }] });
     ed.setModel({
       verts: [{ x: 0, y: 0 }, { x: 400, y: 0 }, { x: 400, y: 400 }, { x: 0, y: 400 }],
-      grid: 20, target: 100, kotak: 100, autoKotak: true, arah: 'h',
+      grid: 20, kotak: 100, arah: 'h',
       supportsManual: [], removed: {}, tiang: [], tinggi: 300,
       matDefault: { frame: 'Hollow 5x10', support: 'Hollow 5x10', tiang: 'Hollow 5x10' }, matOverride: {},
     });
