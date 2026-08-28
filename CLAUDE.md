@@ -134,7 +134,10 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 - Panduan lengkap ada di `PANDUAN_KALIBRASI.md`, harga besi di tabel `master_material`
 
 **Belum terpecahkan:**
-- WF melintang/gawang belum dimodelkan benar (workaround sementara: set jumlah tiang=4)
+- ~~WF melintang/gawang belum dimodelkan benar (workaround set jumlah tiang=4)~~ —
+  **SELESAI, dikonfirmasi Elvan 28 Ags 2026:** sudah digantikan fitur **Balok
+  Melintang B1..Bn** (24 Ags), WF digambar sungguhan dan ikut terhitung lewat
+  members. Workaround tiang=4 TIDAK dipakai lagi — jangan hidupkan kembali.
 - Hollow count discrepancy di Material Support — **RESOLVED 14 Juli** lewat validasi ke cutting list asli project PA-DUTA (Cutting Optimization Pro). Dugaan "Besi Tambahan dobel" GUGUR — fitur itu benar (dipakai nambah profil 4x6/3x3 yang beda material). Detail akar masalah ada di arsip `docs/history/CLAUDE_STATUS_ARCHIVE_2026-08-15.md` bagian "Temuan validasi PA-DUTA".
 
 ---
