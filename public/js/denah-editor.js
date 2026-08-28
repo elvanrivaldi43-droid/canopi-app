@@ -667,6 +667,26 @@ class DenahEditor {
     this.render();
   }
 
+  // Foto denah utk dokumen (penawaran cetak, cutting list): SVG di layar diklon,
+  // alat bantu editor dibuang (pita sentuh transparan, bulatan titik sudut, handle
+  // ujung support, garis bantu snap, tooltip), sorotan support/balok dilepas
+  // sementara lalu dipulihkan (sorotan balok sengaja awet -- sering masih nyala),
+  // lalu warna dipetakan ke palet kertas (svgCetak). CATATAN: lingkaran tiang yang
+  // TAMPAK juga ber-class "hit" -- patokan buang = warna transparan, bukan class itu.
+  snapshotCetak() {
+    const sSup = this.selSup, sBal = this.selBalok, sorot = (sSup != null || sBal != null);
+    if (sorot) { this.selSup = null; this.selBalok = null; this.render(); }
+    const svg = this._q('.de-canvas svg');
+    let out = '';
+    if (svg) {
+      const k = svg.cloneNode(true);
+      [].slice.call(k.querySelectorAll('[stroke="transparent"],[fill="transparent"],.vh,[id^=smh],[id^=slh],[id^=agx],[id^=agy],[data-boxprev],title')).forEach(e => e.remove());
+      out = DenahConv.svgCetak(k.outerHTML);
+    }
+    if (sorot) { this.selSup = sSup; this.selBalok = sBal; this.render(); }
+    return out;
+  }
+
   // Jumlah batang per material di legend — DITANYAKAN KE SERVER, tidak dihitung sendiri.
   // Rumus lokal "total panjang / 600" tak memperhitungkan sisa potongan yang terbuang,
   // batas 1 sambungan per potong, dan panjang batang per material (tak selalu 6m). Uji

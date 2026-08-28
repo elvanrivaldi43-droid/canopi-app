@@ -35,36 +35,18 @@ class CuttingController extends Controller
     {
         abort_if(!$this->bolehAkses(), 403);
 
+        // Halaman dirombak 28 Ags 2026 (permintaan Elvan): kalkulator kotak-polos lama
+        // DIBUANG, diganti editor denah yang sama dengan RAB Multi-Opsi -- gambar di
+        // sini, keluar cutting list. Karena dokumen produksi/kalibrasi tanpa harga,
+        // cuma butuh NAMA besi (harga tidak dikirim ke halaman ini).
         $besi = collect();
         try {
             $besi = DB::table('master_material')
                 ->where('kategori', 'rangka_besi')->where('aktif', 1)
-                ->orderBy('nama')->get(['id', 'nama', 'harga_pokok']);
+                ->orderBy('nama')->get(['id', 'nama']);
         } catch (\Throwable $e) { $besi = collect(); }
 
-        $jenisKerja = collect();
-        $kondisi    = collect();
-        $atap       = collect();
-        try {
-            $jenisKerja = DB::table('rab_jenis_kerja')->where('is_active', 1)
-                ->orderBy('urutan')->get(['id', 'nama', 'satuan', 'produktivitas_per_hari', 'jml_tukang', 'jml_kenek', 'skill_default']);
-            $kondisi = DB::table('rab_kondisi_kerja')->where('is_active', 1)
-                ->orderBy('urutan')->get(['id', 'nama', 'pengali_upah', 'tambahan_per_hari']);
-        } catch (\Throwable $e) {}
-        try {
-            $atap = DB::table('rab_atap')->where('is_active', 1)
-                ->orderBy('urutan')->orderBy('nama')
-                ->get(['id', 'nama', 'harga_per_m2', 'pemborosan_persen', 'upah_pasang_per_m2']);
-        } catch (\Throwable $e) {}
-
-        $addon = collect();
-        try {
-            $addon = DB::table('rab_addon')->where('is_active', 1)
-                ->orderBy('urutan')->orderBy('nama')
-                ->get(['id', 'nama', 'satuan', 'formula_type', 'harga_pokok_satuan', 'level']);
-        } catch (\Throwable $e) {}
-
-        // Pemilih lead utk cutting list dari denah (kalibrasi). LIKE murah krn cuma
+        // Pemilih lead utk cutting list dari denah RAB tersimpan. LIKE murah krn cuma
         // menyaring kandidat; blok denah nonaktif/kosong disaring lagi saat render.
         $leadDenah = collect();
         try {
@@ -74,248 +56,13 @@ class CuttingController extends Controller
                 ->get(['id', 'nama_customer']);
         } catch (\Throwable $e) { $leadDenah = collect(); }
 
-        $lihatHarga = Auth::user()->level == 1;
-        return view('cutting.index', compact('besi', 'jenisKerja', 'kondisi', 'atap', 'addon', 'lihatHarga', 'leadDenah'));
+        return view('cutting.index', compact('besi', 'leadDenah'));
     }
 
-    private function ambilInput(Request $request): array
-    {
-        $b = fn($k, $def) => filter_var($request->input($k, $def), FILTER_VALIDATE_BOOLEAN);
-        return [
-            'lebar_cm'     => $request->input('lebar_cm'),
-            'panjang_cm'   => $request->input('panjang_cm'),
-            'tinggi_cm'    => $request->input('tinggi_cm', 300),
-            'kotak_cm'     => $request->input('kotak_cm', 80),
-            'arah_support' => $request->input('arah_support', 2),
-            'jml_tiang'    => $request->input('jml_tiang', 2),
-            'mat_frame'    => $request->input('mat_frame', 'Frame'),
-            'mat_support'  => $request->input('mat_support', 'Support'),
-            'mat_tiang'    => $request->input('mat_tiang', 'Tiang'),
-            'frame_depan'    => $b('frame_depan', true),
-            'frame_belakang' => $b('frame_belakang', true),
-            'frame_kiri'     => $b('frame_kiri', true),
-            'frame_kanan'    => $b('frame_kanan', true),
-            'frame_tengah'   => $b('frame_tengah', true),
-        ];
-    }
+    // Kalkulator kotak-polos lama (hitung/cetak + ambilInput/tempelHarga/hitungHarga)
+    // DIHAPUS 28 Ags 2026 -- halaman ini kini memakai editor denah (bentuk apa pun).
+    // Mesin CuttingService::hitungRangka TETAP ada: dipakai RangkaDesignService::seed.
 
-    private function tempelHarga(array $hasil, array $harga, bool $lihatHarga): array
-    {
-        foreach ($hasil['per_material'] as &$m) {
-            $h = ($lihatHarga && isset($harga[$m['material']])) ? (float) $harga[$m['material']] : null;
-            $m['harga_pokok']   = $h;
-            $m['subtotal_besi'] = $h !== null ? $h * $m['jumlah_batang'] : null;
-        }
-        unset($m);
-        $hasil['total_biaya_besi'] = $lihatHarga
-            ? array_sum(array_filter(array_column($hasil['per_material'], 'subtotal_besi')))
-            : null;
-        return $hasil;
-    }
-
-    /**
-     * Harga total RANGKA + ATAP (owner). Besi + upah rangka + atap (material+upah) -> pokok -> jual.
-     * Data kosong -> peringatan, BUKAN Rp0 diam-diam.
-     */
-    private function hitungHarga(array $hasil, Request $req, bool $lihatHarga): array
-    {
-        $hasil['harga'] = null;
-        if (!$lihatHarga) return $hasil;
-
-        $besi = (float) ($hasil['total_biaya_besi'] ?? 0);
-        $L = (float) ($hasil['input']['L'] ?? 0);
-        $P = (float) ($hasil['input']['P'] ?? 0);
-        $luasKanopi = $L * $P / 10000;
-        $warn = [];
-
-        // ===== UPAH RANGKA =====
-        $rangka = null; $upahRangka = 0.0;
-        $jkId = (int) $req->input('jenis_kerja_id', 0);
-        if ($jkId > 0) {
-            $jk = DB::table('rab_jenis_kerja')->where('id', $jkId)->first();
-            if ($jk) {
-                $skill = DB::table('rab_skill')->where('nama', $jk->skill_default)->first();
-                $prod = (float) ($jk->produktivitas_per_hari ?? 0);
-                $prodInst = (float) ($jk->produktivitas_inst ?? 0);
-                $nT = (int) ($jk->jml_tukang ?? 0); $nK = (int) ($jk->jml_kenek ?? 0);
-                $uT = (float) ($skill->upah_tukang_harian ?? 0);
-                $uK = (float) ($skill->upah_kenek_harian ?? 0);
-                if ($prod <= 0)           $warn[] = "Produktivitas \"{$jk->nama}\" belum diisi";
-                if ($nT <= 0 && $nK <= 0) $warn[] = "Tukang/kenek \"{$jk->nama}\" belum diisi";
-                if ($nT > 0 && $uT <= 0)  $warn[] = "Upah tukang \"{$jk->skill_default}\" belum diisi";
-                if ($nK > 0 && $uK <= 0)  $warn[] = "Upah kenek \"{$jk->skill_default}\" belum diisi";
-
-                $hariFab = $prod > 0 ? $luasKanopi / $prod : 0;
-                $hariInst = $prodInst > 0 ? $luasKanopi / $prodInst : 0;
-                $hari = $hariFab + $hariInst;
-                $upahHari = $nT * $uT + $nK * $uK;
-                $base = $hari * $upahHari;
-
-                $pengali = 1.0; $tambahanHari = 0.0; $kondNama = [];
-                $kondIds = array_filter((array) $req->input('kondisi_ids', []));
-                if ($kondIds) {
-                    foreach (DB::table('rab_kondisi_kerja')->whereIn('id', $kondIds)->get() as $k) {
-                        if (($k->pengali_upah ?? 0) > 0) $pengali *= (float) $k->pengali_upah;
-                        $tambahanHari += (float) ($k->tambahan_per_hari ?? 0);
-                        $kondNama[] = $k->nama;
-                    }
-                }
-                $upahRangka = $base * $pengali + $tambahanHari * $hari;
-                $rangka = [
-                    'jenis_kerja' => $jk->nama, 'luas' => round($luasKanopi, 2),
-                    'produktivitas' => $prod, 'hari' => round($hari, 2),
-                    'jml_tukang' => $nT, 'jml_kenek' => $nK, 'upah_per_hari' => $upahHari,
-                    'kondisi' => $kondNama, 'pengali' => $pengali, 'total' => round($upahRangka),
-                ];
-            }
-        }
-
-        // ===== ATAP (banyak bagian) =====
-        $atapRows = []; $atapMaterial = 0.0; $atapUpah = 0.0;
-        $aIds  = (array) $req->input('atap_jenis_id', []);
-        $aLuas = (array) $req->input('atap_luas', []);
-        foreach ($aIds as $i => $aid) {
-            $aid = (int) $aid; $luas = (float) ($aLuas[$i] ?? 0);
-            if ($aid <= 0 || $luas <= 0) continue;
-            $a = DB::table('rab_atap')->where('id', $aid)->first();
-            if (!$a) continue;
-            $hm2   = (float) ($a->harga_per_m2 ?? 0);
-            $boros = (float) ($a->pemborosan_persen ?? 0);
-            $upm2  = (float) ($a->upah_pasang_per_m2 ?? 0);
-            if ($hm2 <= 0)  $warn[] = "Harga/m² atap \"{$a->nama}\" belum diisi";
-            if ($upm2 <= 0) $warn[] = "Upah pasang atap \"{$a->nama}\" belum diisi";
-            $mat = $luas * $hm2 * (1 + $boros / 100);
-            $up  = $luas * $upm2;
-            $atapMaterial += $mat; $atapUpah += $up;
-            $atapRows[] = [
-                'nama' => $a->nama, 'luas' => round($luas, 2), 'harga_m2' => round($hm2),
-                'boros' => $boros, 'material' => round($mat), 'upah' => round($up),
-                'subtotal' => round($mat + $up),
-            ];
-        }
-
-        // ===== ADD-ON (dari rab_addon: modal -> pokok -> margin global) =====
-        $addonRows = []; $addonFisik = 0.0;
-        $adId  = (array) $req->input('addon_id', []);
-        $adQty = (array) $req->input('addon_qty', []);
-        foreach ($adId as $i => $aid) {
-            $aid = (int) $aid;
-            if ($aid <= 0) continue;
-            $ad = DB::table('rab_addon')->where('id', $aid)->first();
-            if (!$ad) continue;
-            $ft    = $ad->formula_type ?? 'per_unit';   // per_unit | per_meter | per_m2 | flat
-            $level = $ad->level ?? 'total';
-            $harga = (float) ($ad->harga_pokok_satuan ?? 0);
-            $qty   = ($ft === 'flat') ? 1.0 : (float) ($adQty[$i] ?? 0);
-            if ($ft !== 'flat' && $qty <= 0) continue; // tidak dipakai
-            if ($harga <= 0) $warn[] = "Harga modal add-on \"{$ad->nama}\" belum diisi";
-            $biaya = $qty * $harga;
-            $addonFisik += $biaya;
-            $addonRows[] = [
-                'nama' => $ad->nama, 'satuan' => $ad->satuan, 'formula' => $ft,
-                'level' => $level, 'qty' => $qty, 'harga' => round($harga), 'biaya' => round($biaya),
-            ];
-        }
-
-        // ===== TOTAL (margin sekali, di atas semua pokok) =====
-        $margin = min(0.9, max(0.0, (float) $req->input('margin_persen', 45) / 100));
-        $pokok = $besi + $upahRangka + $atapMaterial + $atapUpah + $addonFisik;
-        $jual = $pokok / (1 - $margin);
-
-        $hasil['harga'] = [
-            'besi'          => round($besi),
-            'rangka'        => $rangka,
-            'upah_rangka'   => round($upahRangka),
-            'atap'          => $atapRows,
-            'atap_material' => round($atapMaterial),
-            'atap_upah'     => round($atapUpah),
-            'addon'         => $addonRows,
-            'addon_fisik'   => round($addonFisik),
-            'pokok'         => round($pokok),
-            'margin_persen' => round($margin * 100),
-            'jual'          => round($jual),
-            'peringatan'    => array_values(array_unique($warn)),
-        ];
-        return $hasil;
-    }
-
-    public function hitung(Request $request, CuttingService $svc)
-    {
-        abort_if(!$this->bolehAkses(), 403);
-        $lihatHarga = Auth::user()->level == 1;
-        $hasil = $svc->hitungRangka($this->ambilInput($request));
-        $hasil = $this->tempelHarga($hasil, (array) $request->input('harga', []), $lihatHarga);
-        $hasil = $this->hitungHarga($hasil, $request, $lihatHarga);
-        return response()->json(['success' => true, 'data' => $hasil]);
-    }
-
-    public function cetak(Request $request, CuttingService $svc)
-    {
-        abort_if(!$this->bolehAkses(), 403);
-        $lihatHarga = Auth::user()->level == 1;
-        $hasil = $svc->hitungRangka($this->ambilInput($request));
-        $hasil = $this->tempelHarga($hasil, (array) $request->input('harga', []), $lihatHarga);
-        $hasil = $this->hitungHarga($hasil, $request, $lihatHarga);
-
-        $judul = $request->input('judul', 'Cutting List Rangka');
-        return view('cutting.print', [
-            'd'          => $hasil,
-            'judul'      => $judul,
-            'lihatHarga' => $lihatHarga,
-            'tanggal'    => now()->format('d/m/Y H:i'),
-        ]);
-    }
-
-    // ================================================================
-    // MULTI-BLOK (Tahap 1) — beberapa blok dalam 1 opsi, 1 total.
-    // Engine lama TIDAK diubah; ini jalur baru di /rab-blok.
-    // ================================================================
-
-    public function projectIndex()
-    {
-        abort_if(!$this->bolehAkses(), 403);
-
-        $besi = collect();
-        try {
-            $besi = DB::table('master_material')
-                ->where('kategori', 'rangka_besi')->where('aktif', 1)
-                ->orderBy('nama')->get(['id', 'nama', 'harga_pokok']);
-        } catch (\Throwable $e) {}
-
-        $besiSemua = collect();
-        try {
-            $besiSemua = DB::table('master_material')->where('aktif', 1)
-                ->orderBy('kategori')->orderBy('nama')->get(['id', 'nama', 'harga_pokok']);
-        } catch (\Throwable $e) {}
-
-        $jenisKerja = collect(); $kondisi = collect(); $atap = collect(); $addon = collect();
-        try {
-            $jenisKerja = DB::table('rab_jenis_kerja')->where('is_active', 1)
-                ->orderBy('urutan')->get(['id', 'nama', 'satuan', 'produktivitas_per_hari', 'jml_tukang', 'jml_kenek', 'skill_default']);
-            $kondisi = DB::table('rab_kondisi_kerja')->where('is_active', 1)
-                ->orderBy('urutan')->get(['id', 'nama', 'pengali_upah', 'tambahan_per_hari']);
-            $atap = DB::table('rab_atap')->where('is_active', 1)
-                ->orderBy('urutan')->orderBy('nama')->get(['id', 'nama', 'harga_per_m2', 'pemborosan_persen', 'upah_pasang_per_m2']);
-            $addon = DB::table('rab_addon')->where('is_active', 1)
-                ->orderBy('urutan')->orderBy('nama')->get(['id', 'nama', 'satuan', 'formula_type', 'harga_pokok_satuan', 'level']);
-        } catch (\Throwable $e) {}
-
-        $lihatHarga = Auth::user()->level == 1;
-        return view('rab-blok.index', compact('besi', 'besiSemua', 'jenisKerja', 'kondisi', 'atap', 'addon', 'lihatHarga'));
-    }
-
-    /**
-     * Jumlah batang per material untuk legend editor denah — dipanggil tiap surveyor
-     * berhenti menggambar, jadi sengaja TIPIS (tanpa harga, upah, atau opsi lain).
-     *
-     * Editor TIDAK boleh menghitung batang sendiri: rumus "total panjang / 600" tak
-     * memperhitungkan sisa potongan yang terbuang dan batas 1 sambungan per potong,
-     * dan uji 6000 kombinasi ukuran wajar menunjukkan rumus itu tak pernah lebih besar
-     * dari kebutuhan nyata — selisihnya SELALU ke arah kurang beli (~8% kasus).
-     * Jalurnya sengaja sama persis dengan yang dipakai harga (blok denah di
-     * hitungSatuBlok): RangkaDesignService -> CuttingService, termasuk panjang batang
-     * per material dari master_material. Satu mesin, satu angka.
-     */
     /**
      * Cutting list PRODUKSI/KALIBRASI dari denah RAB Multi-Opsi (rab_snapshot lead).
      * Dua pintu, satu halaman cetak:
@@ -348,11 +95,18 @@ class CuttingController extends Controller
             }
         }
 
+        foreach ($bloks as &$b) $b['denah_svg'] = $svgMap[$b['opsi'] . '|' . $b['blok']] ?? null;
+        unset($b);
+
+        return $this->tampilkanCuttingDenah($bloks, $judul, $peringatan);
+    }
+
+    /** Bagian tampilan bersama: hitung daftar potong per blok lalu render halaman cetak. */
+    private function tampilkanCuttingDenah(array $bloks, string $judul, string $peringatan = '')
+    {
+        $rd = new \App\Services\RangkaDesignService();
         $stok = $this->stokMap();
-        foreach ($bloks as &$b) {
-            $b['hasil'] = $rd->hitung($b['members'], [], false, $stok);   // tanpa harga
-            $b['denah_svg'] = $svgMap[$b['opsi'] . '|' . $b['blok']] ?? null;
-        }
+        foreach ($bloks as &$b) $b['hasil'] = $rd->hitung($b['members'], [], false, $stok);   // tanpa harga
         unset($b);
 
         return view('cutting.print-denah', [
@@ -361,6 +115,36 @@ class CuttingController extends Controller
             'peringatan' => $peringatan,
             'tanggal'    => now()->format('d/m/Y H:i'),
         ]);
+    }
+
+    /**
+     * Cutting list dari denah yang digambar LANGSUNG di halaman Cutting List
+     * (tanpa lead). Members + foto denah dikirim dari editor di klien.
+     */
+    public function cuttingDenahManual(Request $request)
+    {
+        abort_if(!$this->bolehAkses(), 403);
+
+        $members = json_decode((string) $request->input('members', '[]'), true);
+        if (!is_array($members)) $members = [];
+        $bersih = [];
+        foreach (array_slice($members, 0, 3000) as $m) {
+            $m = (array) $m;
+            $mat = trim((string) ($m['material'] ?? ''));
+            $len = (float) ($m['panjang'] ?? 0);
+            if ($mat === '' || $len <= 0) continue;
+            $bersih[] = ['nama' => (string) ($m['nama'] ?? ''), 'material' => $mat, 'panjang' => $len];
+        }
+
+        $svg = (string) $request->input('denah_svg', '');
+        // Jangan telan SVG raksasa/aneh -- foto denah normal puluhan KB.
+        if (strlen($svg) > 512 * 1024 || ($svg !== '' && !str_starts_with(ltrim($svg), '<svg'))) $svg = '';
+
+        $judul = trim((string) $request->input('judul', '')) ?: 'Cutting List Denah';
+        $bloks = $bersih ? [['opsi' => '', 'blok' => 'Denah', 'members' => $bersih, 'denah_svg' => $svg ?: null]] : [];
+
+        return $this->tampilkanCuttingDenah($bloks, $judul,
+            $bersih ? '' : 'Denah belum punya batang besi — gambar bentuknya dulu, baru buka cutting list.');
     }
 
     public function cuttingDenahLead(Request $request)

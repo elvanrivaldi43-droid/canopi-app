@@ -40,7 +40,7 @@
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="M7.848 8.25l1.536.887M7.848 8.25a3 3 0 11-5.196-3 3 3 0 015.196 3zm1.536.887a2.165 2.165 0 011.083 1.839c.005.351.054.695.14 1.024M9.384 9.137l10.768 6.218m0 0A3 3 0 1022.5 18.75a3 3 0 00-2.348-3.395zm-10.768.011a2.165 2.165 0 00-1.083 1.839c-.005.351-.054.695-.14 1.024m1.223-2.863L9.384 14.863"/>
     </svg>
-    <span x-show="sidebarOpen">Cutting List (uji 1 blok)</span>
+    <span x-show="sidebarOpen">Cutting List</span>
 </a>
 <a href="{{ url('/rangka-desain') }}"
    class="nav-item {{ request()->is('rangka-desain*') ? 'active' : '' }}">

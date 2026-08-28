@@ -1032,22 +1032,10 @@ function namaAtap(id){ for(var i=0;i<ATAP.length;i++){ if(+ATAP[i].id===+id) ret
 // pakai class itu; patokannya warna transparan (murni alat bantu, tak pernah tampil).
 // Hasilnya jadi FOTO BEKU: penawaran yang sudah dibuat tak ikut berubah kalau RAB diedit lagi.
 function denahCetak(card){
-    var ed=card?DENAH.get(card):null; if(!ed) return '';
-    // Sorotan garis (support/balok, kuning tebal) juga alat bantu -- di dokumen customer bikin
-    // satu batang kelihatan "beda sendiri" tanpa alasan. Sorotan balok sengaja awet by design,
-    // jadi cukup sering masih menyala saat tombol ini ditekan. Dilepas sementara lalu
-    // dipulihkan, supaya tampilan editor yang dilihat surveyor tidak berubah.
-    var sSup=ed.selSup, sBal=ed.selBalok, sorot=(sSup!=null||sBal!=null);
-    if(sorot){ ed.selSup=null; ed.selBalok=null; ed.render(); }
-    var svg=card.querySelector('.de-canvas svg');
-    var out='';
-    if(svg){
-        var k=svg.cloneNode(true);
-        [].slice.call(k.querySelectorAll('[stroke="transparent"],[fill="transparent"],.vh,[id^=smh],[id^=slh],[id^=agx],[id^=agy],[data-boxprev],title')).forEach(function(e){ e.remove(); });
-        out=DenahConv.svgCetak(k.outerHTML);
-    }
-    if(sorot){ ed.selSup=sSup; ed.selBalok=sBal; ed.render(); }
-    return out;
+    // Logika foto-denah pindah ke DenahEditor.snapshotCetak() (28 Ags) -- dipakai juga
+    // halaman Cutting List. Satu implementasi, dua pemakai.
+    var ed=card?DENAH.get(card):null;
+    return ed?ed.snapshotCetak():'';
 }
 function buildPenawaran(){
     if(!window.CMP || !window.CMP.length){ alert('Tekan "Hitung Harga" dulu supaya harga tiap opsi keluar.'); return null; }
