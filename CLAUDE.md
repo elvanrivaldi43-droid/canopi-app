@@ -238,6 +238,30 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 
 ### Utang aktif / resume point
 
+0. **Gambar denah ikut ke penawaran cetak — LIVE 27/28 Ags 2026, BELUM
+   DIVALIDASI Bos.** Antrean polesan DenahEditor #1 selesai. Saat tombol
+   "Buat Penawaran" ditekan, SVG yang sudah ada di layar di-snapshot:
+   `denahCetak()` (`rab-opsi/index.blade.php`) klon SVG → buang alat bantu
+   editor (pita sentuh transparan, bulatan titik sudut, handle ujung support,
+   garis bantu snap, tooltip) + lepas sorotan support/balok sementara lalu
+   pulihkan → `DenahConv.svgCetak()` (fungsi MURNI string, test
+   `tests/rangka/test_svg_cetak.mjs`) memetakan palet layar ke palet kertas.
+   Ditampilkan di `penawaran/show.blade.php` sbg `<img>` data-URI — sengaja
+   BUKAN SVG tempel-langsung: di dalam `<img>` browser mematikan script &
+   sumber luar, jadi nol kode pembersih sendiri.
+   **Perilaku disengaja (jangan salah lapor):** (a) foto BEKU — penawaran
+   yang sudah dibuat tak ikut berubah kalau RAB diedit lagi; (b) penawaran
+   yang dibuat SEBELUM 27 Ags tak punya gambar, harus tekan "Buat Penawaran"
+   ulang; (c) lingkaran tiang yang TAMPAK juga ber-class `hit` — kalau
+   menyaring elemen, patokannya warna transparan, JANGAN class itu.
+   `pipeline_leads.penawaran_json` sudah dicek Bos 27 Ags: **LONGTEXT**, aman
+   (SQL cadangan `docs/sql/2026-08-27-penawaran-json-longtext.sql` tak jadi
+   dipakai). **Tampak samping/angle SENGAJA belum dikerjakan** — model denah
+   cuma simpan 1 angka `tinggi` utk semua tiang, tanpa kemiringan atap; gambar
+   samping dari data sekarang akan datar rata (salah utk kanopi yang miring
+   buang air). Butuh data baru dulu → sesi `/plan` terpisah, sudah disetujui
+   Elvan sbg "atas dulu, samping nyusul".
+
 1. **Kalibrasi RAB tetap prioritas roadmap #1.** Data masih tes dan belum boleh
    dipakai ke customer asli sampai kalibrasi tuntas. PA-DUTA 4x8 masih kurang foto
    bar #12 untuk menutup validasi target 9 batang. Luas referensi yang benar sekitar
@@ -619,9 +643,22 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 
-- iOS Safari: `position:fixed` dapat rusak bila bersarang di `.page-content`
-  (`overflow-y:auto` + `-webkit-overflow-scrolling:touch`). Overlay fullscreen
-  perlu direparent ke `document.body`, lalu dikembalikan saat selesai.
+- iOS Safari: `position:fixed` rusak bila bersarang di `.page-content`.
+  **AKAR MASALAHNYA SUDAH DICABUT 28 Ags 2026** — biangnya `-webkit-overflow-scrolling:touch`
+  di `.page-content` (`layouts/app.blade.php`), bukan `overflow-y:auto`-nya.
+  **JANGAN pasang balik properti itu** (ada komentar peringatan di CSS-nya);
+  sudah usang juga — momentum scroll bawaan sejak iOS 13.
+  Gejalanya: bar aksi bawah hilang TOTAL di HP pada 4 halaman sekaligus
+  (rab-opsi + rab-blok `.actbar`, kelola_material `.ka-actions`,
+  produktivitas `.pk-actions`) — dilaporkan Elvan sbg "tombol Lanjut →
+  Finalisasi tidak muncul", sempat lama tak terpecahkan karena ditebak-tebak.
+  Dibuktikan empiris lewat halaman uji sekali pakai di HP Elvan (bar identik
+  di dalam wadah = tak muncul, di luar = muncul; "induk pengunci" TIDAK ADA;
+  begitu properti dimatikan bar langsung muncul di posisi yang memang sudah
+  benar: `rect.bottom` = `innerHeight`). **TERVALIDASI Elvan di HP.**
+  Tambalan lama yang masih ada dan tetap aman dibiarkan (tak perlu dicabut,
+  tapi juga tak perlu ditiru lagi): reparent ke `document.body` pada overlay
+  fullscreen DenahEditor dan modal `libur-nasional`.
 - Debug production memakai `Log::error()` sementara karena `LOG_LEVEL=error`
   menyaring `info/debug`; hapus instrumentation setelah bukti didapat.
 - Cron/notifikasi harus idempotent: record existing tidak boleh memicu kirim ulang.
