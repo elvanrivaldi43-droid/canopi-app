@@ -1,0 +1,64 @@
+{
+  "source": "/root/.hermes/profiles/canopidev/cache/documents/doc_71b638d792b6_u8221523_canopi_new.sql",
+  "mime": "text/plain; charset=us-ascii",
+  "bytes": 67312,
+  "mode": "644",
+  "sha256": "a6dc401d62c84a7908eac84354814f0a13ab2cc42c0a8bdf77c9386e493a2376",
+  "utf8": true,
+  "nul_bytes": 0,
+  "line_count": 1655,
+  "statement_counts": {
+    "create_table": 68,
+    "alter_table": 158,
+    "create_view": 0,
+    "create_trigger": 0,
+    "create_procedure": 0,
+    "create_function": 0,
+    "create_event": 0,
+    "insert": 0,
+    "replace": 0,
+    "load_data": 0,
+    "update": 0,
+    "delete": 0,
+    "create_user": 0,
+    "grant": 0,
+    "set_password": 0,
+    "use_database": 0,
+    "create_database": 0,
+    "definer": 0,
+    "auto_increment_seed": 0
+  },
+  "credential_indicators": {
+    "dsn": 0,
+    "uri_with_auth": 0,
+    "identified_by": 0,
+    "env_secret_assignment": 0
+  },
+  "ddl_tables": 68,
+  "ddl_columns": 873,
+  "column_comparison": {
+    "table_missing": [],
+    "table_extra": [],
+    "order_mismatch_count": 0,
+    "type_mismatch": [],
+    "nullable_mismatch": []
+  },
+  "index_comparison": {
+    "ddl": 141,
+    "csv": 141,
+    "missing": [],
+    "extra": [],
+    "column_mismatch": []
+  },
+  "foreign_key_comparison": {
+    "ddl": 41,
+    "csv": 41,
+    "missing": [],
+    "extra": [],
+    "rule_mismatch": []
+  },
+  "safety": {
+    "contains_business_rows": false,
+    "contains_admin_or_credentials": false
+  }
+}

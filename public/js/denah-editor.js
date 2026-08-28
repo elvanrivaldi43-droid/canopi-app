@@ -543,14 +543,6 @@ const DenahConv = {
     const balok = (S.balok || []).map(b => ({ no: b.no, a: remap(b.a), b: remap(b.b), material: b.material }));
     return { tiang, balok, balokSeq: S.balokSeq || (balok.reduce((m, b) => Math.max(m, b.no), 0) + 1) };
   },
-  // Total batang standar per material WF (default batang 6m = 600cm). Non-WF diabaikan.
-  hitungBatangWF(mem, panjangBatang = 600) {
-    const tot = {};
-    (mem || []).forEach(m => { if (m.jenis === 'balok' && /wf/i.test(m.material)) tot[m.material] = (tot[m.material] || 0) + m.panjang; });
-    const out = {};
-    Object.keys(tot).forEach(k => { out[k] = Math.ceil(tot[k] / panjangBatang); });
-    return out;
-  },
   // Tempel kotak ke 1 sisi lurus (sisiIdx): sisipkan "detour" 4 titik pengganti segmen yang
   // ketutup. Tanda `depth` menentukan arah — SATU fungsi yang sama menghasilkan tonjolan
   // keluar (nambah) atau notch ke dalam (lekukan), tergantung tanda itu. UI (DenahEditor) yang
@@ -615,6 +607,10 @@ class DenahEditor {
       if (!this.S.matDefault.tiang) this.S.matDefault.tiang = cari('5x10');
       if (!this.S.matDefault.balok) this.S.matDefault.balok = cari('wf') || this.besi[0].nama;
     }
+    // Sumber angka batang: endpoint server (lihat _jadwalCutting). Kosong = fitur diam.
+    this.cutUrl = this.opts.cuttingUrl || '';
+    this.cutCsrf = this.opts.csrf || '';
+    this.batangKunci = ''; this.batangHtml = ''; this._cutTimer = null;
     this.undoStack = []; this.redoStack = [];
     this.mode = 'bentuk';
     this.armed = null;      // 'addV' | 'delV' | 'addSupport' | 'addBox'
@@ -669,6 +665,53 @@ class DenahEditor {
     this._wireFullscreen();
     this.syncInputs();
     this.render();
+  }
+
+  // Jumlah batang per material di legend — DITANYAKAN KE SERVER, tidak dihitung sendiri.
+  // Rumus lokal "total panjang / 600" tak memperhitungkan sisa potongan yang terbuang,
+  // batas 1 sambungan per potong, dan panjang batang per material (tak selalu 6m). Uji
+  // 6000 kombinasi ukuran wajar: rumus itu TAK PERNAH lebih besar dari kebutuhan nyata —
+  // selisihnya selalu ke arah kurang beli (~8% kasus). Server memakai mesin yang sama
+  // dengan perhitungan harga, jadi angka di sini dan di step Harga tak akan beda.
+  // Dipanggil dari render() (sering); permintaan ditunda 1,5 dtk setelah gambar berhenti
+  // berubah, dan dilewati sama sekali kalau susunan batang sama dengan hasil terakhir.
+  _jadwalCutting(mem) {
+    const el = this._q('[data-role=legendBatang]');
+    if (!el) return;
+    if (!this.cutUrl) { el.innerHTML = ''; return; }   // dipakai di luar halaman RAB: fitur diam
+    const items = (mem || []).filter(m => m.material && m.panjang > 0)
+      .map(m => ({ nama: m.nama, material: m.material, panjang: m.panjang }));
+    const kunci = items.map(i => i.material + '|' + i.panjang).sort().join(',');
+    if (kunci === this.batangKunci) { el.innerHTML = this.batangHtml || ''; return; }
+    el.innerHTML = '<span style="color:#94a3b8">menghitung batang…</span>';
+    // Penanda permintaan terbaru: jawaban yang datang untuk gambar yang SUDAH BERUBAH
+    // harus dibuang, bukan ditampilkan. Tanpa ini angka lama sempat nongol sebagai
+    // angka baru — dan angka batang itu dipakai orang buat belanja besi.
+    this._cutKunci = kunci;
+    clearTimeout(this._cutTimer);
+    this._cutTimer = setTimeout(() => {
+      if (!items.length) { this.batangKunci = kunci; this.batangHtml = ''; const e = this._q('[data-role=legendBatang]'); if (e) e.innerHTML = ''; return; }
+      fetch(this.cutUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.cutCsrf, 'Accept': 'application/json' },
+        body: JSON.stringify({ members: items }),
+      }).then(r => r.json()).then(res => {
+        if (this._cutKunci !== kunci) return;            // gambar sudah berubah — jawaban ini basi
+        if (!res || !res.ok) throw new Error('tolak');
+        const ks = Object.keys(res.batang || {});
+        this.batangKunci = kunci;
+        this.batangHtml = ks.length
+          ? '<span style="color:#a855f7;font-weight:600">' + ks.map(k => `${k}: ${res.batang[k]} batang`).join(' · ') + '</span>'
+          : '';
+        const e = this._q('[data-role=legendBatang]'); if (e) e.innerHTML = this.batangHtml;
+      }).catch(() => {
+        if (this._cutKunci !== kunci) return;
+        // Sinyal lapangan putus itu wajar. Jangan tinggalkan angka basi yang bisa dipakai
+        // belanja — kosongkan kuncinya supaya percobaan berikutnya menghitung ulang.
+        this.batangKunci = '';
+        const e = this._q('[data-role=legendBatang]'); if (e) e.innerHTML = '<span style="color:#94a3b8">jumlah batang belum bisa dihitung (sinyal?)</span>';
+      });
+    }, 1500);
   }
 
   static defaultModel() {
@@ -897,6 +940,7 @@ body,.page-content{overscroll-behavior-y:contain}
     </div>
   </div>
   <div class="de-legend" data-role="legend"></div>
+  <div class="de-legend" data-role="legendBatang" style="margin-top:4px"></div>
   <div style="font-size:12px;color:#64748b;margin-top:4px">Luas denah: <b data-role="luas">–</b></div>
 </div>
 <div class="de-matmenu" data-role="matMenu">
@@ -2647,13 +2691,7 @@ body,.page-content{overscroll-behavior-y:contain}
     this._q('[data-role=legend]').innerHTML = used.length
       ? used.map(n => `<span><span class="de-sw" style="background:${cmap[n]}"></span><b>${n}</b></span>`).join('')
       : '<span style="color:#94a3b8">Belum ada batang</span>';
-    // Info tambahan batang WF (dibeli per-batang 6m; sisa potongan biar user tulis manual di catatan RAB).
-    const batang = DenahConv.hitungBatangWF(mem);
-    const batangKeys = Object.keys(batang);
-    if (batangKeys.length) {
-      this._q('[data-role=legend]').innerHTML += ' <span style="margin-left:12px;color:#a855f7;font-weight:600">' +
-        batangKeys.map(k => `${k}: ${batang[k]} batang 6m`).join(' · ') + '</span>';
-    }
+    this._jadwalCutting(mem);
     this._q('[data-role=luas]').textContent = (shoelace(S.verts) / 10000).toFixed(2) + ' m²';
     this.renderSides(mem);
     this.renderBoxPanel();

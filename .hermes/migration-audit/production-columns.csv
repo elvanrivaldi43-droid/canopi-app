@@ -1,0 +1,874 @@
+"TABLE_NAME","ORDINAL_POSITION","COLUMN_NAME","COLUMN_TYPE","IS_NULLABLE","COLUMN_DEFAULT","EXTRA","COLUMN_KEY","COLLATION_NAME"
+"absensi","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"absensi","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"absensi","3","tanggal","date","NO",NULL,,,NULL
+"absensi","4","jam_masuk","time","YES","NULL",,,NULL
+"absensi","5","jam_pulang","time","YES","NULL",,,NULL
+"absensi","6","foto_masuk","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","7","foto_pulang","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","8","foto_siang_1","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","9","foto_siang_2","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","10","foto_siang_3","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","11","lat_siang","decimal(10,7)","YES","NULL",,,NULL
+"absensi","12","lng_siang","decimal(10,7)","YES","NULL",,,NULL
+"absensi","13","gps_valid_siang","tinyint(1)","YES","0",,,NULL
+"absensi","14","jam_absen_siang","time","YES","NULL",,,NULL
+"absensi","15","jam_lapor_progress","time","YES","NULL",,,NULL
+"absensi","16","pertanyaan_progress","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","17","jawaban_progress","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","18","status_pekerjaan","varchar(50)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","19","ada_kendala","tinyint(1)","YES","0",,,NULL
+"absensi","20","jenis_kendala","varchar(100)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","21","deskripsi_kendala","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","22","kendala_kenapa","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","23","lat_kembali_kerja","decimal(10,7)","YES","NULL",,,NULL
+"absensi","24","lng_kembali_kerja","decimal(10,7)","YES","NULL",,,NULL
+"absensi","25","1ng_kembali_kerja","decimal(10,7)","YES","NULL",,,NULL
+"absensi","26","gps_valid_kembali_kerja","tinyint(1)","YES","NULL",,,NULL
+"absensi","27","lembur_jam","decimal(4,2)","YES","0.00",,,NULL
+"absensi","28","lembur_approved","tinyint(1)","YES","0",,,NULL
+"absensi","29","lembur_approved_oleh","bigint(20)","YES","NULL",,,NULL
+"absensi","30","lat_masuk","decimal(10,7)","YES","NULL",,,NULL
+"absensi","31","lng_masuk","decimal(10,7)","YES","NULL",,,NULL
+"absensi","32","lat_pulang","decimal(10,7)","YES","NULL",,,NULL
+"absensi","33","lng_pulang","decimal(10,7)","YES","NULL",,,NULL
+"absensi","34","status","enum('hadir','telat','setengah_hari','alpha','sakit','izin','cuti','dinas_luar')","YES","'alpha'",,,"utf8mb4_unicode_ci"
+"absensi","35","keterangan","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","36","foto_surat","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","37","potongan_telat","decimal(12,2)","NO","0.00",,,NULL
+"absensi","38","uang_makan_hari_ini","decimal(12,2)","NO","0.00",,,NULL
+"absensi","39","gaji_hari_ini","decimal(12,2)","NO","0.00",,,NULL
+"absensi","40","dikoreksi","tinyint(1)","NO","0",,,NULL
+"absensi","41","alasan_koreksi","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"absensi","42","dikoreksi_oleh","bigint(20) unsigned","YES","NULL",,"MUL",NULL
+"absensi","43","created_at","timestamp","YES","NULL",,,NULL
+"absensi","44","updated_at","timestamp","YES","NULL",,,NULL
+"absensi","45","gps_valid_masuk","tinyint(1)","YES","0",,,NULL
+"absensi","46","gps_valid_pulang","tinyint(1)","YES","0",,,NULL
+"absensi","47","potongan_siang_dicatat","tinyint(1)","YES","0",,,NULL
+"absensi","48","potongan_progress_dicatat","tinyint(1)","NO","0",,,NULL
+"absensi","49","kerja_hari_libur","tinyint(1)","NO","0",,,NULL
+"absensi","50","upah_hari_libur","decimal(12,2)","NO","0.00",,,NULL
+"cache","1","key","varchar(255)","NO",NULL,,"PRI","utf8mb4_unicode_ci"
+"cache","2","value","mediumtext","NO",NULL,,,"utf8mb4_unicode_ci"
+"cache","3","expiration","bigint(20)","NO",NULL,,"MUL",NULL
+"cache_locks","1","key","varchar(255)","NO",NULL,,"PRI","utf8mb4_unicode_ci"
+"cache_locks","2","owner","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"cache_locks","3","expiration","bigint(20)","NO",NULL,,"MUL",NULL
+"failed_jobs","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"failed_jobs","2","uuid","varchar(255)","NO",NULL,,"UNI","utf8mb4_unicode_ci"
+"failed_jobs","3","connection","varchar(255)","NO",NULL,,"MUL","utf8mb4_unicode_ci"
+"failed_jobs","4","queue","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"failed_jobs","5","payload","longtext","NO",NULL,,,"utf8mb4_unicode_ci"
+"failed_jobs","6","exception","longtext","NO",NULL,,,"utf8mb4_unicode_ci"
+"failed_jobs","7","failed_at","timestamp","NO","current_timestamp()",,,NULL
+"izin_absen","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"izin_absen","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"izin_absen","3","tanggal","date","NO",NULL,,,NULL
+"izin_absen","4","tipe","enum('sakit','izin','cuti','dinas_luar','setengah_hari')","NO",NULL,,,"utf8mb4_unicode_ci"
+"izin_absen","5","alasan","text","NO",NULL,,,"utf8mb4_unicode_ci"
+"izin_absen","6","foto_surat","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"izin_absen","7","status","enum('pending','approved','rejected')","NO","'pending'",,,"utf8mb4_unicode_ci"
+"izin_absen","8","diproses_oleh","bigint(20) unsigned","YES","NULL",,"MUL",NULL
+"izin_absen","9","catatan_mandor","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"izin_absen","10","created_at","timestamp","YES","NULL",,,NULL
+"izin_absen","11","updated_at","timestamp","YES","NULL",,,NULL
+"izin_absen","12","diproses_at","timestamp","YES","NULL",,,NULL
+"jadwal_libur","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"jadwal_libur","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"jadwal_libur","3","tanggal","date","NO",NULL,,,NULL
+"jadwal_libur","4","tanggal_baru","date","YES","NULL",,,NULL
+"jadwal_libur","5","jenis","enum('tambah','batal','tukar')","NO",NULL,,,"latin1_swedish_ci"
+"jadwal_libur","6","status","enum('pending','approved','rejected')","NO","'pending'",,,"latin1_swedish_ci"
+"jadwal_libur","7","alasan","text","YES","NULL",,,"latin1_swedish_ci"
+"jadwal_libur","8","diproses_oleh","bigint(20) unsigned","YES","NULL",,"MUL",NULL
+"jadwal_libur","9","diproses_at","timestamp","YES","NULL",,,NULL
+"jadwal_libur","10","created_at","timestamp","YES","NULL",,,NULL
+"jadwal_libur","11","updated_at","timestamp","YES","NULL",,,NULL
+"jobs","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"jobs","2","queue","varchar(255)","NO",NULL,,"MUL","utf8mb4_unicode_ci"
+"jobs","3","payload","longtext","NO",NULL,,,"utf8mb4_unicode_ci"
+"jobs","4","attempts","smallint(5) unsigned","NO",NULL,,,NULL
+"jobs","5","reserved_at","int(10) unsigned","YES","NULL",,,NULL
+"jobs","6","available_at","int(10) unsigned","NO",NULL,,,NULL
+"jobs","7","created_at","int(10) unsigned","NO",NULL,,,NULL
+"job_batches","1","id","varchar(255)","NO",NULL,,"PRI","utf8mb4_unicode_ci"
+"job_batches","2","name","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"job_batches","3","total_jobs","int(11)","NO",NULL,,,NULL
+"job_batches","4","pending_jobs","int(11)","NO",NULL,,,NULL
+"job_batches","5","failed_jobs","int(11)","NO",NULL,,,NULL
+"job_batches","6","failed_job_ids","longtext","NO",NULL,,,"utf8mb4_unicode_ci"
+"job_batches","7","options","mediumtext","YES","NULL",,,"utf8mb4_unicode_ci"
+"job_batches","8","cancelled_at","int(11)","YES","NULL",,,NULL
+"job_batches","9","created_at","int(11)","NO",NULL,,,NULL
+"job_batches","10","finished_at","int(11)","YES","NULL",,,NULL
+"karyawan_tunjangan","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"karyawan_tunjangan","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"karyawan_tunjangan","3","tunjangan_master_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"karyawan_tunjangan","4","nominal","decimal(12,2)","NO","0.00",,,NULL
+"karyawan_tunjangan","5","created_at","timestamp","YES","NULL",,,NULL
+"karyawan_tunjangan","6","updated_at","timestamp","YES","NULL",,,NULL
+"kasbon","1","id","bigint(20)","NO",NULL,"auto_increment","PRI",NULL
+"kasbon","2","user_id","bigint(20)","NO",NULL,,,NULL
+"kasbon","3","tanggal","date","NO",NULL,,,NULL
+"kasbon","4","nominal","decimal(12,2)","NO",NULL,,,NULL
+"kasbon","5","keterangan","text","YES","NULL",,,"latin1_swedish_ci"
+"kasbon","6","cicilan_per_bulan","decimal(12,2)","NO",NULL,,,NULL
+"kasbon","7","jumlah_cicilan","tinyint(4)","NO",NULL,,,NULL
+"kasbon","8","cicilan_ke","tinyint(4)","YES","0",,,NULL
+"kasbon","9","sisa_kasbon","decimal(12,2)","NO",NULL,,,NULL
+"kasbon","10","status","varchar(20)","NO","'pending'",,,"latin1_swedish_ci"
+"kasbon","11","ditunda_sampai","date","YES","NULL",,,NULL
+"kasbon","12","approved_oleh","bigint(20)","YES","NULL",,,NULL
+"kasbon","13","created_at","timestamp","YES","NULL",,,NULL
+"kasbon","14","updated_at","timestamp","YES","NULL",,,NULL
+"kasbon","15","kategori","enum('kebutuhan_pribadi','kesehatan','pendidikan','renovasi_rumah','lainnya')","YES","'kebutuhan_pribadi'",,,"latin1_swedish_ci"
+"kasbon","16","kategori_lainnya","varchar(255)","YES","NULL",,,"latin1_swedish_ci"
+"kasbon","17","alasan_tolak","text","YES","NULL",,,"latin1_swedish_ci"
+"kasbon","18","ttd_digital","text","YES","NULL",,,"latin1_swedish_ci"
+"kasbon","19","ttd_tanggal","datetime","YES","NULL",,,NULL
+"kasbon","20","ditolak_oleh","bigint(20)","YES","NULL",,,NULL
+"kasbon","21","ditolak_at","datetime","YES","NULL",,,NULL
+"kendaraan","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"kendaraan","2","nama","varchar(100)","NO",NULL,,,"utf8mb4_unicode_ci"
+"kendaraan","3","plat","varchar(20)","NO",NULL,,,"utf8mb4_unicode_ci"
+"kendaraan","4","jenis","varchar(50)","YES","NULL",,,"utf8mb4_unicode_ci"
+"kendaraan","5","standar_km_per_liter","decimal(5,2)","NO","9.00",,,NULL
+"kendaraan","6","is_active","tinyint(1)","NO","1",,,NULL
+"kendaraan","7","created_at","timestamp","YES","NULL",,,NULL
+"kendaraan","8","updated_at","timestamp","YES","NULL",,,NULL
+"kerja_hari_libur","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"kerja_hari_libur","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"kerja_hari_libur","3","tanggal","date","NO",NULL,,"MUL",NULL
+"kerja_hari_libur","4","diaktifkan_oleh","bigint(20) unsigned","YES","NULL",,,NULL
+"kerja_hari_libur","5","gaji_harian_snapshot","decimal(12,2)","NO","0.00",,,NULL
+"kerja_hari_libur","6","uang_makan_snapshot","decimal(12,2)","NO","0.00",,,NULL
+"kerja_hari_libur","7","created_at","timestamp","YES","NULL",,,NULL
+"kerja_hari_libur","8","updated_at","timestamp","YES","NULL",,,NULL
+"kode_absen","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"kode_absen","2","tanggal","date","NO",NULL,,"MUL",NULL
+"kode_absen","3","kode","varchar(6)","NO",NULL,,,"utf8mb4_unicode_ci"
+"kode_absen","4","project_id","int(11)","YES","NULL",,,NULL
+"kode_absen","5","aktif","tinyint(1)","NO","1",,,NULL
+"kode_absen","6","created_at","timestamp","YES","NULL",,,NULL
+"kode_absen","7","updated_at","timestamp","YES","NULL",,,NULL
+"kode_absen","8","user_id","bigint(20) unsigned","YES","NULL",,,NULL
+"komplain_karyawan","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"komplain_karyawan","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"komplain_karyawan","3","tanggal","date","NO",NULL,,,NULL
+"komplain_karyawan","4","sumber","enum('customer','internal','supervisor')","NO","'customer'",,,"utf8mb4_unicode_ci"
+"komplain_karyawan","5","keterangan","text","NO",NULL,,,"utf8mb4_unicode_ci"
+"komplain_karyawan","6","bobot_potongan","decimal(5,2)","YES","10.00",,,NULL
+"komplain_karyawan","7","dicatat_oleh","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"komplain_karyawan","8","created_at","timestamp","YES","current_timestamp()",,,NULL
+"komplain_karyawan","9","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"kpi_setting","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"kpi_setting","2","key_setting","varchar(100)","NO",NULL,,"UNI","utf8mb4_unicode_ci"
+"kpi_setting","3","value_setting","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"kpi_setting","4","keterangan","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"kpi_setting","5","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"levels","1","id","tinyint(4)","NO",NULL,,"PRI",NULL
+"levels","2","nama_level","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"levels","3","deskripsi","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"levels","4","redirect_to","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"levels","5","created_at","timestamp","YES","NULL",,,NULL
+"levels","6","updated_at","timestamp","YES","NULL",,,NULL
+"libur_nasional","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"libur_nasional","2","nama","varchar(255)","NO",NULL,,,"latin1_swedish_ci"
+"libur_nasional","3","tanggal_mulai","date","NO",NULL,,,NULL
+"libur_nasional","4","tanggal_selesai","date","NO",NULL,,,NULL
+"libur_nasional","5","dibuat_oleh","bigint(20) unsigned","YES","NULL",,"MUL",NULL
+"libur_nasional","6","created_at","timestamp","YES","NULL",,,NULL
+"libur_nasional","7","updated_at","timestamp","YES","NULL",,,NULL
+"libur_nasional_piket","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"libur_nasional_piket","2","libur_nasional_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"libur_nasional_piket","3","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"libur_nasional_piket","4","tanggal","date","NO",NULL,,,NULL
+"libur_nasional_piket","5","created_at","timestamp","YES","NULL",,,NULL
+"libur_nasional_piket","6","updated_at","timestamp","YES","NULL",,,NULL
+"log_bensin","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"log_bensin","2","kendaraan_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"log_bensin","3","driver_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"log_bensin","4","tanggal","date","NO",NULL,,"MUL",NULL
+"log_bensin","5","tujuan","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"log_bensin","6","km_awal","decimal(10,1)","NO",NULL,,,NULL
+"log_bensin","7","km_akhir","decimal(10,1)","YES","NULL",,,NULL
+"log_bensin","8","liter","decimal(6,2)","NO",NULL,,,NULL
+"log_bensin","9","nominal","int(11)","NO",NULL,,,NULL
+"log_bensin","10","km_tempuh","decimal(10,1)","YES","NULL",,,NULL
+"log_bensin","11","konsumsi_aktual","decimal(6,2)","YES","NULL",,,NULL
+"log_bensin","12","status","enum('berangkat','selesai')","NO","'berangkat'",,,"utf8mb4_unicode_ci"
+"log_bensin","13","catatan","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"log_bensin","14","notif_boros_terkirim","tinyint(1)","NO","0",,,NULL
+"log_bensin","15","created_at","timestamp","YES","NULL",,,NULL
+"log_bensin","16","updated_at","timestamp","YES","NULL",,,NULL
+"luar_kota","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"luar_kota","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"luar_kota","3","dibuat_oleh","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"luar_kota","4","tanggal_mulai","date","NO",NULL,,"MUL",NULL
+"luar_kota","5","tanggal_selesai","date","NO",NULL,,,NULL
+"luar_kota","6","lokasi","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"luar_kota","7","keterangan","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"luar_kota","8","status","enum('aktif','selesai','dibatalkan')","NO","'aktif'",,,"utf8mb4_unicode_ci"
+"luar_kota","9","created_at","timestamp","YES","NULL",,,NULL
+"luar_kota","10","updated_at","timestamp","YES","NULL",,,NULL
+"master_material","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"master_material","2","kode","varchar(30)","YES","NULL",,,"utf8mb4_general_ci"
+"master_material","3","nama","varchar(150)","NO",NULL,,,"utf8mb4_general_ci"
+"master_material","4","kategori","enum('rangka_besi','kaca','atap','cat_finishing','aksesori','talang','konsumabel','jasa','lainnya')","NO","'lainnya'",,,"utf8mb4_general_ci"
+"master_material","5","satuan","varchar(20)","NO","'pcs'",,,"utf8mb4_general_ci"
+"master_material","6","harga_pokok","bigint(20)","NO","0",,,NULL
+"master_material","7","sumber","enum('pos','luar')","NO","'luar'",,,"utf8mb4_general_ci"
+"master_material","8","keterangan","text","YES","NULL",,,"utf8mb4_general_ci"
+"master_material","9","aktif","tinyint(1)","YES","1",,,NULL
+"master_material","10","created_by","bigint(20) unsigned","YES","NULL",,,NULL
+"master_material","11","created_at","timestamp","YES","NULL",,,NULL
+"master_material","12","updated_at","timestamp","YES","NULL",,,NULL
+"master_material","13","panjang_batang_cm","int(11)","NO","600",,,NULL
+"migrations","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"migrations","2","migration","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"migrations","3","batch","int(11)","NO",NULL,,,NULL
+"password_reset_tokens","1","email","varchar(255)","NO",NULL,,"PRI","utf8mb4_unicode_ci"
+"password_reset_tokens","2","token","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"password_reset_tokens","3","created_at","timestamp","YES","NULL",,,NULL
+"pembayaran_project","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"pembayaran_project","2","id_project","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"pembayaran_project","3","jenis","enum('dp','termin','lunas')","NO",NULL,,,"utf8mb4_general_ci"
+"pembayaran_project","4","nominal","bigint(20)","NO","0",,,NULL
+"pembayaran_project","5","tanggal_bayar","date","YES","NULL",,,NULL
+"pembayaran_project","6","metode","varchar(50)","YES","NULL",,,"utf8mb4_general_ci"
+"pembayaran_project","7","bukti_transfer","varchar(255)","YES","NULL",,,"utf8mb4_general_ci"
+"pembayaran_project","8","keterangan","text","YES","NULL",,,"utf8mb4_general_ci"
+"pembayaran_project","9","dikonfirmasi_oleh","bigint(20) unsigned","YES","NULL",,,NULL
+"pembayaran_project","10","dikonfirmasi_at","timestamp","YES","NULL",,,NULL
+"pembayaran_project","11","status","enum('pending','dikonfirmasi')","YES","'pending'",,,"utf8mb4_general_ci"
+"pembayaran_project","12","created_at","timestamp","YES","NULL",,,NULL
+"pembayaran_project","13","updated_at","timestamp","YES","NULL",,,NULL
+"pipeline_followups","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"pipeline_followups","2","pipeline_lead_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"pipeline_followups","3","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"pipeline_followups","4","metode","enum('whatsapp','telepon','email','kunjungan','lainnya')","NO","'whatsapp'",,,"utf8mb4_unicode_ci"
+"pipeline_followups","5","catatan","text","NO",NULL,,,"utf8mb4_unicode_ci"
+"pipeline_followups","6","tgl_followup_berikutnya","date","YES","NULL",,,NULL
+"pipeline_followups","7","created_at","timestamp","YES","NULL",,,NULL
+"pipeline_followups","8","updated_at","timestamp","YES","NULL",,,NULL
+"pipeline_leads","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"pipeline_leads","2","nama_customer","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"pipeline_leads","3","no_hp","varchar(20)","NO",NULL,,,"utf8mb4_unicode_ci"
+"pipeline_leads","4","alamat","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","5","lokasi_area","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","6","lokasi_patokan","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","7","lokasi_maps_link","varchar(500)","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","8","lokasi_sharelok","varchar(500)","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","9","lokasi_lat","decimal(10,7)","YES","NULL",,,NULL
+"pipeline_leads","10","lokasi_lng","decimal(10,7)","YES","NULL",,,NULL
+"pipeline_leads","11","lokasi_gps_at","timestamp","YES","NULL",,,NULL
+"pipeline_leads","12","lokasi_jarak_km","decimal(8,2)","YES","NULL",,,NULL
+"pipeline_leads","13","lokasi_listrik","varchar(20)","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","14","lokasi_jarak_listrik_m","int(11)","YES","NULL",,,NULL
+"pipeline_leads","15","lokasi_izin_nginap","varchar(10)","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","16","lokasi_akses","varchar(50)","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","17","lokasi_catatan","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","18","lokasi_oleh","bigint(20)","YES","NULL",,,NULL
+"pipeline_leads","19","lokasi_updated_at","timestamp","YES","NULL",,,NULL
+"pipeline_leads","20","lokasi_foto","longtext","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","21","lokasi_video","longtext","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","22","produk","enum('kanopi','pagar','tralis','tenda_membrane','lainnya')","NO","'kanopi'",,,"utf8mb4_unicode_ci"
+"pipeline_leads","23","atap_diminati","varchar(100)","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","24","sumber_lead","enum('instagram','whatsapp','referensi','google','spanduk','lainnya')","NO","'whatsapp'",,,"utf8mb4_unicode_ci"
+"pipeline_leads","25","status","enum('lead','dihubungi','dijadwalkan','dikunjungi','ditawar','deal','tidak_jadi')","NO","'lead'",,,"utf8mb4_unicode_ci"
+"pipeline_leads","26","estimasi_nilai","bigint(20)","NO","0",,,NULL
+"pipeline_leads","27","estimasi_min","bigint(20)","YES","NULL",,,NULL
+"pipeline_leads","28","estimasi_max","bigint(20)","YES","NULL",,,NULL
+"pipeline_leads","29","harga_final","bigint(20)","YES","NULL",,,NULL
+"pipeline_leads","30","rab_snapshot","longtext","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","31","final_oleh","bigint(20)","YES","NULL",,,NULL
+"pipeline_leads","32","final_at","timestamp","YES","NULL",,,NULL
+"pipeline_leads","33","catatan","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","34","tgl_kunjungan","datetime","YES","NULL",,,NULL
+"pipeline_leads","35","last_activity_at","timestamp","YES","NULL",,,NULL
+"pipeline_leads","36","input_oleh","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"pipeline_leads","37","created_at","timestamp","YES","NULL",,,NULL
+"pipeline_leads","38","updated_at","timestamp","YES","NULL",,,NULL
+"pipeline_leads","39","penawaran_json","longtext","YES","NULL",,,"utf8mb4_unicode_ci"
+"pipeline_leads","40","deal_json","longtext","YES","NULL",,,"utf8mb4_unicode_ci"
+"poin_kinerja","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"poin_kinerja","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"poin_kinerja","3","bulan","tinyint(2)","NO",NULL,,"MUL",NULL
+"poin_kinerja","4","tahun","smallint(4)","NO",NULL,,,NULL
+"poin_kinerja","5","poin_kehadiran","decimal(5,2)","YES","0.00",,,NULL
+"poin_kinerja","6","poin_tugas","decimal(5,2)","YES","0.00",,,NULL
+"poin_kinerja","7","poin_leads","decimal(5,2)","YES","0.00",,,NULL
+"poin_kinerja","8","poin_bbm","decimal(5,2)","YES","0.00",,,NULL
+"poin_kinerja","9","poin_komplain","decimal(5,2)","YES","20.00",,,NULL
+"poin_kinerja","10","total_poin","decimal(5,2)","YES","0.00",,,NULL
+"poin_kinerja","11","bintang","tinyint(1)","YES","0",,,NULL
+"poin_kinerja","12","is_alpha","tinyint(1)","YES","0",,,NULL
+"poin_kinerja","13","bonus_nominal","bigint(20)","YES","0",,,NULL
+"poin_kinerja","14","is_bintang_jabatan","tinyint(1)","YES","0",,,NULL
+"poin_kinerja","15","detail_kehadiran","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"poin_kinerja","16","detail_tugas","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"poin_kinerja","17","detail_bbm","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"poin_kinerja","18","dihitung_pada","timestamp","YES","NULL",,,NULL
+"poin_kinerja","19","created_at","timestamp","YES","current_timestamp()",,,NULL
+"poin_kinerja","20","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"potongan_insidental","1","id","bigint(20)","NO",NULL,"auto_increment","PRI",NULL
+"potongan_insidental","2","user_id","bigint(20)","NO",NULL,,,NULL
+"potongan_insidental","3","keterangan","varchar(255)","NO",NULL,,,"latin1_swedish_ci"
+"potongan_insidental","4","nominal_total","decimal(12,2)","NO",NULL,,,NULL
+"potongan_insidental","5","jumlah_cicilan","tinyint(4)","NO",NULL,,,NULL
+"potongan_insidental","6","cicilan_per_bulan","decimal(12,2)","NO",NULL,,,NULL
+"potongan_insidental","7","cicilan_ke","tinyint(4)","YES","0",,,NULL
+"potongan_insidental","8","sisa","decimal(12,2)","NO",NULL,,,NULL
+"potongan_insidental","9","status","enum('aktif','lunas')","YES","'aktif'",,,"latin1_swedish_ci"
+"potongan_insidental","10","input_oleh","bigint(20)","NO",NULL,,,NULL
+"potongan_insidental","11","tanggal_mulai","date","NO",NULL,,,NULL
+"potongan_insidental","12","created_at","timestamp","YES","NULL",,,NULL
+"potongan_insidental","13","updated_at","timestamp","YES","NULL",,,NULL
+"projects","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"projects","2","rab_id","int(10) unsigned","YES","NULL",,,NULL
+"projects","3","nama_project","varchar(200)","YES","NULL",,,"utf8mb4_general_ci"
+"projects","4","id_lead","bigint(20) unsigned","YES","NULL",,,NULL
+"projects","5","kode_project","varchar(20)","YES","NULL",,,"utf8mb4_general_ci"
+"projects","6","nama_customer","varchar(150)","NO",NULL,,,"utf8mb4_general_ci"
+"projects","7","no_hp","varchar(20)","YES","NULL",,,"utf8mb4_general_ci"
+"projects","8","alamat_project","text","YES","NULL",,,"utf8mb4_general_ci"
+"projects","9","jenis_project","varchar(100)","YES","NULL",,,"utf8mb4_general_ci"
+"projects","10","deskripsi","text","YES","NULL",,,"utf8mb4_general_ci"
+"projects","11","nilai_kontrak","bigint(20)","NO","0",,,NULL
+"projects","12","nilai_project","decimal(14,2)","YES","0.00",,,NULL
+"projects","13","id_rate_kondisi","bigint(20) unsigned","YES","NULL",,,NULL
+"projects","14","multiplier_upah","decimal(4,2)","YES","1.00",,,NULL
+"projects","15","kondisi_approved_by","bigint(20) unsigned","YES","NULL",,,NULL
+"projects","16","kondisi_approved_at","timestamp","YES","NULL",,,NULL
+"projects","17","status","varchar(30)","YES","'menunggu_dp'",,,"utf8mb4_general_ci"
+"projects","18","tgl_mulai_target","date","YES","NULL",,,NULL
+"projects","19","tgl_mulai_aktual","date","YES","NULL",,,NULL
+"projects","20","tgl_selesai_target","date","YES","NULL",,,NULL
+"projects","21","tgl_selesai_aktual","date","YES","NULL",,,NULL
+"projects","22","dibuat_oleh","bigint(20) unsigned","YES","NULL",,,NULL
+"projects","23","created_at","timestamp","YES","NULL",,,NULL
+"projects","24","updated_at","timestamp","YES","NULL",,,NULL
+"project_material","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"project_material","2","id_project","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"project_material","3","id_rab_item","bigint(20) unsigned","YES","NULL",,,NULL
+"project_material","4","id_master_material","bigint(20) unsigned","YES","NULL",,,NULL
+"project_material","5","nama_material","varchar(150)","NO",NULL,,,"utf8mb4_general_ci"
+"project_material","6","satuan","varchar(20)","NO","'pcs'",,,"utf8mb4_general_ci"
+"project_material","7","qty_aktual","decimal(10,2)","NO","0.00",,,NULL
+"project_material","8","harga_satuan","bigint(20)","NO","0",,,NULL
+"project_material","9","total","bigint(20)","NO","0",,,NULL
+"project_material","10","tanggal_beli","date","YES","NULL",,,NULL
+"project_material","11","keterangan","text","YES","NULL",,,"utf8mb4_general_ci"
+"project_material","12","status_vs_rab","enum('normal','melebihi_rab','approved')","YES","'normal'",,,"utf8mb4_general_ci"
+"project_material","13","alasan_melebihi","text","YES","NULL",,,"utf8mb4_general_ci"
+"project_material","14","approved_by","bigint(20) unsigned","YES","NULL",,,NULL
+"project_material","15","approved_at","timestamp","YES","NULL",,,NULL
+"project_material","16","dibuat_oleh","bigint(20) unsigned","YES","NULL",,,NULL
+"project_material","17","created_at","timestamp","YES","NULL",,,NULL
+"project_material","18","updated_at","timestamp","YES","NULL",,,NULL
+"project_tim","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"project_tim","2","id_project","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"project_tim","3","id_user","bigint(20) unsigned","NO",NULL,,,NULL
+"project_tim","4","tgl_masuk","date","NO",NULL,,,NULL
+"project_tim","5","tgl_keluar","date","YES","NULL",,,NULL
+"project_tim","6","jumlah_hari","int(11)","YES","NULL",,,NULL
+"project_tim","7","jabatan_lapangan","enum('tukang','kenek')","NO","'tukang'",,,"utf8mb4_general_ci"
+"project_tim","8","rate_dasar","int(11)","NO","170000",,,NULL
+"project_tim","9","multiplier","decimal(4,2)","NO","1.00",,,NULL
+"project_tim","10","rate_final","int(11)","NO","170000",,,NULL
+"project_tim","11","total_upah","bigint(20)","YES","NULL",,,NULL
+"project_tim","12","override_rate","int(11)","YES","NULL",,,NULL
+"project_tim","13","alasan_override","text","YES","NULL",,,"utf8mb4_general_ci"
+"project_tim","14","override_approved_by","bigint(20) unsigned","YES","NULL",,,NULL
+"project_tim","15","override_approved_at","timestamp","YES","NULL",,,NULL
+"project_tim","16","di_assign_oleh","bigint(20) unsigned","YES","NULL",,,NULL
+"project_tim","17","status","enum('pending_approval','disetujui','ditolak')","YES","'pending_approval'",,,"utf8mb4_general_ci"
+"project_tim","18","created_at","timestamp","YES","NULL",,,NULL
+"project_tim","19","updated_at","timestamp","YES","NULL",,,NULL
+"rab_addon","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_addon","2","kode","varchar(40)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_addon","3","nama","varchar(100)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_addon","4","kategori","enum('talang','pembuangan','plafon','pencahayaan','struktur','dinding','finishing','lainnya')","NO",NULL,,,"utf8mb4_general_ci"
+"rab_addon","5","satuan","varchar(20)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_addon","6","formula_type","enum('per_unit','per_meter','per_m2','flat')","NO",NULL,,,"utf8mb4_general_ci"
+"rab_addon","7","harga_satuan","decimal(12,2)","NO",NULL,,,NULL
+"rab_addon","8","harga_pokok_satuan","decimal(12,2)","YES","NULL",,,NULL
+"rab_addon","9","qty_default","decimal(8,2)","YES","1.00",,,NULL
+"rab_addon","10","deskripsi","varchar(200)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_addon","11","perlu_input_qty","tinyint(1)","YES","1",,,NULL
+"rab_addon","12","urutan","int(11)","YES","0",,,NULL
+"rab_addon","13","is_active","tinyint(1)","YES","1",,,NULL
+"rab_addon","14","level","varchar(10)","NO","'total'",,,"utf8mb4_general_ci"
+"rab_addon","15","created_at","timestamp","YES","NULL",,,NULL
+"rab_addon","16","updated_at","timestamp","YES","NULL",,,NULL
+"rab_addon","17","durasi_fab","decimal(10,2)","YES","0.00",,,NULL
+"rab_addon","18","durasi_inst","decimal(10,2)","YES","0.00",,,NULL
+"rab_approval","1","id","bigint(20)","NO",NULL,"auto_increment","PRI",NULL
+"rab_approval","2","lead_id","int(11)","YES","NULL",,,NULL
+"rab_approval","3","customer","varchar(255)","YES","NULL",,,"latin1_swedish_ci"
+"rab_approval","4","opsi_nama","varchar(255)","YES","NULL",,,"latin1_swedish_ci"
+"rab_approval","5","harga_normal","bigint(20)","YES","0",,,NULL
+"rab_approval","6","harga_nawar","bigint(20)","YES","0",,,NULL
+"rab_approval","7","diskon_persen","decimal(5,2)","YES","0.00",,,NULL
+"rab_approval","8","pokok","bigint(20)","YES","0",,,NULL
+"rab_approval","9","status","varchar(20)","YES","'pending'",,,"latin1_swedish_ci"
+"rab_approval","10","catatan_owner","varchar(500)","YES","NULL",,,"latin1_swedish_ci"
+"rab_approval","11","diminta_oleh","bigint(20)","YES","NULL",,,NULL
+"rab_approval","12","diputus_oleh","bigint(20)","YES","NULL",,,NULL
+"rab_approval","13","diputus_at","timestamp","YES","NULL",,,NULL
+"rab_approval","14","created_at","timestamp","YES","NULL",,,NULL
+"rab_approval","15","updated_at","timestamp","YES","NULL",,,NULL
+"rab_approval_request","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_approval_request","2","rab_id","int(10) unsigned","NO",NULL,,"MUL",NULL
+"rab_approval_request","3","diminta_oleh","int(10) unsigned","NO",NULL,,,NULL
+"rab_approval_request","4","harga_normal","decimal(14,2)","NO",NULL,,,NULL
+"rab_approval_request","5","harga_diminta","decimal(14,2)","NO",NULL,,,NULL
+"rab_approval_request","6","diskon_diminta_persen","decimal(5,2)","NO",NULL,,,NULL
+"rab_approval_request","7","alasan","varchar(300)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_approval_request","8","status","enum('pending','approved','rejected')","YES","'pending'",,,"utf8mb4_general_ci"
+"rab_approval_request","9","diproses_oleh","int(10) unsigned","YES","NULL",,,NULL
+"rab_approval_request","10","catatan_owner","varchar(300)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_approval_request","11","notif_wa_terkirim","tinyint(1)","YES","0",,,NULL
+"rab_approval_request","12","created_at","timestamp","YES","current_timestamp()",,,NULL
+"rab_approval_request","13","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"rab_atap","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_atap","2","kode","varchar(30)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_atap","3","nama","varchar(100)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_atap","4","kategori","enum('tembus_cahaya','tidak_tembus','kain_membrane')","NO",NULL,,,"utf8mb4_general_ci"
+"rab_atap","5","berat_kategori","enum('ringan','sedang','berat')","YES","'ringan'",,,"utf8mb4_general_ci"
+"rab_atap","6","grade_adjustment","tinyint(4)","YES","0",,,NULL
+"rab_atap","7","harga_per_lembar","decimal(12,2)","YES","NULL",,,NULL
+"rab_atap","8","harga_per_m2","decimal(12,2)","YES","NULL",,,NULL
+"rab_atap","9","pemborosan_persen","decimal(5,2)","YES","10.00",,,NULL
+"rab_atap","10","upah_pasang_per_m2","decimal(12,2)","YES","NULL",,,NULL
+"rab_atap","11","lebar_lembar_cm","decimal(6,2)","YES","80.00",,,NULL
+"rab_atap","12","keterangan_customer","varchar(200)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_atap","13","urutan","int(11)","YES","0",,,NULL
+"rab_atap","14","is_active","tinyint(1)","YES","1",,,NULL
+"rab_atap","15","consumable","decimal(12,2)","YES","0.00",,,NULL
+"rab_evaluasi_notif","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_evaluasi_notif","2","komponen","varchar(100)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_evaluasi_notif","3","jumlah_kasus","int(11)","YES","0",,,NULL
+"rab_evaluasi_notif","4","total_kerugian_estimasi","decimal(14,2)","YES","0.00",,,NULL
+"rab_evaluasi_notif","5","surveyor_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_evaluasi_notif","6","status","enum('pending','ditinjau','ditunda','diabaikan')","YES","'pending'",,,"utf8mb4_general_ci"
+"rab_evaluasi_notif","7","tunda_sampai","date","YES","NULL",,,NULL
+"rab_evaluasi_notif","8","created_at","timestamp","YES","current_timestamp()",,,NULL
+"rab_evaluasi_notif","9","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"rab_header","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_header","2","nomor_rab","varchar(30)","YES","NULL",,"UNI","utf8mb4_general_ci"
+"rab_header","3","pipeline_lead_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_header","4","project_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_header","5","produk_kode","varchar(20)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_header","6","paket_konstruksi_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_header","7","atap_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_header","8","panjang","decimal(8,2)","NO","0.00",,,NULL
+"rab_header","9","lebar","decimal(8,2)","NO","0.00",,,NULL
+"rab_header","10","m2_total","decimal(10,2)","YES","0.00",,,NULL
+"rab_header","11","bentangan_max","decimal(8,2)","YES","NULL",,,NULL
+"rab_header","12","zona_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_header","13","biaya_rangka","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","14","biaya_atap","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","15","biaya_jasa","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","16","biaya_addon","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","17","biaya_kondisi","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","18","biaya_pokok_total","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","19","buffer_persen","decimal(5,2)","YES","20.00",,,NULL
+"rab_header","20","biaya_setelah_buffer","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","21","margin_persen","decimal(5,2)","YES","25.00",,,NULL
+"rab_header","22","harga_sebelum_diskon","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","23","diskon_persen","decimal(5,2)","YES","0.00",,,NULL
+"rab_header","24","diskon_nominal","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","25","harga_final","decimal(14,2)","YES","0.00",,,NULL
+"rab_header","26","catatan_surveyor","text","YES","NULL",,,"utf8mb4_general_ci"
+"rab_header","27","catatan_internal","text","YES","NULL",,,"utf8mb4_general_ci"
+"rab_header","28","status","enum('draft','sent','negotiating','deal','batal','revised')","YES","'draft'",,,"utf8mb4_general_ci"
+"rab_header","29","tahap","enum('quick','detail')","YES","'quick'",,,"utf8mb4_general_ci"
+"rab_header","30","is_estimasi_kasar","tinyint(1)","YES","0",,,NULL
+"rab_header","31","dibuat_oleh","int(10) unsigned","NO",NULL,,,NULL
+"rab_header","32","disetujui_oleh","int(10) unsigned","YES","NULL",,,NULL
+"rab_header","33","created_at","timestamp","YES","current_timestamp()",,,NULL
+"rab_header","34","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"rab_item","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_item","2","rab_id","int(10) unsigned","NO",NULL,,"MUL",NULL
+"rab_item","3","tipe","enum('rangka','atap','jasa','addon','kondisi','manual')","NO",NULL,,,"utf8mb4_general_ci"
+"rab_item","4","referensi_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_item","5","nama_item","varchar(150)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_item","6","satuan","varchar(20)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_item","7","qty","decimal(10,3)","NO",NULL,,,NULL
+"rab_item","8","harga_satuan","decimal(12,2)","NO",NULL,,,NULL
+"rab_item","9","total","decimal(14,2)","YES","0.00",,,NULL
+"rab_item","10","catatan","varchar(200)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_item","11","urutan","int(11)","YES","0",,,NULL
+"rab_items","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_items","2","id_project","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"rab_items","3","id_master_material","bigint(20) unsigned","YES","NULL",,,NULL
+"rab_items","4","nama_item","varchar(150)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_items","5","satuan","varchar(20)","NO","'pcs'",,,"utf8mb4_general_ci"
+"rab_items","6","kategori","varchar(50)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_items","7","qty_rencana","decimal(10,2)","NO","0.00",,,NULL
+"rab_items","8","harga_pokok","bigint(20)","NO","0",,,NULL
+"rab_items","9","total_pokok","bigint(20)","NO","0",,,NULL
+"rab_items","10","margin_persen","decimal(5,2)","YES","0.00",,,NULL
+"rab_items","11","harga_customer","bigint(20)","NO","0",,,NULL
+"rab_items","12","total_customer","bigint(20)","NO","0",,,NULL
+"rab_items","13","keterangan","text","YES","NULL",,,"utf8mb4_general_ci"
+"rab_items","14","created_at","timestamp","YES","NULL",,,NULL
+"rab_items","15","updated_at","timestamp","YES","NULL",,,NULL
+"rab_jenis_kerja","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_jenis_kerja","2","nama","varchar(120)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_jenis_kerja","3","produk","varchar(60)","NO","'kanopi'",,,"utf8mb4_general_ci"
+"rab_jenis_kerja","4","satuan","varchar(20)","NO","'m2'",,,"utf8mb4_general_ci"
+"rab_jenis_kerja","5","skill_default","varchar(100)","NO","'umum'",,,"utf8mb4_general_ci"
+"rab_jenis_kerja","6","produktivitas_per_hari","decimal(10,2)","YES","NULL",,,NULL
+"rab_jenis_kerja","7","produktivitas_inst","decimal(10,2)","YES","NULL",,,NULL
+"rab_jenis_kerja","8","jml_tukang","int(11)","YES","NULL",,,NULL
+"rab_jenis_kerja","9","jml_kenek","int(11)","YES","NULL",,,NULL
+"rab_jenis_kerja","10","jml_tukang_inst","int(11)","YES","NULL",,,NULL
+"rab_jenis_kerja","11","jml_kenek_inst","int(11)","YES","NULL",,,NULL
+"rab_jenis_kerja","12","urutan","int(11)","NO","99",,,NULL
+"rab_jenis_kerja","13","is_active","tinyint(1)","NO","1",,,NULL
+"rab_jenis_kerja","14","created_at","timestamp","YES","NULL",,,NULL
+"rab_jenis_kerja","15","updated_at","timestamp","YES","NULL",,,NULL
+"rab_katalog","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_katalog","2","produk_kode","varchar(20)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_katalog","3","judul","varchar(150)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_katalog","4","deskripsi","varchar(300)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_katalog","5","foto_url","varchar(500)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_katalog","6","sumber_foto","enum('upload','pinterest','dokumentasi')","YES","'dokumentasi'",,,"utf8mb4_general_ci"
+"rab_katalog","7","atap_kode","varchar(30)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_katalog","8","konstruksi_label","varchar(50)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_katalog","9","addon_default","varchar(200)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_katalog","10","kisaran_harga_min","bigint(20)","YES","0",,,NULL
+"rab_katalog","11","kisaran_harga_max","bigint(20)","YES","0",,,NULL
+"rab_katalog","12","tipe_lokasi","enum('rumah','ruko','kafe','gudang','mall','lainnya')","YES","'rumah'",,,"utf8mb4_general_ci"
+"rab_katalog","13","tag","varchar(200)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_katalog","14","urutan","int(11)","YES","0",,,NULL
+"rab_katalog","15","is_active","tinyint(1)","YES","1",,,NULL
+"rab_katalog","16","created_at","timestamp","YES","current_timestamp()",,,NULL
+"rab_kondisi_kerja","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_kondisi_kerja","2","nama","varchar(100)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_kondisi_kerja","3","pengali_upah","decimal(5,2)","YES","NULL",,,NULL
+"rab_kondisi_kerja","4","tambahan_per_hari","decimal(12,2)","YES","NULL",,,NULL
+"rab_kondisi_kerja","5","urutan","int(11)","NO","99",,,NULL
+"rab_kondisi_kerja","6","is_active","tinyint(1)","NO","1",,,NULL
+"rab_kondisi_kerja","7","created_at","timestamp","YES","NULL",,,NULL
+"rab_kondisi_kerja","8","updated_at","timestamp","YES","NULL",,,NULL
+"rab_kondisi_kerja","9","kena","varchar(10)","YES","'fabinst'",,,"utf8mb4_general_ci"
+"rab_kondisi_lokasi","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_kondisi_lokasi","2","kode","varchar(30)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_kondisi_lokasi","3","nama","varchar(100)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_kondisi_lokasi","4","deskripsi","varchar(200)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_kondisi_lokasi","5","tipe","enum('multiplier','flat_add','persen_add')","YES","'persen_add'",,,"utf8mb4_general_ci"
+"rab_kondisi_lokasi","6","nilai","decimal(8,2)","NO",NULL,,,NULL
+"rab_kondisi_lokasi","7","urutan","int(11)","YES","0",,,NULL
+"rab_kondisi_lokasi","8","is_active","tinyint(1)","YES","1",,,NULL
+"rab_margin_setting","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_margin_setting","2","produk_kode","varchar(20)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_margin_setting","3","margin_min_persen","decimal(5,2)","YES","15.00",,,NULL
+"rab_margin_setting","4","margin_standar_persen","decimal(5,2)","YES","25.00",,,NULL
+"rab_margin_setting","5","margin_target_persen","decimal(5,2)","YES","35.00",,,NULL
+"rab_margin_setting","6","diskon_max_persen","decimal(5,2)","YES","15.00",,,NULL
+"rab_margin_setting","7","mode_aktif","enum('standar','target')","YES","'standar'",,,"utf8mb4_general_ci"
+"rab_margin_setting","8","updated_by","int(10) unsigned","YES","NULL",,,NULL
+"rab_margin_setting","9","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"rab_paket_konstruksi","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_paket_konstruksi","2","zona_id","int(10) unsigned","NO",NULL,,,NULL
+"rab_paket_konstruksi","3","produk_kode","varchar(20)","YES","'KANOPI_STD'",,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","4","nama_paket","enum('Hemat','Standar','Premium')","NO",NULL,,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","5","label_display","varchar(100)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","6","frame_material","varchar(50)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","7","frame_ukuran","varchar(20)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","8","frame_tebal","varchar(10)","YES","'1mm'",,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","9","support_material","varchar(50)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","10","support_ukuran","varchar(20)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","11","metode","enum('solid','kremona','wf','sling')","YES","'solid'",,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","12","interval_kremona_cm","int(11)","YES","NULL",,,NULL
+"rab_paket_konstruksi","13","harga_per_m2_rangka","decimal(12,2)","NO",NULL,,,NULL
+"rab_paket_konstruksi","14","harga_per_m2_jasa_pasang","decimal(12,2)","NO","35000.00",,,NULL
+"rab_paket_konstruksi","15","catatan_teknis","text","YES","NULL",,,"utf8mb4_general_ci"
+"rab_paket_konstruksi","16","urutan","int(11)","YES","0",,,NULL
+"rab_paket_konstruksi","17","is_active","tinyint(1)","YES","1",,,NULL
+"rab_produk","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_produk","2","kode","varchar(20)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_produk","3","nama","varchar(100)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_produk","4","deskripsi","text","YES","NULL",,,"utf8mb4_general_ci"
+"rab_produk","5","icon","varchar(50)","YES","'kanopi'",,,"utf8mb4_general_ci"
+"rab_produk","6","is_estimasi_saja","tinyint(1)","YES","0",,,NULL
+"rab_produk","7","buffer_estimasi_persen","decimal(5,2)","YES","20.00",,,NULL
+"rab_produk","8","urutan","int(11)","YES","0",,,NULL
+"rab_produk","9","is_active","tinyint(1)","YES","1",,,NULL
+"rab_produk","10","created_at","timestamp","YES","current_timestamp()",,,NULL
+"rab_produk","11","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"rab_selisih","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_selisih","2","rab_id","int(10) unsigned","NO",NULL,,,NULL
+"rab_selisih","3","project_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_selisih","4","surveyor_id","int(10) unsigned","YES","NULL",,,NULL
+"rab_selisih","5","harga_deal","decimal(14,2)","NO",NULL,,,NULL
+"rab_selisih","6","total_rab_detail","decimal(14,2)","NO",NULL,,,NULL
+"rab_selisih","7","selisih","decimal(14,2)","YES","0.00",,,NULL
+"rab_selisih","8","persen_selisih","decimal(6,2)","YES","NULL",,,NULL
+"rab_selisih","9","status_tindak","enum('otomatis','review_admin','hubungi_customer')","YES","'otomatis'",,,"utf8mb4_general_ci"
+"rab_selisih","10","catatan","text","YES","NULL",,,"utf8mb4_general_ci"
+"rab_selisih","11","created_at","timestamp","YES","current_timestamp()",,,NULL
+"rab_selisih_komponen","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_selisih_komponen","2","selisih_id","int(10) unsigned","NO",NULL,,"MUL",NULL
+"rab_selisih_komponen","3","nama_komponen","varchar(100)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_selisih_komponen","4","selisih_nilai","decimal(12,2)","NO",NULL,,,NULL
+"rab_setting_global","1","id","int(11)","NO",NULL,,"PRI",NULL
+"rab_setting_global","2","diskon_max","decimal(5,2)","YES","15.00",,,NULL
+"rab_setting_global","3","margin_default","decimal(5,2)","YES","45.00",,,NULL
+"rab_setting_global","4","lay_hemat","decimal(5,2)","YES","5.00",,,NULL
+"rab_setting_global","5","lay_kilat","decimal(5,2)","YES","10.00",,,NULL
+"rab_setting_global","6","tarif_km","int(11)","YES","5000",,,NULL
+"rab_setting_global","7","tarif_genset","int(11)","YES","150000",,,NULL
+"rab_setting_global","8","tarif_hotel","int(11)","YES","0",,,NULL
+"rab_setting_global","9","tarif_kontrakan","int(11)","YES","0",,,NULL
+"rab_setting_global","10","tarif_makan","int(11)","YES","25000",,,NULL
+"rab_setting_global","11","updated_at","timestamp","YES","NULL",,,NULL
+"rab_setting_global","12","consumable_rangka","decimal(12,2)","YES","0.00",,,NULL
+"rab_setting_global","13","consumable_atap","decimal(12,2)","YES","0.00",,,NULL
+"rab_setting_global","14","finishing_standar","decimal(12,2)","YES","0.00",,,NULL
+"rab_setting_global","15","powder_coating","decimal(12,2)","YES","0.00",,,NULL
+"rab_skill","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_skill","2","nama","varchar(100)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rab_skill","3","upah_tukang_harian","decimal(12,2)","YES","NULL",,,NULL
+"rab_skill","4","upah_kenek_harian","decimal(12,2)","YES","NULL",,,NULL
+"rab_skill","5","urutan","int(11)","NO","99",,,NULL
+"rab_skill","6","is_active","tinyint(1)","NO","1",,,NULL
+"rab_skill","7","created_at","timestamp","YES","NULL",,,NULL
+"rab_skill","8","updated_at","timestamp","YES","NULL",,,NULL
+"rab_ttd","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_ttd","2","rab_id","int(10) unsigned","NO",NULL,,"UNI",NULL
+"rab_ttd","3","nama_penandatangan","varchar(100)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_ttd","4","ttd_data","longtext","NO",NULL,,,"utf8mb4_general_ci"
+"rab_ttd","5","ip_address","varchar(45)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_ttd","6","user_agent","varchar(300)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_ttd","7","lokasi_lat","decimal(10,7)","YES","NULL",,,NULL
+"rab_ttd","8","lokasi_lng","decimal(10,7)","YES","NULL",,,NULL
+"rab_ttd","9","signed_at","timestamp","YES","current_timestamp()",,,NULL
+"rab_versi","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_versi","2","rab_id","int(10) unsigned","NO",NULL,,"MUL",NULL
+"rab_versi","3","label","enum('Hemat','Standar','Premium')","NO",NULL,,,"utf8mb4_general_ci"
+"rab_versi","4","paket_konstruksi_id","int(10) unsigned","NO",NULL,,,NULL
+"rab_versi","5","harga_final","decimal(14,2)","NO",NULL,,,NULL
+"rab_versi","6","margin_persen","decimal(5,2)","NO",NULL,,,NULL
+"rab_versi","7","detail_json","longtext","YES","NULL",,,"utf8mb4_bin"
+"rab_versi","8","dipilih","tinyint(1)","YES","0",,,NULL
+"rab_zona_bentangan","1","id","int(10) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rab_zona_bentangan","2","nama","varchar(50)","NO",NULL,,,"utf8mb4_general_ci"
+"rab_zona_bentangan","3","bentangan_min","decimal(5,2)","NO",NULL,,,NULL
+"rab_zona_bentangan","4","bentangan_max","decimal(5,2)","NO",NULL,,,NULL
+"rab_zona_bentangan","5","deskripsi","varchar(200)","YES","NULL",,,"utf8mb4_general_ci"
+"rab_zona_bentangan","6","urutan","int(11)","YES","0",,,NULL
+"rab_zona_bentangan","7","is_active","tinyint(1)","YES","1",,,NULL
+"rapor_karyawan","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rapor_karyawan","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"rapor_karyawan","3","periode","enum('januari','juli')","NO",NULL,,,"utf8mb4_unicode_ci"
+"rapor_karyawan","4","tahun","smallint(4)","NO",NULL,,,NULL
+"rapor_karyawan","5","nilai_kpi","decimal(5,2)","YES","0.00",,,NULL
+"rapor_karyawan","6","nilai_ujian","decimal(5,2)","YES","0.00",,,NULL
+"rapor_karyawan","7","nilai_sp","decimal(5,2)","YES","20.00",,,NULL
+"rapor_karyawan","8","nilai_total","decimal(5,2)","YES","0.00",,,NULL
+"rapor_karyawan","9","kelas_sebelumnya","enum('platinum','gold','silver','bronze','red_zone','')","YES","''",,,"utf8mb4_unicode_ci"
+"rapor_karyawan","10","kelas_baru","enum('platinum','gold','silver','bronze','red_zone')","NO","'bronze'",,,"utf8mb4_unicode_ci"
+"rapor_karyawan","11","kenaikan_gaji","bigint(20)","YES","0",,,NULL
+"rapor_karyawan","12","kelas_naik","tinyint(1)","YES","0",,,NULL
+"rapor_karyawan","13","status","enum('pending','selesai')","YES","'pending'",,,"utf8mb4_unicode_ci"
+"rapor_karyawan","14","id_ujian_sesi","bigint(20) unsigned","YES","NULL",,,NULL
+"rapor_karyawan","15","created_at","timestamp","YES","current_timestamp()",,,NULL
+"rapor_karyawan","16","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"rate_kondisi","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"rate_kondisi","2","kode","varchar(10)","NO",NULL,,"UNI","utf8mb4_general_ci"
+"rate_kondisi","3","nama","varchar(100)","NO",NULL,,,"utf8mb4_general_ci"
+"rate_kondisi","4","deskripsi","text","YES","NULL",,,"utf8mb4_general_ci"
+"rate_kondisi","5","multiplier","decimal(4,2)","NO","1.00",,,NULL
+"rate_kondisi","6","aktif","tinyint(1)","YES","1",,,NULL
+"rate_kondisi","7","created_at","timestamp","YES","NULL",,,NULL
+"rate_kondisi","8","updated_at","timestamp","YES","NULL",,,NULL
+"registrasi_token","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"registrasi_token","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"registrasi_token","3","token","varchar(64)","NO",NULL,,"UNI","utf8mb4_unicode_ci"
+"registrasi_token","4","expired_at","timestamp","NO",NULL,,,NULL
+"registrasi_token","5","used","tinyint(1)","NO","0",,,NULL
+"registrasi_token","6","created_at","timestamp","YES","NULL",,,NULL
+"registrasi_token","7","updated_at","timestamp","YES","NULL",,,NULL
+"riwayat_tabungan","1","id","bigint(20)","NO",NULL,"auto_increment","PRI",NULL
+"riwayat_tabungan","2","user_id","bigint(20)","NO",NULL,,,NULL
+"riwayat_tabungan","3","tipe","enum('wajib','lebaran')","NO",NULL,,,"latin1_swedish_ci"
+"riwayat_tabungan","4","tipe_transaksi","enum('masuk','keluar')","NO",NULL,,,"latin1_swedish_ci"
+"riwayat_tabungan","5","nominal","decimal(12,2)","NO",NULL,,,NULL
+"riwayat_tabungan","6","keterangan","varchar(255)","YES","NULL",,,"latin1_swedish_ci"
+"riwayat_tabungan","7","slip_gaji_id","bigint(20)","YES","NULL",,,NULL
+"riwayat_tabungan","8","created_at","timestamp","YES","NULL",,,NULL
+"riwayat_tabungan","9","updated_at","timestamp","YES","NULL",,,NULL
+"sessions","1","id","varchar(255)","NO",NULL,,"PRI","utf8mb4_unicode_ci"
+"sessions","2","user_id","bigint(20) unsigned","YES","NULL",,"MUL",NULL
+"sessions","3","ip_address","varchar(45)","YES","NULL",,,"utf8mb4_unicode_ci"
+"sessions","4","user_agent","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"sessions","5","payload","longtext","NO",NULL,,,"utf8mb4_unicode_ci"
+"sessions","6","last_activity","int(11)","NO",NULL,,"MUL",NULL
+"slip_gaji","1","id","bigint(20)","NO",NULL,"auto_increment","PRI",NULL
+"slip_gaji","2","user_id","bigint(20)","NO",NULL,,"MUL",NULL
+"slip_gaji","3","periode","enum('uang_makan','gaji_bulanan')","NO",NULL,,,"latin1_swedish_ci"
+"slip_gaji","4","bulan","tinyint(4)","NO",NULL,,,NULL
+"slip_gaji","5","tahun","smallint(6)","NO",NULL,,,NULL
+"slip_gaji","6","tanggal_generate","date","NO",NULL,,,NULL
+"slip_gaji","7","tanggal_bayar","date","YES","NULL",,,NULL
+"slip_gaji","8","status","enum('draft','menunggu_konfirmasi','dibayar')","YES","'draft'",,,"latin1_swedish_ci"
+"slip_gaji","9","hari_hadir","tinyint(4)","YES","0",,,NULL
+"slip_gaji","10","hari_alpha","tinyint(4)","YES","0",,,NULL
+"slip_gaji","11","hari_telat","tinyint(4)","YES","0",,,NULL
+"slip_gaji","12","hari_izin","tinyint(4)","YES","0",,,NULL
+"slip_gaji","13","gaji_pokok","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","14","total_uang_makan","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","15","total_tunjangan","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","16","bonus_kpi","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","17","kelas_kpi","enum('platinum','gold','silver','none')","YES","'none'",,,"latin1_swedish_ci"
+"slip_gaji","18","bonus_lembur","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","19","jam_lembur","decimal(4,2)","YES","0.00",,,NULL
+"slip_gaji","20","potongan_telat","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","21","potongan_kasbon","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","22","potongan_insidental","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","23","tabungan_wajib","decimal(12,2)","YES","100000.00",,,NULL
+"slip_gaji","24","tabungan_lebaran","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","25","total_pendapatan","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","26","total_potongan","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","27","gaji_bersih","decimal(12,2)","YES","0.00",,,NULL
+"slip_gaji","28","warning_batas_aman","tinyint(1)","YES","0",,,NULL
+"slip_gaji","29","owner_konfirmasi","tinyint(1)","YES","0",,,NULL
+"slip_gaji","30","catatan","text","YES","NULL",,,"latin1_swedish_ci"
+"slip_gaji","31","created_at","timestamp","YES","NULL",,,NULL
+"slip_gaji","32","updated_at","timestamp","YES","NULL",,,NULL
+"slip_gaji","33","hari_kerja_libur","int(11)","NO","0",,,NULL
+"slip_gaji","34","upah_hari_libur","decimal(12,2)","NO","0.00",,,NULL
+"sp_karyawan","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"sp_karyawan","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"sp_karyawan","3","level_sp","enum('sp1','sp2','sp3')","NO",NULL,,,"utf8mb4_unicode_ci"
+"sp_karyawan","4","alasan","text","NO",NULL,,,"utf8mb4_unicode_ci"
+"sp_karyawan","5","trigger_otomatis","tinyint(1)","YES","0",,,NULL
+"sp_karyawan","6","status","enum('usulan','aktif','dicabut','pulih')","YES","'usulan'",,,"utf8mb4_unicode_ci"
+"sp_karyawan","7","tanggal_sp","date","NO",NULL,,,NULL
+"sp_karyawan","8","tanggal_aktif","date","YES","NULL",,,NULL
+"sp_karyawan","9","tanggal_pulih","date","YES","NULL",,,NULL
+"sp_karyawan","10","dikonfirmasi_oleh","bigint(20) unsigned","YES","NULL",,"MUL",NULL
+"sp_karyawan","11","catatan_owner","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"sp_karyawan","12","bulan_bersih_berturut","tinyint(2)","YES","0",,,NULL
+"sp_karyawan","13","reset_timer_pada","date","YES","NULL",,,NULL
+"sp_karyawan","14","created_at","timestamp","YES","current_timestamp()",,,NULL
+"sp_karyawan","15","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"tabungan_karyawan","1","id","bigint(20)","NO",NULL,"auto_increment","PRI",NULL
+"tabungan_karyawan","2","user_id","bigint(20)","NO",NULL,,"UNI",NULL
+"tabungan_karyawan","3","tabungan_wajib_total","decimal(12,2)","YES","0.00",,,NULL
+"tabungan_karyawan","4","tabungan_lebaran_total","decimal(12,2)","YES","0.00",,,NULL
+"tabungan_karyawan","5","tabungan_lebaran_per_bulan","decimal(12,2)","YES","0.00",,,NULL
+"tabungan_karyawan","6","tabungan_lebaran_cair","tinyint(1)","YES","0",,,NULL
+"tabungan_karyawan","7","created_at","timestamp","YES","NULL",,,NULL
+"tabungan_karyawan","8","updated_at","timestamp","YES","NULL",,,NULL
+"tugas_assignee","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"tugas_assignee","2","tugas_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"tugas_assignee","3","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"tugas_assignee","4","status","enum('belum','dikerjakan','selesai','tidak_selesai')","NO","'belum'",,"MUL","utf8mb4_unicode_ci"
+"tugas_assignee","5","catatan_karyawan","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"tugas_assignee","6","waktu_mulai","timestamp","YES","NULL",,,NULL
+"tugas_assignee","7","waktu_selesai","timestamp","YES","NULL",,,NULL
+"tugas_assignee","8","notif_wa_terkirim","tinyint(1)","NO","0",,,NULL
+"tugas_assignee","9","created_at","timestamp","YES","NULL",,,NULL
+"tugas_assignee","10","updated_at","timestamp","YES","NULL",,,NULL
+"tugas_harian","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"tugas_harian","2","judul","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"tugas_harian","3","deskripsi","text","YES","NULL",,,"utf8mb4_unicode_ci"
+"tugas_harian","4","tanggal","date","NO",NULL,,"MUL",NULL
+"tugas_harian","5","jam_mulai","time","YES","NULL",,,NULL
+"tugas_harian","6","jam_selesai_target","time","YES","NULL",,,NULL
+"tugas_harian","7","lokasi","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"tugas_harian","8","prioritas","enum('rendah','sedang','tinggi')","NO","'sedang'",,,"utf8mb4_unicode_ci"
+"tugas_harian","9","dibuat_oleh","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"tugas_harian","10","created_at","timestamp","YES","NULL",,,NULL
+"tugas_harian","11","updated_at","timestamp","YES","NULL",,,NULL
+"tunjangan_master","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"tunjangan_master","2","nama_tunjangan","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"tunjangan_master","3","tipe","enum('harian','bulanan','project')","NO",NULL,,,"utf8mb4_unicode_ci"
+"tunjangan_master","4","nominal_default","decimal(12,2)","NO","0.00",,,NULL
+"tunjangan_master","5","aktif","tinyint(1)","NO","1",,,NULL
+"tunjangan_master","6","created_at","timestamp","YES","NULL",,,NULL
+"tunjangan_master","7","updated_at","timestamp","YES","NULL",,,NULL
+"ujian_jawaban","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"ujian_jawaban","2","sesi_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"ujian_jawaban","3","soal_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"ujian_jawaban","4","urutan","tinyint(2)","NO",NULL,,,NULL
+"ujian_jawaban","5","jawaban_karyawan","enum('a','b','c','d')","YES","NULL",,,"utf8mb4_unicode_ci"
+"ujian_jawaban","6","is_benar","tinyint(1)","YES","NULL",,,NULL
+"ujian_jawaban","7","created_at","timestamp","YES","current_timestamp()",,,NULL
+"ujian_jawaban","8","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"ujian_sesi","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"ujian_sesi","2","user_id","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"ujian_sesi","3","periode","enum('januari','juli')","NO",NULL,,,"utf8mb4_unicode_ci"
+"ujian_sesi","4","tahun","smallint(4)","NO",NULL,,,NULL
+"ujian_sesi","5","mulai_pada","timestamp","YES","NULL",,,NULL
+"ujian_sesi","6","selesai_pada","timestamp","YES","NULL",,,NULL
+"ujian_sesi","7","batas_waktu","timestamp","YES","NULL",,,NULL
+"ujian_sesi","8","status","enum('belum','berlangsung','selesai','expired')","YES","'belum'",,,"utf8mb4_unicode_ci"
+"ujian_sesi","9","nilai","decimal(5,2)","YES","0.00",,,NULL
+"ujian_sesi","10","jumlah_benar","tinyint(2)","YES","0",,,NULL
+"ujian_sesi","11","jumlah_soal","tinyint(2)","YES","20",,,NULL
+"ujian_sesi","12","created_at","timestamp","YES","current_timestamp()",,,NULL
+"ujian_sesi","13","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"ujian_soal","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"ujian_soal","2","jabatan_level","tinyint(1)","NO",NULL,,"MUL",NULL
+"ujian_soal","3","pertanyaan","text","NO",NULL,,,"utf8mb4_unicode_ci"
+"ujian_soal","4","pilihan_a","varchar(500)","NO",NULL,,,"utf8mb4_unicode_ci"
+"ujian_soal","5","pilihan_b","varchar(500)","NO",NULL,,,"utf8mb4_unicode_ci"
+"ujian_soal","6","pilihan_c","varchar(500)","NO",NULL,,,"utf8mb4_unicode_ci"
+"ujian_soal","7","pilihan_d","varchar(500)","NO",NULL,,,"utf8mb4_unicode_ci"
+"ujian_soal","8","jawaban_benar","enum('a','b','c','d')","NO",NULL,,,"utf8mb4_unicode_ci"
+"ujian_soal","9","is_aktif","tinyint(1)","YES","1",,,NULL
+"ujian_soal","10","dibuat_oleh","bigint(20) unsigned","NO",NULL,,"MUL",NULL
+"ujian_soal","11","created_at","timestamp","YES","current_timestamp()",,,NULL
+"ujian_soal","12","updated_at","timestamp","YES","current_timestamp()","on update current_timestamp()",,NULL
+"users","1","id","bigint(20) unsigned","NO",NULL,"auto_increment","PRI",NULL
+"users","2","level","tinyint(4)","NO","5",,,NULL
+"users","3","jabatan","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","4","no_hp","varchar(20)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","5","foto","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","6","nama_bank","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","7","no_rekening","varchar(30)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","8","atas_nama","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","9","tempat_lahir","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","10","tgl_lahir","date","YES","NULL",,,NULL
+"users","11","no_ktp","varchar(20)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","12","no_kk","varchar(20)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","13","darurat_nama","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","14","darurat_no_hp","varchar(20)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","15","darurat_hubungan","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","16","ukuran_baju","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","17","status_nikah","enum('belum_menikah','menikah','cerai')","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","18","jumlah_tanggungan","tinyint(4)","NO","0",,,NULL
+"users","19","golongan_darah","varchar(5)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","20","no_bpjs_kesehatan","varchar(20)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","21","no_bpjs_ketenagakerjaan","varchar(20)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","22","status_registrasi","enum('menunggu','lengkap')","NO","'lengkap'",,,"utf8mb4_unicode_ci"
+"users","23","tipe_gaji","enum('harian','bulanan','project')","NO","'harian'",,,"utf8mb4_unicode_ci"
+"users","24","gaji_harian","decimal(12,2)","NO","0.00",,,NULL
+"users","25","uang_makan","decimal(10,2)","NO","0.00",,,NULL
+"users","26","uang_bonus","bigint(20)","NO","0",,,NULL
+"users","27","gaji_bulanan","decimal(12,2)","NO","0.00",,,NULL
+"users","28","jam_masuk","time","NO","'07:30:00'",,,NULL
+"users","29","jam_pulang","time","NO","'17:00:00'",,,NULL
+"users","30","status","enum('aktif','nonaktif','sp1','sp2','sp3')","NO","'aktif'",,,"utf8mb4_unicode_ci"
+"users","31","tgl_masuk_kerja","date","YES","NULL",,,NULL
+"users","32","alamat","varchar(255)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","33","name","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"users","34","email","varchar(255)","NO",NULL,,"UNI","utf8mb4_unicode_ci"
+"users","35","email_verified_at","timestamp","YES","NULL",,,NULL
+"users","36","password","varchar(255)","NO",NULL,,,"utf8mb4_unicode_ci"
+"users","37","remember_token","varchar(100)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","38","created_at","timestamp","YES","NULL",,,NULL
+"users","39","updated_at","timestamp","YES","NULL",,,NULL
+"users","40","nama_kontak_darurat","varchar(100)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","41","no_kontak_darurat","varchar(20)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","42","tanggal_bergabung","date","YES","NULL",,,NULL
+"users","43","telegram_chat_id","varchar(50)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","44","telegram_link_token","varchar(64)","YES","NULL",,,"utf8mb4_unicode_ci"
+"users","45","hari_libur_default","tinyint(3) unsigned","YES","NULL",,,NULL

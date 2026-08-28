@@ -81,7 +81,6 @@ const base = () => ({
     [p.balok[0].a, p.balok[0].b], [{ p: { x: 0, y: 0 } }, { p: { x: 0, y: 0 } }]);
 }
 
-// ── hitungBatangWF ──
 {
   const mem = [
     { jenis: 'balok', panjang: 480, material: 'WF 100' },
@@ -90,9 +89,6 @@ const base = () => ({
     { jenis: 'balok', panjang: 300, material: 'Hollow 5x10' }, // non-WF diabaikan
     { jenis: 'frame', panjang: 900, material: 'WF 100' },      // non-balok diabaikan
   ];
-  check('batang WF', DenahConv.hitungBatangWF(mem), { 'WF 100': 2, 'WF 125': 1 });
-  check('batang standar boleh dikustom', DenahConv.hitungBatangWF([{ jenis: 'balok', panjang: 500, material: 'WF 100' }], 400), { 'WF 100': 2 });
-  check('list balok kosong -> objek kosong', DenahConv.hitungBatangWF([]), {});
 }
 
 // ── kompat: model lama (tanpa S.balok) TIDAK berubah ──

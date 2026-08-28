@@ -1,0 +1,2109 @@
+{
+  "index_row_count": 162,
+  "distinct_index_count": 141,
+  "table_count_with_indexes": 68,
+  "unique_index_count_including_primary": 94,
+  "non_primary_unique_index_count": 26,
+  "indexes": [
+    {
+      "table": "absensi",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "absensi",
+      "index": "absensi_dikoreksi_oleh_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "dikoreksi_oleh",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "absensi",
+      "index": "absensi_user_id_tanggal_unique",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "tanggal",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "cache",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "key",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "cache",
+      "index": "cache_expiration_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "expiration",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "cache_locks",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "key",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "cache_locks",
+      "index": "cache_locks_expiration_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "expiration",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "failed_jobs",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "failed_jobs",
+      "index": "failed_jobs_connection_queue_failed_at_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "connection",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "queue",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 3,
+          "column": "failed_at",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "failed_jobs",
+      "index": "failed_jobs_uuid_unique",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "uuid",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "izin_absen",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "izin_absen",
+      "index": "izin_absen_diproses_oleh_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "diproses_oleh",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "izin_absen",
+      "index": "izin_absen_user_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "jadwal_libur",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "jadwal_libur",
+      "index": "diproses_oleh",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "diproses_oleh",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "jadwal_libur",
+      "index": "user_id",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "job_batches",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "jobs",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "jobs",
+      "index": "jobs_queue_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "queue",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "karyawan_tunjangan",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "karyawan_tunjangan",
+      "index": "karyawan_tunjangan_tunjangan_master_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "tunjangan_master_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "karyawan_tunjangan",
+      "index": "karyawan_tunjangan_user_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kasbon",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kendaraan",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kerja_hari_libur",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kerja_hari_libur",
+      "index": "kerja_hari_libur_tanggal_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "tanggal",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kerja_hari_libur",
+      "index": "kerja_hari_libur_user_tanggal_unique",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "tanggal",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kode_absen",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kode_absen",
+      "index": "kode_absen_tanggal_user_unique",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "tanggal",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "user_id",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "komplain_karyawan",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "komplain_karyawan",
+      "index": "fk_komplain_pencatat",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "dicatat_oleh",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "komplain_karyawan",
+      "index": "idx_user_tanggal",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "tanggal",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kpi_setting",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "kpi_setting",
+      "index": "unique_key",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "key_setting",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "levels",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "libur_nasional",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "libur_nasional",
+      "index": "dibuat_oleh",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "dibuat_oleh",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "libur_nasional_piket",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "libur_nasional_piket",
+      "index": "libur_nasional_id",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "libur_nasional_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "libur_nasional_piket",
+      "index": "user_id",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "log_bensin",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "log_bensin",
+      "index": "log_bensin_driver_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "driver_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "log_bensin",
+      "index": "log_bensin_kendaraan_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "kendaraan_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "log_bensin",
+      "index": "log_bensin_tanggal_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "tanggal",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "luar_kota",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "luar_kota",
+      "index": "luar_kota_dibuat_oleh_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "dibuat_oleh",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "luar_kota",
+      "index": "luar_kota_tanggal_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "tanggal_mulai",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "tanggal_selesai",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "luar_kota",
+      "index": "luar_kota_user_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "master_material",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "migrations",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "password_reset_tokens",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "email",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "pembayaran_project",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "pembayaran_project",
+      "index": "id_project",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id_project",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "pipeline_followups",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "pipeline_followups",
+      "index": "pipeline_followups_pipeline_lead_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "pipeline_lead_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "pipeline_followups",
+      "index": "pipeline_followups_user_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "pipeline_leads",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "pipeline_leads",
+      "index": "pipeline_leads_input_oleh_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "input_oleh",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "poin_kinerja",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "poin_kinerja",
+      "index": "idx_bulan_tahun",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "bulan",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "tahun",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "poin_kinerja",
+      "index": "unique_kpi_bulan",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "bulan",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 3,
+          "column": "tahun",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "potongan_insidental",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "project_material",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "project_material",
+      "index": "id_project",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id_project",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "project_tim",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "project_tim",
+      "index": "id_project",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id_project",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "projects",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_addon",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_addon",
+      "index": "kode",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "kode",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_addon",
+      "index": "uq_addon_nama",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "nama",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_approval",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_approval_request",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_approval_request",
+      "index": "rab_id",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "rab_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_atap",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_atap",
+      "index": "kode",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "kode",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_evaluasi_notif",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_header",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_header",
+      "index": "nomor_rab",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "nomor_rab",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_item",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_item",
+      "index": "rab_id",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "rab_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_items",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_items",
+      "index": "id_project",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id_project",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_jenis_kerja",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_jenis_kerja",
+      "index": "uq_jeniskerja_nama",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "nama",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_katalog",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_kondisi_kerja",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_kondisi_kerja",
+      "index": "uq_kondisi_nama",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "nama",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_kondisi_lokasi",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_kondisi_lokasi",
+      "index": "kode",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "kode",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_margin_setting",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_margin_setting",
+      "index": "produk_kode",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "produk_kode",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_paket_konstruksi",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_produk",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_produk",
+      "index": "kode",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "kode",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_selisih",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_selisih_komponen",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_selisih_komponen",
+      "index": "selisih_id",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "selisih_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_setting_global",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_skill",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_skill",
+      "index": "uq_skill_nama",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "nama",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_ttd",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_ttd",
+      "index": "rab_id",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "rab_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_versi",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_versi",
+      "index": "rab_id",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "rab_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rab_zona_bentangan",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rapor_karyawan",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rapor_karyawan",
+      "index": "unique_rapor",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "periode",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 3,
+          "column": "tahun",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rate_kondisi",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "rate_kondisi",
+      "index": "kode",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "kode",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "registrasi_token",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "registrasi_token",
+      "index": "registrasi_token_token_unique",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "token",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "registrasi_token",
+      "index": "registrasi_token_user_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "riwayat_tabungan",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "sessions",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "sessions",
+      "index": "sessions_last_activity_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "last_activity",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "sessions",
+      "index": "sessions_user_id_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "slip_gaji",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "slip_gaji",
+      "index": "slip_unik",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "periode",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 3,
+          "column": "bulan",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 4,
+          "column": "tahun",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "sp_karyawan",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "sp_karyawan",
+      "index": "fk_sp_konfirmasi",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "dikonfirmasi_oleh",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "sp_karyawan",
+      "index": "idx_sp_user",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "status",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tabungan_karyawan",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tabungan_karyawan",
+      "index": "user_id",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tugas_assignee",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tugas_assignee",
+      "index": "tugas_assignee_status_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "status",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tugas_assignee",
+      "index": "tugas_assignee_tugas_user_unique",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "tugas_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tugas_assignee",
+      "index": "tugas_assignee_user_id_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tugas_harian",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tugas_harian",
+      "index": "tugas_harian_dibuat_oleh_foreign",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "dibuat_oleh",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tugas_harian",
+      "index": "tugas_harian_tanggal_index",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "tanggal",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "tunjangan_master",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "ujian_jawaban",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "ujian_jawaban",
+      "index": "fk_jawaban_soal",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "soal_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "ujian_jawaban",
+      "index": "unique_jawaban",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "sesi_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "soal_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "ujian_sesi",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "ujian_sesi",
+      "index": "unique_sesi",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "user_id",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "periode",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 3,
+          "column": "tahun",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "ujian_soal",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "ujian_soal",
+      "index": "fk_soal_pembuat",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "dibuat_oleh",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "ujian_soal",
+      "index": "idx_soal_jabatan",
+      "unique": false,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "jabatan_level",
+          "nullable": false,
+          "sub_part": "NULL"
+        },
+        {
+          "position": 2,
+          "column": "is_aktif",
+          "nullable": true,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "users",
+      "index": "PRIMARY",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "id",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    },
+    {
+      "table": "users",
+      "index": "users_email_unique",
+      "unique": true,
+      "type": "BTREE",
+      "columns": [
+        {
+          "position": 1,
+          "column": "email",
+          "nullable": false,
+          "sub_part": "NULL"
+        }
+      ]
+    }
+  ]
+}

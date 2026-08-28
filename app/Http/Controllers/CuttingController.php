@@ -294,6 +294,44 @@ class CuttingController extends Controller
         return view('rab-blok.index', compact('besi', 'besiSemua', 'jenisKerja', 'kondisi', 'atap', 'addon', 'lihatHarga'));
     }
 
+    /**
+     * Jumlah batang per material untuk legend editor denah — dipanggil tiap surveyor
+     * berhenti menggambar, jadi sengaja TIPIS (tanpa harga, upah, atau opsi lain).
+     *
+     * Editor TIDAK boleh menghitung batang sendiri: rumus "total panjang / 600" tak
+     * memperhitungkan sisa potongan yang terbuang dan batas 1 sambungan per potong,
+     * dan uji 6000 kombinasi ukuran wajar menunjukkan rumus itu tak pernah lebih besar
+     * dari kebutuhan nyata — selisihnya SELALU ke arah kurang beli (~8% kasus).
+     * Jalurnya sengaja sama persis dengan yang dipakai harga (blok denah di
+     * hitungSatuBlok): RangkaDesignService -> CuttingService, termasuk panjang batang
+     * per material dari master_material. Satu mesin, satu angka.
+     */
+    public function cuttingDenah(Request $request, \App\Services\RangkaDesignService $rd)
+    {
+        abort_if(!$this->bolehAkses(), 403);
+
+        $members = (array) $request->input('members', []);
+        // Batas wajar: denah terpadat pun jauh di bawah ini. Mencegah request gemuk
+        // dipakai membebani server (endpoint ini dipanggil otomatis & sering).
+        if (count($members) > 3000) return response()->json(['ok' => false, 'message' => 'Terlalu banyak batang'], 422);
+
+        $bersih = [];
+        foreach ($members as $m) {
+            $m   = (array) $m;
+            $mat = trim((string) ($m['material'] ?? ''));
+            $len = (float) ($m['panjang'] ?? 0);
+            if ($mat === '' || $len <= 0) continue;
+            $bersih[] = ['nama' => (string) ($m['nama'] ?? ''), 'material' => $mat, 'panjang' => $len];
+        }
+
+        $batang = [];
+        foreach ($rd->hitung($bersih, [], false, $this->stokMap())['per_material'] as $r) {
+            $batang[$r['material']] = (int) $r['jumlah_batang'];
+        }
+
+        return response()->json(['ok' => true, 'batang' => $batang]);
+    }
+
     public function hitungProject(Request $request, CuttingService $svc)
     {
         abort_if(!$this->bolehAkses(), 403);

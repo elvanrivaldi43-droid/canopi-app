@@ -366,6 +366,12 @@
       "runner": "node",
       "requires_db": false,
       "manual": false
+    },
+    {
+      "path": "tests/rangka/test_cutting_denah.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
     }
   ],
   "excluded": [

@@ -463,6 +463,10 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/rab-blok',         [\App\Http\Controllers\CuttingController::class, 'projectIndex']);
     Route::post('/rab-blok/hitung', [\App\Http\Controllers\CuttingController::class, 'hitungProject']);
+    // Legend editor denah: jumlah batang per material (tanpa harga). Dipanggil otomatis
+    // tiap surveyor berhenti menggambar — sengaja endpoint tipis sendiri, bukan numpang
+    // /rab-blok/hitung yang menghitung seluruh opsi berikut harga & upah.
+    Route::post('/rab-blok/cutting', [\App\Http\Controllers\CuttingController::class, 'cuttingDenah']);
 });
 
 // ================================================================

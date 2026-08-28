@@ -545,6 +545,10 @@ function tambahBlok(pane, tipe, data){
         const ed=new DenahEditor(mount, {
             besi: BESI.map(function(b){ return { nama:b.nama, harga:Number(b.harga_pokok)||0 }; }),
             model: (data && data.denah) ? data.denah : null,
+            // Jumlah batang di legend ditanyakan ke server (mesin cutting yang sama dgn harga),
+            // bukan dihitung di browser -- lihat _jadwalCutting di denah-editor.js.
+            cuttingUrl: '{{ url("/rab-blok/cutting") }}',
+            csrf: CSRF,
             onChange: function(){ jadwalkanHitung(pane); }
         });
         DENAH.set(card, ed);

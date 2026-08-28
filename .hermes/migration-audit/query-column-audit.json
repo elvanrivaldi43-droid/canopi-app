@@ -1,0 +1,404 @@
+{
+  "actual_schema_tables": {
+    "absensi": [
+      "alasan_koreksi",
+      "created_at",
+      "deskripsi_kendala",
+      "dikoreksi",
+      "dikoreksi_oleh",
+      "foto_masuk",
+      "foto_pulang",
+      "foto_surat",
+      "gaji_hari_ini",
+      "gps_valid_kembali_kerja",
+      "id",
+      "jam_absen_siang",
+      "jam_lapor_progress",
+      "jam_masuk",
+      "jam_pulang",
+      "jawaban_progress",
+      "kendala_kenapa",
+      "kerja_hari_libur",
+      "keterangan",
+      "lat_kembali_kerja",
+      "lat_masuk",
+      "lat_pulang",
+      "lng_kembali_kerja",
+      "lng_masuk",
+      "lng_pulang",
+      "pertanyaan_progress",
+      "potongan_progress_dicatat",
+      "potongan_siang_dicatat",
+      "potongan_telat",
+      "status",
+      "tanggal",
+      "uang_makan_hari_ini",
+      "upah_hari_libur",
+      "updated_at",
+      "user_id"
+    ],
+    "cache": [
+      "expiration",
+      "key",
+      "value"
+    ],
+    "cache_locks": [
+      "expiration",
+      "key",
+      "owner"
+    ],
+    "failed_jobs": [
+      "connection",
+      "exception",
+      "failed_at",
+      "id",
+      "payload",
+      "queue",
+      "uuid"
+    ],
+    "izin_absen": [
+      "alasan",
+      "catatan_mandor",
+      "created_at",
+      "diproses_oleh",
+      "foto_surat",
+      "id",
+      "status",
+      "tanggal",
+      "tipe",
+      "updated_at",
+      "user_id"
+    ],
+    "jadwal_libur": [
+      "alasan",
+      "created_at",
+      "diproses_at",
+      "diproses_oleh",
+      "id",
+      "jenis",
+      "status",
+      "tanggal",
+      "tanggal_baru",
+      "updated_at",
+      "user_id"
+    ],
+    "jobs": [
+      "attempts",
+      "available_at",
+      "created_at",
+      "id",
+      "payload",
+      "queue",
+      "reserved_at"
+    ],
+    "job_batches": [
+      "cancelled_at",
+      "created_at",
+      "failed_job_ids",
+      "failed_jobs",
+      "finished_at",
+      "id",
+      "name",
+      "options",
+      "pending_jobs",
+      "total_jobs"
+    ],
+    "karyawan_tunjangan": [
+      "created_at",
+      "id",
+      "nominal",
+      "tunjangan_master_id",
+      "updated_at",
+      "user_id"
+    ],
+    "kerja_hari_libur": [
+      "created_at",
+      "diaktifkan_oleh",
+      "gaji_harian_snapshot",
+      "id",
+      "tanggal",
+      "uang_makan_snapshot",
+      "updated_at",
+      "user_id"
+    ],
+    "kode_absen": [
+      "aktif",
+      "created_at",
+      "id",
+      "kode",
+      "project_id",
+      "tanggal",
+      "updated_at",
+      "user_id"
+    ],
+    "levels": [
+      "created_at",
+      "deskripsi",
+      "id",
+      "nama_level",
+      "redirect_to",
+      "updated_at"
+    ],
+    "libur_nasional": [
+      "created_at",
+      "dibuat_oleh",
+      "id",
+      "nama",
+      "tanggal_mulai",
+      "tanggal_selesai",
+      "updated_at"
+    ],
+    "libur_nasional_piket": [
+      "created_at",
+      "id",
+      "libur_nasional_id",
+      "tanggal",
+      "updated_at",
+      "user_id"
+    ],
+    "migrations": [
+      "batch",
+      "id",
+      "migration"
+    ],
+    "password_reset_tokens": [
+      "created_at",
+      "email",
+      "token"
+    ],
+    "pipeline_followups": [
+      "catatan",
+      "created_at",
+      "id",
+      "pipeline_lead_id",
+      "status_sebelum",
+      "status_sesudah",
+      "updated_at",
+      "user_id"
+    ],
+    "pipeline_leads": [
+      "alamat",
+      "catatan",
+      "created_at",
+      "estimasi_nilai",
+      "id",
+      "jam_jadwal",
+      "last_activity_at",
+      "lokasi_foto",
+      "lokasi_video",
+      "nama_customer",
+      "no_hp",
+      "produk",
+      "status",
+      "sumber_lead",
+      "tanggal_jadwal",
+      "updated_at",
+      "user_id"
+    ],
+    "registrasi_token": [
+      "created_at",
+      "expired_at",
+      "id",
+      "token",
+      "updated_at",
+      "used",
+      "user_id"
+    ],
+    "sessions": [
+      "id",
+      "ip_address",
+      "last_activity",
+      "payload",
+      "user_agent",
+      "user_id"
+    ],
+    "tunjangan_master": [
+      "aktif",
+      "created_at",
+      "id",
+      "nama_tunjangan",
+      "nominal_default",
+      "tipe",
+      "updated_at"
+    ],
+    "users": [
+      "alamat",
+      "atas_nama",
+      "created_at",
+      "darurat_hubungan",
+      "darurat_nama",
+      "darurat_no_hp",
+      "email",
+      "email_verified_at",
+      "foto",
+      "gaji_bulanan",
+      "gaji_harian",
+      "golongan_darah",
+      "hari_libur_default",
+      "id",
+      "jabatan",
+      "jam_masuk",
+      "jam_pulang",
+      "jumlah_tanggungan",
+      "level",
+      "nama_bank",
+      "name",
+      "no_bpjs_kesehatan",
+      "no_bpjs_ketenagakerjaan",
+      "no_hp",
+      "no_kk",
+      "no_ktp",
+      "no_rekening",
+      "password",
+      "remember_token",
+      "status",
+      "status_nikah",
+      "status_registrasi",
+      "tanggal_bergabung",
+      "tempat_lahir",
+      "tgl_lahir",
+      "tgl_masuk_kerja",
+      "tipe_gaji",
+      "uang_bonus",
+      "uang_makan",
+      "ukuran_baju",
+      "updated_at"
+    ]
+  },
+  "candidate_missing_columns": {
+    "pipeline_leads": [
+      "created_by",
+      "deal_json",
+      "estimasi_max",
+      "estimasi_min",
+      "final_at",
+      "final_oleh",
+      "harga_final",
+      "input_oleh",
+      "penawaran_json",
+      "rab_snapshot",
+      "tgl_kunjungan"
+    ],
+    "absensi": [
+      "ada_kendala",
+      "foto_siang_1",
+      "foto_siang_2",
+      "foto_siang_3",
+      "gps_valid_masuk",
+      "gps_valid_pulang",
+      "gps_valid_siang",
+      "jenis_kendala",
+      "lat_siang",
+      "lembur_approved",
+      "lembur_approved_oleh",
+      "lembur_jam",
+      "lng_siang",
+      "status_pekerjaan"
+    ],
+    "izin_absen": [
+      "diproses_at"
+    ],
+    "pipeline_followups": [
+      "metode",
+      "tgl_followup_berikutnya"
+    ],
+    "users": [
+      "nama_kontak_darurat",
+      "no_kontak_darurat"
+    ]
+  },
+  "evidence": {
+    "pipeline_leads.deal_json": [
+      "app/Http/Controllers/PenawaranController.php:44"
+    ],
+    "pipeline_leads.estimasi_min": [
+      "app/Http/Controllers/RabOpsiController.php:74"
+    ],
+    "pipeline_leads.estimasi_max": [
+      "app/Http/Controllers/RabOpsiController.php:74"
+    ],
+    "pipeline_leads.harga_final": [
+      "app/Http/Controllers/RabOpsiController.php:113"
+    ],
+    "pipeline_leads.rab_snapshot": [
+      "app/Http/Controllers/RabOpsiController.php:113",
+      "app/Http/Controllers/RabOpsiController.php:138"
+    ],
+    "pipeline_leads.final_oleh": [
+      "app/Http/Controllers/RabOpsiController.php:113"
+    ],
+    "pipeline_leads.final_at": [
+      "app/Http/Controllers/RabOpsiController.php:113"
+    ],
+    "pipeline_leads.penawaran_json": [
+      "app/Http/Controllers/RabOpsiController.php:153"
+    ],
+    "pipeline_leads.created_by": [
+      "app/Services/KpiService.php:146",
+      "app/Services/KpiService.php:151"
+    ],
+    "absensi.ada_kendala": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.foto_siang_1": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.foto_siang_2": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.foto_siang_3": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.gps_valid_masuk": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.gps_valid_pulang": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.gps_valid_siang": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.jenis_kendala": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.lat_siang": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.lembur_approved": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.lembur_approved_oleh": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.lembur_jam": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.lng_siang": [
+      "App\\Models\\Absensi:0"
+    ],
+    "absensi.status_pekerjaan": [
+      "App\\Models\\Absensi:0"
+    ],
+    "izin_absen.diproses_at": [
+      "App\\Models\\IzinAbsen:0"
+    ],
+    "pipeline_followups.metode": [
+      "App\\Models\\PipelineFollowup:0"
+    ],
+    "pipeline_followups.tgl_followup_berikutnya": [
+      "App\\Models\\PipelineFollowup:0"
+    ],
+    "pipeline_leads.input_oleh": [
+      "App\\Models\\PipelineLead:0"
+    ],
+    "pipeline_leads.tgl_kunjungan": [
+      "App\\Models\\PipelineLead:0"
+    ],
+    "users.nama_kontak_darurat": [
+      "App\\Models\\User:0"
+    ],
+    "users.no_kontak_darurat": [
+      "App\\Models\\User:0"
+    ]
+  }
+}
