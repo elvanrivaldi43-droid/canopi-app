@@ -16,3 +16,8 @@ tests/rangka/*.log
 
 # Mockup sesi brainstorming (superpowers skill, lokal saja)
 .superpowers/
+
+# Kerja lokal, jangan pernah masuk repo (berisi kredensial DB tes & worktree bersarang)
+.hermes/
+.worktrees/
+docs/sales-blueprint/
