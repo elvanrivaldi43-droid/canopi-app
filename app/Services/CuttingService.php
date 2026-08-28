@@ -4,7 +4,11 @@ namespace App\Services;
 
 /**
  * Kalkulator potong besi (cutting-stock) untuk blok rangka kanopi.
- * Stock 600cm/batang, minimalkan batang, maksimal 1 sambungan per potong.
+ * Stock 600cm/batang, minimalkan batang.
+ * Sambungan: potongan <= 1 batang paling banyak 1 sambungan; potongan yang lebih panjang
+ * dari 1 batang WAJIB lebih (mis. 1500cm dari batang 600 = 3 keping = 2 sambungan) --
+ * itu batas fisik, bukan pilihan. Semua keping satu potongan memakai 'jid' yang SAMA
+ * supaya cutting list produksi terbaca sebagai satu batang panjang yang disambung.
  * Output: jumlah batang (untuk harga) + cutting list bergaris (untuk produksi).
  */
 class CuttingService
@@ -12,7 +16,7 @@ class CuttingService
     const STOCK = 600; // cm per batang
 
     /**
-     * Inti cutting-stock: First-Fit Decreasing + split (maks 1 sambungan).
+     * Inti cutting-stock: First-Fit Decreasing + split.
      * @param array $pieces  [ ['label'=>..,'len'=>cm], ... ]
      * @return array bars: [ ['no'=>1,'seg'=>[ ['label','len','jenis'=>'utuh|sambung','jid'?] ],'sisa'=>cm], ... ]
      */
@@ -72,12 +76,22 @@ class CuttingService
             usort($idx, fn($a, $c) => $bars[$c]['sisa'] <=> $bars[$a]['sisa']);
 
             if (count($idx) >= 2 && ($bars[$idx[0]]['sisa'] + $bars[$idx[1]]['sisa']) >= $len) {
-                $jid++;
+                // Segmen yang SUDAH bagian rangkaian sambungan (hasil pra-proses potongan
+                // > 1 batang) harus tetap memakai nomor rangkaian ASALNYA. Dulu selalu
+                // bikin nomor baru -> satu batang panjang tampil sebagai BEBERAPA rangkaian
+                // terpisah di cutting list, dan tukang membacanya sebagai beberapa batang
+                // pendek, bukan satu batang panjang yang disambung berurutan.
+                // Bug nyata 28 Ags 2026: kanopi 3x10 m, frame membujur 1000cm keluar
+                // "600 [rangkaian #3] · 200 [rangkaian #4] · 200 [rangkaian #4]" -> tukang
+                // membuat batang 600 + batang 400. Kena 93 dari 504 ukuran kanopi wajar.
+                // Jumlah batang & total material TIDAK terpengaruh (harga tetap benar);
+                // yang salah khusus panduan potong untuk produksi + hitungan sambungan.
+                $useJid = $pre > 0 ? $pre : ++$jid;
                 $a   = min($bars[$idx[0]]['sisa'], $len);
                 $rem = $len - $a;
-                $bars[$idx[0]]['seg'][] = ['label' => $p['label'], 'len' => $a,   'jenis' => 'sambung', 'jid' => $jid];
+                $bars[$idx[0]]['seg'][] = ['label' => $p['label'], 'len' => $a,   'jenis' => 'sambung', 'jid' => $useJid];
                 $bars[$idx[0]]['sisa'] -= $a;
-                $bars[$idx[1]]['seg'][] = ['label' => $p['label'], 'len' => $rem, 'jenis' => 'sambung', 'jid' => $jid];
+                $bars[$idx[1]]['seg'][] = ['label' => $p['label'], 'len' => $rem, 'jenis' => 'sambung', 'jid' => $useJid];
                 $bars[$idx[1]]['sisa'] -= $rem;
                 continue;
             }
