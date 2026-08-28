@@ -400,49 +400,15 @@ class CuttingController extends Controller
         $besi = 0.0; $rincian = null; $cutting = null;
 
         if ($tipe === 'kanopi') {
-            $bb = (function () use ($b) {
-                $bool = fn($k, $def) => filter_var($b[$k] ?? $def, FILTER_VALIDATE_BOOLEAN);
-                return [
-                    'lebar_cm'     => $b['lebar_cm'] ?? null,
-                    'panjang_cm'   => $b['panjang_cm'] ?? null,
-                    'tinggi_cm'    => $b['tinggi_cm'] ?? 300,
-                    'kotak_cm'     => $b['kotak_cm'] ?? 80,
-                    'arah_support' => $b['arah_support'] ?? 2,
-                    'jml_tiang'    => $b['jml_tiang'] ?? 2,
-                    'mat_frame'    => $b['mat_frame'] ?? 'Frame',
-                    'mat_support'  => $b['mat_support'] ?? 'Support',
-                    'mat_tiang'    => $b['mat_tiang'] ?? 'Tiang',
-                    'frame_depan'    => $bool('frame_depan', true),
-                    'frame_belakang' => $bool('frame_belakang', true),
-                    'frame_kiri'     => $bool('frame_kiri', true),
-                    'frame_kanan'    => $bool('frame_kanan', true),
-                    'frame_tengah'   => $bool('frame_tengah', true),
-                ];
-            })();
-            $cutting = $svc->hitungRangka($bb);
-
-            $harga = (array) ($b['harga'] ?? []);
-            if ($lihatHarga) {
-                foreach ($cutting['per_material'] as &$m) {
-                    $h = isset($harga[$m['material']]) ? (float) $harga[$m['material']] : 0;
-                    $m['harga_pokok'] = $h;
-                    $m['subtotal_besi'] = $h * $m['jumlah_batang'];
-                    $besi += $h * $m['jumlah_batang'];
-                    if ($h <= 0) $warn[] = "Harga besi \"{$m['material']}\" belum diisi";
-                }
-                unset($m);
-                // BESI TAMBAHAN manual (support/reng/besi lain di luar cutting otomatis)
-                foreach ((array) ($b['besi_extra'] ?? []) as $bx) {
-                    $bx = (array) $bx;
-                    $nm = trim((string) ($bx['material'] ?? '')); $bt = (float) ($bx['batang'] ?? 0);
-                    if ($nm === '' || $bt <= 0) continue;
-                    $h = isset($harga[$nm]) ? (float) $harga[$nm] : 0;
-                    $besi += $bt * $h;
-                    $cutting['per_material'][] = ['material' => $nm, 'jumlah_batang' => $bt, 'harga_pokok' => $h, 'subtotal_besi' => $h * $bt];
-                    if ($h <= 0) $warn[] = "Harga besi tambahan \"{$nm}\" belum diisi";
-                }
-            }
-            $rincian = $cutting['per_material'];
+            // Blok tipe KANOPI DIPENSIUNKAN 28 Ags 2026 (keputusan Elvan). Pembuatan blok baru
+            // memang sudah lama mati (tombolnya tak ada di wizard); sekarang jalur hitungnya ikut
+            // dibuang. Data lama SENGAJA tidak dihitung diam-diam jadi 0 -- dikembalikan dengan
+            // peringatan jelas supaya kelihatan harus dibuat ulang, bukan hilang tanpa jejak.
+            // CATATAN: mesin CuttingService::hitungRangka TIDAK ikut dihapus -- masih dipakai
+            // untuk bentuk awal blok Denah (RangkaDesignService) dan halaman cutting list.
+            $warn[] = "Blok \"{$nama}\" bertipe KANOPI (format lama) sudah tidak didukung — buat ulang sebagai blok Denah.";
+            $rincian = [];
+            $cutting = ['per_material' => [], 'input' => ['L' => 0, 'P' => 0], 'luas_m2' => 0.0];
         } elseif ($tipe === 'denah') {
             // DENAH: daftar batang (members) dari denah interaktif -> RangkaDesignService.
             $members = array_map(fn ($m) => (array) $m, (array) ($b['members'] ?? []));

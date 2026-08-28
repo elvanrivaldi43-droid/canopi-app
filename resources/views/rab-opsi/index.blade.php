@@ -467,34 +467,13 @@ function tambahBlok(pane, tipe, data){
 
     let body='';
     if(tipe==='kanopi'){
-        body=
-        '<div class="grid2">'+
-          '<div class="ro-field"><label>Lebar (cm)</label><input type="number" class="b-lebar" value="400"></div>'+
-          '<div class="ro-field"><label>Panjang (cm)</label><input type="number" class="b-panjang" value="300"></div>'+
-          '<div class="ro-field"><label>Tinggi tiang (cm)</label><input type="number" class="b-tinggi" value="300"></div>'+
-          '<div class="ro-field"><label>Kotak support (cm)</label><input type="number" class="b-kotak" value="80"></div>'+
-          '<div class="ro-field"><label>Arah support</label><select class="b-arah"><option value="2">Grid 2 arah</option><option value="1">1 arah</option></select></div>'+
-          '<div class="ro-field"><label>Jumlah tiang</label><input type="number" class="b-tiang" value="2"></div>'+
-          '<div class="ro-field"><label>Material Frame</label><select class="b-matFrame">'+besiOpts()+'</select></div>'+
-          '<div class="ro-field"><label>Material Support</label><select class="b-matSupport">'+besiOpts()+'</select></div>'+
-          '<div class="ro-field"><label>Material Tiang</label><select class="b-matTiang">'+besiOpts()+'</select></div>'+
-        '</div>'+
-        '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
-          '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">Sisi Frame (matikan sisi yang nempel)</div>'+
-          '<div style="display:flex;flex-wrap:wrap;gap:12px">'+
-            '<label class="ckf"><input type="checkbox" class="b-fDepan" checked> Depan</label>'+
-            '<label class="ckf"><input type="checkbox" class="b-fBelakang" checked> Belakang</label>'+
-            '<label class="ckf"><input type="checkbox" class="b-fKiri" checked> Kiri</label>'+
-            '<label class="ckf"><input type="checkbox" class="b-fKanan" checked> Kanan</label>'+
-            '<label class="ckf" style="color:#fbbf24"><input type="checkbox" class="b-fTengah" checked> + Tengah</label>'+
-          '</div>'+
-        '</div>'+
-        '<div style="margin-top:10px;padding:10px;background:#0f172a;border-radius:10px">'+
-          '<div style="font-size:12px;color:#fbbf24;font-weight:700;margin-bottom:8px">Besi Tambahan (support/reng/besi lain)</div>'+
-          '<div class="b-besiExtra"></div>'+
-          '<button type="button" class="btn btn-grey" style="padding:9px" onclick="addBesiRow(this)">+ Besi Tambahan</button>'+
-          '<div style="font-size:10px;color:#64748b;margin-top:6px">Untuk hollow/besi yang tak tercakup rangka otomatis (mis. reng 3x3, gording 4x8, besi beton). Pilih jenis + jumlah batang.</div>'+
-        '</div>';
+        // Blok tipe KANOPI DIPENSIUNKAN 28 Ags 2026 (keputusan Elvan). Pembuatan blok baru sudah
+        // lama mati (tombolnya tak ada); sekarang form isiannya ikut dibuang. Blok lama yang
+        // terlanjur tersimpan TIDAK dihilangkan diam-diam -- ditandai jelas supaya Bos tahu harus
+        // membuatnya ulang sebagai blok Denah, dan tetap bisa dihapus lewat tombol hapus kartu.
+        body='<div style="padding:10px;border:1px dashed #f59e0b;border-radius:8px;background:rgba(245,158,11,.08);font-size:12.5px;color:#92400e">'+
+             '<b>Blok format lama (Kanopi)</b><br>Tipe blok ini sudah dipensiunkan dan tidak ikut dihitung. '+
+             'Buat ulang sebagai <b>Blok Denah</b>, lalu hapus kartu ini.</div>';
     } else if(tipe==='denah'){
         body='<div class="b-denah"></div>';
     } else {
@@ -555,13 +534,6 @@ function tambahBlok(pane, tipe, data){
     }
 
     // default material tebakan
-    if(tipe==='kanopi' && !data){
-        const cari=function(kw){ const b=BESI.find(function(x){return x.nama.toLowerCase().replace(/\s/g,'').includes(kw);}); return b?b.nama:''; };
-        const f=cari('5x10'); const s=cari('4x8');
-        const mf=card.querySelector('.b-matFrame'), mt=card.querySelector('.b-matTiang'), ms=card.querySelector('.b-matSupport');
-        if(f && mf) mf.value=f; if(f && mt) mt.value=f;
-        if(s && ms) ms.value=s;
-    }
     card.querySelector('.b-aktif').addEventListener('change',function(){ card.classList.toggle('off', !this.checked); });
 
     if(data) isiBlok(card, data);
@@ -594,10 +566,7 @@ function isiBlok(card, d){
     setChk(card.querySelector('.b-aktif'), d.aktif!==false);
     card.classList.toggle('off', d.aktif===false);
     if(card.dataset.tipe==='kanopi'){
-        setVal(card.querySelector('.b-lebar'), d.lebar_cm); setVal(card.querySelector('.b-panjang'), d.panjang_cm);
-        setVal(card.querySelector('.b-tinggi'), d.tinggi_cm); setVal(card.querySelector('.b-kotak'), d.kotak_cm);
-        setVal(card.querySelector('.b-arah'), d.arah_support); setVal(card.querySelector('.b-tiang'), d.jml_tiang);
-        setVal(card.querySelector('.b-matFrame'), d.mat_frame); setVal(card.querySelector('.b-matSupport'), d.mat_support); setVal(card.querySelector('.b-matTiang'), d.mat_tiang);
+        // format lama: tak ada field untuk diisi ulang (lihat tambahBlok)
         var bx=d.besi_extra||[];
         bx.forEach(function(x){ var r=addBesiRowTo(card); setVal(r.querySelector('.bx-jenis'), x.material); setVal(r.querySelector('.bx-batang'), x.batang); });
         setChk(card.querySelector('.b-fDepan'), d.frame_depan); setChk(card.querySelector('.b-fBelakang'), d.frame_belakang);
@@ -682,38 +651,8 @@ function bacaBlok(card){
     const ck=function(c){ const el=card.querySelector(c); return el?el.checked:true; };
     const b={ aktif:ck('.b-aktif'), tipe:tipe, nama:g('.b-nama') };
     if(tipe==='kanopi'){
-        const mf=g('.b-matFrame'), ms=g('.b-matSupport'), mt=g('.b-matTiang');
-        const harga={}; [mf,ms,mt].forEach(function(n){ if(n) harga[n]=hargaOf(n); });
-        b.besi_extra=[];
-        [].slice.call(card.querySelectorAll('.b-besiExtra .row3')).forEach(function(r){
-            var j=r.querySelector('.bx-jenis'), q=r.querySelector('.bx-batang');
-            var nm=j?j.value:''; var bt=q?(+q.value||0):0;
-            if(nm && bt>0){ b.besi_extra.push({material:nm, batang:bt}); harga[nm]=hargaOf(nm); }
-        });
-        b.lebar_cm=+g('.b-lebar'); b.panjang_cm=+g('.b-panjang'); b.tinggi_cm=+g('.b-tinggi');
-        b.kotak_cm=+g('.b-kotak'); b.arah_support=+g('.b-arah'); b.jml_tiang=+g('.b-tiang');
-        b.mat_frame=mf||'Frame'; b.mat_support=ms||'Support'; b.mat_tiang=mt||'Tiang';
-        b.frame_depan=ck('.b-fDepan'); b.frame_belakang=ck('.b-fBelakang');
-        b.frame_kiri=ck('.b-fKiri'); b.frame_kanan=ck('.b-fKanan'); b.frame_tengah=ck('.b-fTengah');
-        b.harga=harga; b.jenis_kerja_id=+g('.b-jk')||0;
-        b.kondisi_ids=[].slice.call(card.querySelectorAll('.b-kond:checked')).map(function(c){return +c.value;});
-    } else if(tipe==='denah'){
-        const ed=DENAH.get(card);
-        const members=ed?ed.getMembers():[];
-        const hargaD={};
-        members.forEach(function(m){ hargaD[m.material]=hargaOf(m.material); });
-        b.besi_extra=[];
-        [].slice.call(card.querySelectorAll('.b-besiExtra .row3')).forEach(function(r){
-            var j=r.querySelector('.bx-jenis'), q=r.querySelector('.bx-batang');
-            var nm=j?j.value:''; var bt=q?(+q.value||0):0;
-            if(nm && bt>0){ b.besi_extra.push({material:nm, batang:bt}); hargaD[nm]=hargaOf(nm); }
-        });
-        b.luas_m2=ed?ed.getLuas():0;
-        b.members=members.map(function(m){ return { nama:m.nama, jenis:m.jenis, panjang:m.panjang, material:m.material }; });
-        b.harga=hargaD;
-        b.denah=ed?ed.getModel():null; // ikut ke rab_snapshot untuk rehidrasi
-        b.jenis_kerja_id=+g('.b-jk')||0;
-        b.kondisi_ids=[].slice.call(card.querySelectorAll('.b-kond:checked')).map(function(c){return +c.value;});
+        // Blok format lama: tak ada field untuk dibaca (lihat tambahBlok). Dikirim apa adanya
+        // supaya server membalas peringatan "buat ulang sebagai Denah", bukan hilang diam-diam.
     } else {
         b.manual_items=[].slice.call(card.querySelectorAll('.b-manualRows .row3')).map(function(r){
             return { nama:(r.querySelector('.m-nama')||{}).value||'', qty:+((r.querySelector('.m-qty')||{}).value||0), harga:+((r.querySelector('.m-harga')||{}).value||0) };
@@ -1045,8 +984,9 @@ function validasiStep1(){
             totalBlokAktif++;
             var namaEl=card.querySelector('.b-nama');
             var namaBlok=(namaEl && namaEl.value) ? namaEl.value : ('Blok '+(c+1));
+            if(card.dataset.tipe==='kanopi'){ errors.push(namaBlok+': blok format lama (Kanopi) sudah tidak didukung — buat ulang sebagai Blok Denah, lalu hapus kartu ini'); continue; }
             var lebarEl=card.querySelector('.b-lebar');
-            if(lebarEl){ // blok kanopi (punya ukuran)
+            if(lebarEl){ // sisa jalur lama; blok denah/manual tak punya .b-lebar
                 var lebar=parseFloat(lebarEl.value||'0');
                 var panjangEl=card.querySelector('.b-panjang');
                 var panjang=parseFloat((panjangEl&&panjangEl.value)||'0');
@@ -1123,11 +1063,10 @@ function buildPenawaran(){
             var bl=pd.blok[b];
             if(bl.aktif===false) continue;
             if(bl.tipe==='kanopi'){
-                var atapArr=[];
-                var aj=bl.atap_jenis_id||[], al=bl.atap_luas||[];
-                for(var a=0;a<aj.length;a++){ atapArr.push(namaAtap(aj[a])+' ('+al[a]+' m2)'); }
-                blokOut.push({ nama:bl.nama||('Blok '+(b+1)), ukuran:(bl.lebar_cm||0)+' x '+(bl.panjang_cm||0)+' cm',
-                    frame:bl.mat_frame, support:bl.mat_support, tiang:bl.mat_tiang, atap:atapArr });
+                // Blok format lama (dipensiunkan 28 Ags): tak punya isian lagi, kalau diikutkan
+                // penawaran customer cuma menampilkan "0 x 0 cm". Dilewati -- kartunya sendiri
+                // sudah menandai di layar bahwa blok ini harus dibuat ulang sbg Denah.
+                continue;
             } else if(bl.tipe==='denah'){
                 // blok denah: ringkasan customer = luas denah + besi default per peran + atap (bentuk sama kanopi)
                 var atapArrD=[];
