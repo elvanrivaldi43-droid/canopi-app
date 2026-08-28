@@ -238,8 +238,11 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 
 ### Utang aktif / resume point
 
-0. **Gambar denah ikut ke penawaran cetak — LIVE 27/28 Ags 2026, BELUM
-   DIVALIDASI Bos.** Antrean polesan DenahEditor #1 selesai. Saat tombol
+0. **Gambar denah ikut ke penawaran cetak — LIVE 27/28 Ags 2026, GAMBARNYA
+   BELUM DILIHAT Bos** (alurnya sendiri sudah tervalidasi: tombol "Buat
+   Penawaran" kini membuka halaman penawaran dengan benar di HP; yang belum
+   dicek khusus tampilan gambar denahnya, butuh lead ber-blok DENAH — lead
+   yang dipakai Bos 28 Ags kebetulan blok Kanopi jadi memang tanpa gambar). Antrean polesan DenahEditor #1 selesai. Saat tombol
    "Buat Penawaran" ditekan, SVG yang sudah ada di layar di-snapshot:
    `denahCetak()` (`rab-opsi/index.blade.php`) klon SVG → buang alat bantu
    editor (pita sentuh transparan, bulatan titik sudut, handle ujung support,
@@ -659,6 +662,17 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
   Tambalan lama yang masih ada dan tetap aman dibiarkan (tak perlu dicabut,
   tapi juga tak perlu ditiru lagi): reparent ke `document.body` pada overlay
   fullscreen DenahEditor dan modal `libur-nasional`.
+- iOS Safari memblokir `window.open()` DIAM-DIAM bila dipanggil setelah `await`/
+  `.then()` (dianggap bukan hasil langsung sentuhan jari) — tombol terlihat MATI
+  padahal aksinya sukses. Untuk membuka halaman hasil sesudah fetch, pakai
+  `location.href`, jangan tab baru. **Kejadian nyata 28 Ags 2026** pada "Buat
+  Penawaran" (`rab-opsi`), tervalidasi Elvan; `window.open` yang dipanggil
+  SINKRON langsung di handler klik (WA quote `rab/wizard` & `rab/show`, surat
+  kasbon) tidak kena — jangan ikut diubah.
+- Jangan biarkan kegagalan DIAM. Aksi yang bisa melempar error (mis.
+  `buildPenawaran()`) wajib punya jalur pesan ke user — tombol yang "tidak
+  bereaksi" tanpa pesan adalah kelas bug yang paling lama tak terpecahkan di
+  project ini (dua kejadian 28 Ags: bar tak tampil + tab diblokir).
 - Debug production memakai `Log::error()` sementara karena `LOG_LEVEL=error`
   menyaring `info/debug`; hapus instrumentation setelah bukti didapat.
 - Cron/notifikasi harus idempotent: record existing tidak boleh memicu kirim ulang.
