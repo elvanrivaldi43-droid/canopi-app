@@ -55,7 +55,7 @@
 
 <div class="ct-wrap">
     <h1 class="ct-title">Kalkulator Potong Besi</h1>
-    <p class="ct-sub">Input ukuran → jumlah batang otomatis + cutting list bergaris. Batang 600cm, maksimal 1 sambungan/potong. (Halaman uji — nanti masuk ke wizard block.)</p>
+    <p class="ct-sub">Input ukuran → jumlah batang otomatis + cutting list bergaris. Batang 600cm. Potongan yang lebih panjang dari 1 batang wajib disambung (mis. 10 m = 600+200+200, disambung berurutan jadi SATU batang).</p>
 
     <div class="ct-card">
         <div class="ct-grid">
