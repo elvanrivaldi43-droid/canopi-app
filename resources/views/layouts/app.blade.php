@@ -154,7 +154,15 @@
         .page-content {
             flex: 1;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            /* JANGAN tambahkan lagi `-webkit-overflow-scrolling: touch` di sini.
+               Properti itu bikin SEMUA `position:fixed` di dalam .page-content tak
+               tampil di iOS Safari — bar aksi bawah (.actbar / .ka-actions /
+               .pk-actions di 4 halaman) hilang total, dan modal harus di-reparent
+               ke <body> satu per satu sbg tambalan (lihat libur-nasional).
+               Dibuktikan 28 Ags 2026 lewat halaman uji di HP Elvan: bar identik di
+               dalam wadah ini TIDAK muncul, di luar wadah muncul; begitu properti
+               ini dimatikan, bar di dalam langsung muncul di posisi yang benar.
+               Properti ini juga sudah usang — sejak iOS 13 momentum scroll bawaan. */
         }
         @media (max-width: 1023px) {
             .page-content {
