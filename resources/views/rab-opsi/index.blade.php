@@ -1144,12 +1144,21 @@ function buildPenawaran(){
 }
 function buatPenawaran(){
     if(!LEAD){ alert('Buka RAB dari lead dulu.'); return; }
-    var p=buildPenawaran(); if(!p) return;
+    // Menyusun data penawaran bisa melempar error (mis. blok denah bermasalah). Tanpa jaring ini
+    // errornya DIAM TOTAL -- tombol terlihat seperti mati, tak ada pesan apa pun. Sudah menghabiskan
+    // waktu debug 28 Ags; pesannya sengaja menyebut lokasi biar sekali lihat langsung ketahuan.
+    var p; try{ p=buildPenawaran(); }catch(e){ alert('Gagal menyiapkan data penawaran: '+e.message); return; }
+    if(!p) return;
     fetch('{{ url("/rab-opsi/simpan-penawaran") }}', {method:'POST',
         headers:{'Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'Accept':'application/json'},
         body:JSON.stringify({ lead_id:LEAD.id, penawaran:JSON.stringify(p) })
     }).then(function(r){ return r.json(); }).then(function(res){
-        if(res && res.success){ window.open('{{ url("/penawaran") }}/'+LEAD.id, '_blank'); }
+        // JANGAN window.open() di sini: dipanggil SETELAH await fetch, jadi Safari iOS menganggapnya
+        // bukan hasil langsung sentuhan jari -> tab baru DIBLOKIR DIAM-DIAM, tombol terlihat mati
+        // padahal penawaran sudah tersimpan (laporan Elvan 28 Ags, muncul begitu bar aksi bawah
+        // akhirnya tampil di HP). Pindah halaman di tab yang sama selalu boleh; tombol Back
+        // mengembalikan ke RAB.
+        if(res && res.success){ location.href='{{ url("/penawaran") }}/'+LEAD.id; }
         else { alert('Gagal buat penawaran: '+((res&&res.message)||'error')); }
     }).catch(function(e){ alert('Error: '+e.message); });
 }
