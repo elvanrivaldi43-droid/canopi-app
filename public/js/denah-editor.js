@@ -1668,10 +1668,25 @@ body,.page-content{overscroll-behavior-y:contain}
     this.syncLP();
     this.render();
   }
+  // Tap garis sisi di kanvas = pilih sisi itu di panel "Ukur Sisi", bukan lagi prompt() bawaan
+  // browser. prompt() di iOS menutupi kanvas, tampilannya lepas dari panel lain yang sudah
+  // dirapikan, dan jalur penggantinya memang sudah ada sejak 27 Ags (dropdown F1..Fn).
+  // Satu tujuan, dua jalan masuk: lewat dropdown panel, atau tap garisnya langsung.
   typeSide(i) {
-    const n = this.S.verts.length, a = this.S.verts[i], b = this.S.verts[(i + 1) % n];
-    const val = prompt(`Panjang sisi F${i + 1} (cm):`, Math.round(dist(a, b) * 10) / 10);
-    if (val != null) this.setSideLength(i, val);
+    this.selSisi = i;
+    // Panel Rangka bisa sedang terlipat (auto-lipat setelah Reset/+Sudut/+Kotak). Klik tab-nya
+    // HANYA kalau belum aktif — tab yang sama kalau diklik ulang justru menutup (toggle).
+    const tab = this._q('.de-ribbon-tab[data-tab=rangka]');
+    if (tab && !tab.classList.contains('on')) tab.click();
+    this.renderSides(DenahConv.buildMembers(this.S));
+    const inp = this._q(`[data-role=sisiInput][data-i="${i}"]`);
+    if (!inp) return;
+    // setTimeout: beri waktu panel selesai membuka (transition max-height) sebelum posisinya diukur.
+    setTimeout(() => {
+      const strip = inp.closest('.de-ribbon-strip');
+      if (strip) strip.scrollTop += inp.getBoundingClientRect().top - strip.getBoundingClientRect().top - 8;
+      inp.focus();
+    }, 180);
   }
   // Panel input sisi (mudah di HP — tak perlu tap garis). Dropdown pilih sisi (F1..Fn) ->
   // kotak ketik angka muncul utk sisi terpilih; checklist "Tampilkan semua" di sampingnya
@@ -1708,7 +1723,15 @@ body,.page-content{overscroll-behavior-y:contain}
       this.sisiShowAll = e.target.checked;
       this.renderSides(mem);
     };
-    panel.querySelectorAll('[data-role=sisiInput]').forEach(inp => inp.onchange = e => this.setSideLength(+inp.dataset.i, e.target.value));
+    panel.querySelectorAll('[data-role=sisiInput]').forEach(inp => {
+      inp.onchange = e => this.setSideLength(+inp.dataset.i, e.target.value);
+      // Fokus = kosongkan, biar di HP langsung ketik angka baru tanpa hapus manual dulu.
+      // JANGAN pakai select(): di iOS Safari itu memunculkan menu sistem Potong/Salin/Tempel
+      // yang menutupi & merebut sentuhan (pelajaran combobox besi 27 Ags).
+      let lama = inp.value;
+      inp.onfocus = () => { lama = inp.value; inp.value = ''; };
+      inp.onblur = () => { if (inp.value.trim() === '') inp.value = lama; };
+    });
   }
 
   // Panel daftar tiang numerik (Task 2) — jalur input angka X/Y selain drag/tekan-tahan di kanvas.
