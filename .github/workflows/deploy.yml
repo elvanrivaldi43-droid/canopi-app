@@ -16,7 +16,64 @@ jobs:
       - name: Checkout kode
         uses: actions/checkout@v4
 
-      - name: Upload ke server
+      # Upload FTP ke Niagahoster suka putus di tengah tanpa sebab dari sisi kita
+      # (28 Ags 2026 gagal 2x dalam sehari, guardrail hijau dua-duanya, keduanya
+      # pulih hanya dengan diulang). Karena itu percobaan diulang sampai 3x.
+      #
+      # Kenapa ditulis 3 blok yang mirip, bukan loop: GitHub Actions tidak punya
+      # retry bawaan untuk step `uses:`, dan YAML anchor tidak didukung di sini.
+      # Menambah action pihak ketiga cuma demi ini tidak sepadan.
+      #
+      # Aman diulang: FTP-Deploy-Action menyimpan state sinkron di server, jadi
+      # percobaan berikutnya melanjutkan, bukan mengacak file.
+      - name: Upload ke server (percobaan 1)
+        id: up1
+        continue-on-error: true
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          local-dir: ./
+          server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/vendor/**
+            **/storage/**
+            **/.env
+            **/.github/**
+
+      - name: Upload ke server (percobaan 2)
+        id: up2
+        if: steps.up1.outcome == 'failure'
+        continue-on-error: true
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          local-dir: ./
+          server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/vendor/**
+            **/storage/**
+            **/.env
+            **/.github/**
+
+      # Percobaan terakhir: TANPA continue-on-error, jadi kalau ini pun gagal
+      # deploy tetap MERAH. Jangan pernah dibuat hijau-palsu — "hijau tapi file
+      # tak naik" adalah kegagalan diam yang paling mahal di project ini.
+      - name: Upload ke server (percobaan 3, terakhir)
+        if: steps.up1.outcome == 'failure' && steps.up2.outcome == 'failure'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}

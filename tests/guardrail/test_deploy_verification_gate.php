@@ -34,7 +34,11 @@ if ($runtimePosisi === false) {
 }
 
 $runtimeLama = substr($deploy, $runtimePosisi);
-$expectedRuntimeHash = 'a11c7864f04f4bc1e6c3475f211aa051f24bef5f4e9ababa5076e941f55ffde2';
+// Diperbarui 28 Ags 2026: upload FTP kini diulang sampai 3x (Niagahoster suka
+// memutus koneksi di tengah -- 2 kegagalan dalam sehari, guardrail hijau keduanya).
+// Hash tetap dikunci supaya blok ini tak bisa diubah diam-diam; kalau memang perlu
+// diubah lagi, ubah SADAR berikut hash-nya.
+$expectedRuntimeHash = '448cbb644e01bbbf96f2946f23ebc1d69d65cc745b742d55fcd2fd55281530ef';
 dgPastikan(
     hash('sha256', $runtimeLama) === $expectedRuntimeHash,
     'blok FTP/cache lama berubah; Task 5 hanya boleh menambah verification dependency'
@@ -56,7 +60,17 @@ dgPastikan(
     'job deploy belum dikunci dengan needs: verify'
 );
 
-dgPastikan(substr_count($deploy, 'SamKirkland/FTP-Deploy-Action@v4.3.5') === 1, 'FTP action lama wajib tetap tepat satu');
+dgPastikan(substr_count($deploy, 'SamKirkland/FTP-Deploy-Action@v4.3.5') === 3, 'FTP action wajib tepat 3 (percobaan 1-3), versi sama semua');
+dgPastikan(substr_count($deploy, 'uses: SamKirkland/FTP-Deploy-Action@') === 3, 'tak boleh ada FTP action versi lain menyelinap');
+
+// Retry TIDAK BOLEH jadi hijau-palsu: hanya 2 percobaan pertama yang boleh dimaafkan,
+// percobaan terakhir wajib membuat deploy MERAH kalau gagal. "Hijau tapi file tak naik"
+// adalah kegagalan diam yang paling mahal di project ini.
+dgPastikan(substr_count($deploy, 'continue-on-error: true') === 2, 'continue-on-error wajib tepat 2 -- percobaan terakhir harus bisa memerahkan deploy');
+dgPastikan(
+    preg_match('/percobaan 3, terakhir\)\s*\n        if: [^\n]+\n        uses: SamKirkland/', $deploy) === 1,
+    'percobaan terakhir tak boleh punya continue-on-error'
+);
 dgPastikan(str_contains($deploy, 'server: ${{ secrets.FTP_SERVER }}'), 'FTP server secret lama hilang');
 dgPastikan(str_contains($deploy, 'username: ${{ secrets.FTP_USERNAME }}'), 'FTP username secret lama hilang');
 dgPastikan(str_contains($deploy, 'password: ${{ secrets.FTP_PASSWORD }}'), 'FTP password secret lama hilang');
