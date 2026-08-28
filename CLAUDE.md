@@ -149,19 +149,31 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 6. SWE (Smart Work Engine) — diloncat maju atas keputusan Bos (16 Agustus), kalibrasi RAB (#1) menyusul belakangan. **Fase 1 (Fondasi Tahap Produksi) LIVE. Fase 2 (Skill Karyawan + Rekomendasi PIC) LIVE per 21 Agustus 2026, belum ditest langsung di web — lihat Utang aktif #7.** Sisa: Fase 3 (kapasitas tim), Fase 4 (evaluasi produktivitas) — lihat `docs/superpowers/specs/2026-08-16-swe-smart-work-engine-design.md`
 7. Multi-produk (pagar/tralis) — setelah kanopi matang+kalibrasi tuntas
 
-**SEDANG DIKERJAKAN (lompat urutan, diputuskan Elvan 27 Ags 2026):**
-- **Antrean polesan DenahEditor pasca-kalibrasi** (hasil audit menyeluruh 27 Ags 2026, urut nilai;
-  auditnya bersih — tak ada bug baru, hampir semua fitur terpakai). **Sengaja dikerjakan
-  SEBELUM kalibrasi (#1) tuntas** — item ini UI/polish saja, tidak menyentuh angka kalibrasi RAB;
-  kalibrasi tetap prioritas #1 dan masih berjalan paralel:
-  1. Gambar denah ikut ke penawaran cetak (`penawaran/show.blade.php` nol jejak denah — padahal
-     SVG-nya tinggal dirender baca-saja; cocok digandeng Portal Customer roadmap #5).
-  2. Legend editor hitung batang 6m untuk SEMUA material, bukan cuma WF (`hitungBatangWF` tinggal
-     dibuka filter materialnya) — surveyor bisa sanity-check kebutuhan batang saat menggambar.
-  3. Backlog gestur sudut/sisi frame ikut pola drag=pindah/tahan=menu + sekalian ganti `prompt()`
-     ketik-sisi jadi UI sendiri.
-  4. Bersih-bersih: field model mati `target`/`autoKotak` di `defaultModel()`, blok tipe KANOPI
-     lama di wizard (kompat mundur — pensiunkan hanya kalau RAB lama sudah tak relevan).
+**ANTREAN POLESAN DenahEditor — TUNTAS 28 Ags 2026** (audit 27 Ags; dikerjakan
+sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
+  1. ~~Gambar denah ke penawaran cetak~~ **SELESAI & LIVE** — detail di Utang aktif #0.
+  2. ~~Legend hitung batang semua material~~ **SELESAI & LIVE.** Tidak jadi "buka filter
+     `hitungBatangWF`": rumus itu (total ÷ 600) salah 3 hal — abai sisa potongan terbuang,
+     abai batas 1 sambungan per potong, dan mengasumsikan batang selalu 6m padahal
+     `master_material.panjang_batang_cm` bisa lain. Uji 6000 kombinasi ukuran wajar: rumus
+     kasar TAK PERNAH lebih besar dari kebutuhan nyata → selisihnya SELALU ke arah kurang
+     beli (~8% kasus; contoh 460+449+540+298 = 4 batang, kasar bilang 3). Sekarang angkanya
+     dari server: endpoint tipis `POST /rab-blok/cutting` → `RangkaDesignService` (mesin yang
+     SAMA dengan harga, jadi angka editor & step Harga tak akan beda). Editor memanggil 1,5
+     dtk setelah gambar berhenti berubah, melewati panggilan kalau susunan batang sama, dan
+     MEMBUANG jawaban yang datang untuk gambar yang sudah berubah. `hitungBatangWF` DIHAPUS
+     (kode mati + rumus menyesatkan). Test `tests/rangka/test_cutting_denah.php`.
+  3. (a) ~~`prompt()` ketik-sisi~~ **SELESAI & LIVE** — tap garis frame kini memilih sisi itu
+     di panel "Ukur Sisi" lalu fokus ke kotak angkanya (panel dibuka kalau terlipat; fokus =
+     kosongkan, blur balikin nilai lama; JANGAN `select()` — memicu menu sistem iOS).
+     (b) gestur sudut ala Tiang (geser=pindah, tahan=menu) **SENGAJA TIDAK DIKERJAKAN**
+     (keputusan Elvan 28 Ags): area gestur kanvas baru stabil setelah beberapa kali
+     perbaikan, risiko regresi > manfaat, dan isi menunya sendiri belum jelas.
+  4. (a) ~~field model mati `target`/`autoKotak`~~ **DIHAPUS** (diverifikasi tak pernah dibaca;
+     model lama boleh tetap membawanya, diabaikan). (b) blok tipe KANOPI lama di wizard
+     **MASIH MENUNGGU keputusan Elvan** — kompat mundur, pensiunkan hanya kalau RAB lama
+     sudah tak relevan.
+  **Belum satu pun divalidasi Bos di HP** (kecuali yang disebut di Utang #0).
 
 **Ditunda/belum diputuskan:**
 - **Blok "× N unit" untuk order volume/massal** (disetujui Elvan 27 Ags 2026, dikerjakan SETELAH kalibrasi) — kasus: 60 kanopi = 2-3 tipe unik × jumlah, bukan 60 blok. Gambar denah 1x, besi/upah/durasi dikali N (nginap otomatis ikut benar karena baca durasi total). PR bisnis yang harus diputuskan saat bangun: efisiensi produksi massal (per-unit lebih cepat dari satuan) supaya tak kalah harga di project volume — jangan cuma "harga satuan × N"
@@ -523,6 +535,13 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
    "H"/"V" (title=tooltik nama lengkap), `.de-sup-axname` min-width
    diperkecil drastis -- baris Mode+Kotak(cm) kini muat 1 baris di HP.
    Diverifikasi node --check + 13 test .mjs rangka + canopi-check --full.
+2b. **Deploy FTP flaky makin sering** — 28 Ags GAGAL 2x dalam sehari (run 33097366635
+   & 33156528739), keduanya guardrail HIJAU, yang putus cuma langkah "Upload ke
+   server"; keduanya pulih dengan commit kosong. Cara cek yang benar: bandingkan
+   file live vs lokal (`curl` + `diff`) — JANGAN percaya Actions hijau saja, pernah
+   hijau tapi file tak naik. Belum dikerjakan (butuh persetujuan Elvan): retry
+   otomatis di `deploy.yml`, atau notifikasi Telegram saat deploy merah supaya tak
+   ketahuan dari "kok belum berubah".
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
