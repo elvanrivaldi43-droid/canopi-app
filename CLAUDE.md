@@ -170,9 +170,16 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
      (keputusan Elvan 28 Ags): area gestur kanvas baru stabil setelah beberapa kali
      perbaikan, risiko regresi > manfaat, dan isi menunya sendiri belum jelas.
   4. (a) ~~field model mati `target`/`autoKotak`~~ **DIHAPUS** (diverifikasi tak pernah dibaca;
-     model lama boleh tetap membawanya, diabaikan). (b) blok tipe KANOPI lama di wizard
-     **MASIH MENUNGGU keputusan Elvan** — kompat mundur, pensiunkan hanya kalau RAB lama
-     sudah tak relevan.
+     model lama boleh tetap membawanya, diabaikan). (b) ~~blok tipe KANOPI di wizard~~
+     **DIPENSIUNKAN 28 Ags** atas keputusan Elvan (-120 baris). **Lingkup sengaja terbatas:**
+     mesin `CuttingService::hitungRangka` TIDAK dihapus — masih dipakai untuk bentuk awal blok
+     Denah (`RangkaDesignService`) dan halaman cutting list (`CuttingController::hitung/cetak`);
+     `'kanopi'` di `PipelineLead`/`ProduktivitasController` juga tak disentuh (itu jenis PRODUK,
+     konteks lain). Data lama tak dihilangkan diam-diam: kartunya jadi penanda kuning "Blok
+     format lama", server membalas peringatan (bukan Rp0 senyap), validasi wizard memblokir
+     lanjut, dan `buildPenawaran` MELEWATI blok itu (kalau diikutkan, dokumen customer cuma
+     menampilkan "0 x 0 cm"). **Perlu dicek Bos:** lead lama ber-blok kanopi (mis. dina)
+     menampilkan penanda kuning, bukan error/kartu kosong.
   **Belum satu pun divalidasi Bos di HP** (kecuali yang disebut di Utang #0).
 
 **Ditunda/belum diputuskan:**
@@ -535,13 +542,16 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    "H"/"V" (title=tooltik nama lengkap), `.de-sup-axname` min-width
    diperkecil drastis -- baris Mode+Kotak(cm) kini muat 1 baris di HP.
    Diverifikasi node --check + 13 test .mjs rangka + canopi-check --full.
-2b. **Deploy FTP flaky makin sering** — 28 Ags GAGAL 2x dalam sehari (run 33097366635
-   & 33156528739), keduanya guardrail HIJAU, yang putus cuma langkah "Upload ke
-   server"; keduanya pulih dengan commit kosong. Cara cek yang benar: bandingkan
-   file live vs lokal (`curl` + `diff`) — JANGAN percaya Actions hijau saja, pernah
-   hijau tapi file tak naik. Belum dikerjakan (butuh persetujuan Elvan): retry
-   otomatis di `deploy.yml`, atau notifikasi Telegram saat deploy merah supaya tak
-   ketahuan dari "kok belum berubah".
+2b. ~~Deploy FTP flaky~~ **DIPERBAIKI 28 Ags** — upload kini diulang otomatis sampai
+   3x di `deploy.yml` (28 Ags gagal 2x dalam sehari, run 33097366635 & 33156528739,
+   guardrail HIJAU keduanya, pulih hanya dengan diulang). Percobaan ke-3 SENGAJA tanpa
+   `continue-on-error`: kalau itu pun gagal, deploy tetap MERAH — jangan pernah dibuat
+   hijau-palsu. `tests/guardrail/test_deploy_verification_gate.php` mengunci: FTP action
+   tepat 3 & versi sama, `continue-on-error` tepat 2, percobaan terakhir diperiksa tak
+   punya `continue-on-error`. Terbukti jalan di run pertama (percobaan 1 sukses, 2-3
+   dilewati). **Cara cek deploy yang benar tetap: bandingkan file live vs lokal
+   (`curl` + `diff`)** — JANGAN percaya Actions hijau saja, pernah hijau tapi file tak
+   naik. Notifikasi Telegram saat deploy merah: belum, Elvan pilih retry saja.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
