@@ -24,10 +24,10 @@
   .seg.sisa { background:#e5e7eb; color:#666; }
   ul.potong { margin:5px 0 0; padding-left:18px; }
   ul.potong li { font-size:11px; margin-bottom:1px; }
-  .dot { display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:3px; }
-  .sambox { margin-top:6px; border-top:1px solid #ddd; padding-top:5px; }
-  .sambox .t { font-size:11px; color:#555; margin-bottom:3px; font-weight:bold; }
-  .sambox div { font-size:11px; padding:1px 0; }
+  table.bg-tab { width:100%; border-collapse:collapse; margin-bottom:10px; }
+  table.bg-tab th, table.bg-tab td { border:1px solid #ccc; padding:5px 8px; text-align:left; font-size:11px; vertical-align:top; }
+  table.bg-tab th { background:#1f2937; color:#fff; }
+  .tanda-las { background:#fbbf24; color:#111; font-weight:bold; font-size:10px; border-radius:4px; padding:1px 6px; margin:0 4px; white-space:nowrap; }
   .legend { font-size:10px; color:#555; margin-top:4px; }
   .legend i { display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:middle;margin-right:3px; }
   .warnbox { background:#fef3c7; border:1px solid #f59e0b; color:#92400e; border-radius:6px; padding:8px 12px; font-size:11px; margin-bottom:14px; }
@@ -42,7 +42,7 @@
   </div>
 
   <h1>{{ $judul }}</h1>
-  <div class="meta">Dicetak: {{ $tanggal }} &nbsp;&bull;&nbsp; Dokumen produksi &mdash; tanpa harga. Potongan lebih panjang dari 1 batang disambung berurutan (satu huruf sambungan = satu batang jadi).</div>
+  <div class="meta">Dicetak: {{ $tanggal }} &nbsp;&bull;&nbsp; Dokumen produksi &mdash; tanpa harga. Urutan pakai: (1) tabel <b>Bagian</b> = apa yang mau dibuat &amp; caranya, (2) daftar <b>Batang</b> = potong batang mana saja. Kuning = perlu dilas; huruf sama = dilas jadi satu batang.</div>
 
   @if(!empty($peringatan))
     <div class="warnbox">&#9888; {{ $peringatan }}</div>
@@ -57,18 +57,53 @@
         <div class="denah-img"><img src="data:image/svg+xml;base64,{{ base64_encode($bd['denah_svg']) }}" alt="Denah {{ $bd['blok'] }}"></div>
       @endif
 
-      @php
-        $jcol = fn($jid) => ['#f59e0b','#22c55e','#38bdf8','#f472b6','#c084fc','#fb7185','#2dd4bf','#facc15'][($jid-1) % 8];
-        $jlet = fn($jid) => chr(64 + (($jid - 1) % 26) + 1);
-      @endphp
       @foreach($bd['hasil']['per_material'] as $m)
         @php
-          $joinBars = [];
-          foreach ($m['bars'] as $bar) foreach ($bar['seg'] as $s)
-            if (($s['jenis'] ?? '') === 'sambung') $joinBars[$s['jid']][] = ['bar' => $bar['no'], 'len' => $s['len'], 'label' => $s['label']];
+          // ── Olah data utk tampilan (murni presentasi; mesin tak disentuh) ──
+          // 1) rangkaian sambungan: jid => daftar keping (bar, len) + huruf A/B/C
+          // 2) ringkasan per BAGIAN (F2, S3, B1...): semua potongannya di batang mana
+          $chains = [];   // jid => ['label'=>..,'parts'=>[['bar'=>..,'len'=>..]]]
+          $bagian = [];   // label => ['utuh'=>[['bar','len']], 'jids'=>[jid,..]]
+          foreach ($m['bars'] as $bar) foreach ($bar['seg'] as $s) {
+            $lab = $s['label'] !== '' ? $s['label'] : '—';
+            if (($s['jenis'] ?? '') === 'sambung') {
+              $chains[$s['jid']]['label'] = $lab;
+              $chains[$s['jid']]['parts'][] = ['bar' => $bar['no'], 'len' => $s['len']];
+              if (!in_array($s['jid'], $bagian[$lab]['jids'] ?? [], true)) $bagian[$lab]['jids'][] = $s['jid'];
+            } else {
+              $bagian[$lab]['utuh'][] = ['bar' => $bar['no'], 'len' => $s['len']];
+            }
+          }
+          // huruf urut A,B,C sesuai urutan muncul (bukan nomor jid mentah yang bisa lompat)
+          $huruf = []; $n = 0;
+          foreach ($chains as $jid => $c) $huruf[$jid] = chr(65 + ($n++ % 26));
+          $ket = function ($info) use ($chains, $huruf) {
+            $t = [];
+            foreach ($info['utuh'] ?? [] as $u) $t[] = "potong utuh {$u['len']} cm (Batang #{$u['bar']})";
+            foreach ($info['jids'] ?? [] as $jid) {
+              $c = $chains[$jid];
+              $tot = array_sum(array_column($c['parts'], 'len'));
+              $ps = implode(' + ', array_map(fn ($x) => "{$x['len']} cm (Batang #{$x['bar']})", $c['parts']));
+              $t[] = "LAS \"{$huruf[$jid]}\" jadi satu ({$tot} cm): {$ps}";
+            }
+            return $t;
+          };
         @endphp
         <div class="mat">
-          <h3>{{ $m['material'] }} &mdash; {{ $m['jumlah_batang'] }} batang @if($m['sambungan']) &middot; {{ $m['sambungan'] }} sambungan @endif</h3>
+          <h3>{{ $m['material'] }} &mdash; beli {{ $m['jumlah_batang'] }} batang @if($m['sambungan']) &middot; {{ $m['sambungan'] }} titik las @endif</h3>
+
+          {{-- LANGKAH 2 dulu di atas: tabel per BAGIAN — tukang yang mau bikin "F2"
+               cukup baca satu baris, tak perlu memindai semua batang. --}}
+          <table class="bg-tab">
+            <tr><th>Bagian</th><th>Cara membuat</th></tr>
+            @foreach($bagian as $lab => $info)
+              <tr><td><b>{{ $lab }}</b></td><td>{!! implode('<br>', array_map('e', $ket($info))) !!}</td></tr>
+            @endforeach
+          </table>
+
+          {{-- LANGKAH 1: potong per batang. 3 warna saja — biru=utuh, kuning=perlu las
+               (huruf sama = dilas jadi satu), abu=sisa. Pasangan tiap keping ditulis
+               LANGSUNG di barisnya, tidak perlu cari ke batang lain. --}}
           @foreach($m['bars'] as $bar)
             @php $stockBar = $bar['sisa'] + array_sum(array_column($bar['seg'], 'len')); @endphp
             <div class="batang">
@@ -76,37 +111,37 @@
               <div class="bar">
                 @foreach($bar['seg'] as $s)
                   @if(($s['jenis'] ?? '')==='sambung')
-                    <div class="seg" style="width:{{ number_format($s['len']/$stockBar*100,2) }}%;background:{{ $jcol($s['jid']) }}">{{ $s['len'] }} {{ $s['label'] }}&middot;{{ $jlet($s['jid']) }}</div>
+                    <div class="seg" style="width:{{ number_format($s['len']/$stockBar*100,2) }}%;background:#fbbf24">{{ $s['label'] }}&nbsp;<b>{{ $huruf[$s['jid']] }}</b>&nbsp;{{ $s['len'] }}</div>
                   @else
-                    <div class="seg" style="width:{{ number_format($s['len']/$stockBar*100,2) }}%;background:#93c5fd">{{ $s['len'] }} {{ $s['label'] }}</div>
+                    <div class="seg" style="width:{{ number_format($s['len']/$stockBar*100,2) }}%;background:#93c5fd">{{ $s['label'] }} {{ $s['len'] }}</div>
                   @endif
                 @endforeach
                 @if($bar['sisa']>0)<div class="seg sisa" style="width:{{ number_format($bar['sisa']/$stockBar*100,2) }}%">sisa {{ $bar['sisa'] }}</div>@endif
               </div>
               <ul class="potong">
                 @foreach($bar['seg'] as $s)
-                  <li>potong <b>{{ $s['len'] }} cm</b> &mdash; {{ $s['label'] }}
-                    @if(($s['jenis'] ?? '')==='sambung')
-                      <span class="dot" style="background:{{ $jcol($s['jid']) }}"></span><b style="color:{{ $jcol($s['jid']) }}">sambungan {{ $jlet($s['jid']) }}</b>
-                    @endif
-                  </li>
+                  @if(($s['jenis'] ?? '')==='sambung')
+                    @php
+                      $c = $chains[$s['jid']]; $tot = array_sum(array_column($c['parts'], 'len'));
+                      // buang HANYA SATU keping (keping ini sendiri) -- filter biasa akan
+                      // membuang kembarannya juga kalau ada 2 keping sama panjang di 1 batang
+                      $lain = $c['parts']; foreach ($lain as $i => $x) { if ($x['bar'] === $bar['no'] && $x['len'] === $s['len']) { unset($lain[$i]); break; } } $lain = array_values($lain);
+                      $lainTxt = implode(' + ', array_map(fn ($x) => "{$x['len']} cm di Batang #{$x['bar']}", $lain));
+                    @endphp
+                    <li>potong <b>{{ $s['len'] }} cm</b> &mdash; {{ $s['label'] }}
+                      <span class="tanda-las">LAS "{{ $huruf[$s['jid']] }}"</span>
+                      <span style="color:#92400e">pasangannya: {{ $lainTxt }} (jadi {{ $tot }} cm)</span>
+                    </li>
+                  @else
+                    <li>potong <b>{{ $s['len'] }} cm</b> &mdash; {{ $s['label'] }}</li>
+                  @endif
                 @endforeach
                 @if($bar['sisa']>0)<li style="color:#666">sisa {{ $bar['sisa'] }} cm</li>@endif
               </ul>
             </div>
           @endforeach
 
-          @if(count($joinBars))
-            <div class="sambox">
-              <div class="t">Daftar Sambungan (las):</div>
-              @foreach($joinBars as $jid => $parts)
-                @php $txt = implode(' + ', array_map(fn($p) => $p['len'].'cm (Batang #'.$p['bar'].')', $parts)); @endphp
-                <div><span class="dot" style="background:{{ $jcol($jid) }}"></span><b>Sambungan {{ $jlet($jid) }}</b> &mdash; {{ $parts[0]['label'] }}: las {{ $txt }}</div>
-              @endforeach
-            </div>
-          @endif
-
-          <div class="legend"><i style="background:#93c5fd"></i>potong utuh &nbsp; <i style="background:#f59e0b"></i>perlu sambung (huruf = pasangannya) &nbsp; <i style="background:#e5e7eb"></i>sisa</div>
+          <div class="legend"><i style="background:#93c5fd"></i>potong utuh &nbsp; <i style="background:#fbbf24"></i>perlu dilas &mdash; huruf sama = dilas jadi satu &nbsp; <i style="background:#e5e7eb"></i>sisa</div>
         </div>
       @endforeach
     </div>
