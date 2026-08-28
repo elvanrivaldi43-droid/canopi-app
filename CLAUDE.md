@@ -178,8 +178,8 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
      konteks lain). Data lama tak dihilangkan diam-diam: kartunya jadi penanda kuning "Blok
      format lama", server membalas peringatan (bukan Rp0 senyap), validasi wizard memblokir
      lanjut, dan `buildPenawaran` MELEWATI blok itu (kalau diikutkan, dokumen customer cuma
-     menampilkan "0 x 0 cm"). **Perlu dicek Bos:** lead lama ber-blok kanopi (mis. dina)
-     menampilkan penanda kuning, bukan error/kartu kosong.
+     menampilkan "0 x 0 cm"). **TERVALIDASI Bos 28 Ags:** lead dina menampilkan peringatan
+     dengan benar, blok lamanya sudah dihapus Bos sendiri.
   **Belum satu pun divalidasi Bos di HP** (kecuali yang disebut di Utang #0).
 
 **Ditunda/belum diputuskan:**
