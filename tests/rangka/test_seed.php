@@ -28,16 +28,13 @@ $check('denah diteruskan', isset($seed['denah']['v']), true);
 // Hitung hasil seed -> angka yang SUDAH DIVERIFIKASI live (14 Juli):
 // frame 5x10 = 8 batang / 6 sambungan; support 4x8 = 20 batang; tiang = 1.
 //
-// SAMBUNGAN support 4x8 diubah 16 -> 17 pada 28 Ags 2026. Angka 16 lama BUKAN
-// bukti algoritma optimal, melainkan akibat bug: satu potongan panjang yang
-// terpecah ke beberapa rangkaian membuat hitungan sambungan MENGECIL (under-count).
-// Dibuktikan independen: 16 potongan 4x8 semuanya > 600cm, jadi minimum fisik = 16
-// sambungan; daftar potong yang benar-benar dihasilkan memakai 17 (satu potongan
-// terpecah 3 keping padahal cukup 2). Jadi mesin memang MEMBUAT 17, dulu cuma
-// melaporkannya 16. Sekarang laporannya jujur.
-// Jumlah BATANG tidak berubah (harga tidak bergeser) -- diverifikasi 1008 kombinasi
-// ukuran kanopi: identik sebelum vs sesudah perbaikan.
-// PELUANG PERBAIKAN (belum dikerjakan): 17 masih 1 lebih banyak dari optimum 16.
+// RIWAYAT SAMBUNGAN support 4x8: 16 (lapor salah, under-count krn bug rangkaian
+// terpecah, fix 28 Ags) -> 17 (laporan jujur atas susunan yang memang boros 1 las)
+// -> 16 LAGI pada 30 Ags, kali ini SUNGGUHAN OPTIMAL: mesin dual-varian
+// (boleh-belah vs tanpa-belah, prioritas batang->las->sisa) memilih susunan
+// tanpa belahan sia-sia. 16 = minimum fisik (16 potongan semuanya > 600cm,
+// dibuktikan independen 28 Ags). Batang tetap 20 -- diverifikasi 1008 kombinasi
+// ukuran: nol kombinasi batangnya berubah, 144 kombinasi las-nya berkurang.
 $r = $svc->hitung($seed['members']);
 $get = function ($r, $mat) {
     foreach ($r['per_material'] as $x) if ($x['material'] === $mat) return $x;
@@ -46,7 +43,7 @@ $get = function ($r, $mat) {
 $check('frame 5x10 = 8 batang', $get($r, '5x10')['jumlah_batang'], 8);
 $check('frame 5x10 = 6 sambungan', $get($r, '5x10')['sambungan'], 6);
 $check('support 4x8 = 20 batang', $get($r, '4x8')['jumlah_batang'], 20);
-$check('support 4x8 = 17 sambungan (optimum teoretis 16, lihat catatan)', $get($r, '4x8')['sambungan'], 17);
+$check('support 4x8 = 16 sambungan (= optimum fisik, lihat catatan)', $get($r, '4x8')['sambungan'], 16);
 $check('tiang WF150 = 1 batang', $get($r, 'WF150')['jumlah_batang'], 1);
 
 echo $fail ? "\n=== ADA FAIL ===\n" : "\n=== SEMUA PASS ===\n";

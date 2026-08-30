@@ -23,6 +23,40 @@ class CuttingService
     public function potong(array $pieces, ?float $stock = null): array
     {
         $stock = $stock ?? self::STOCK;
+        // Dua varian dijalankan, pemenang dipilih sesuai prioritas Elvan (30 Ags):
+        // (1) batang paling sedikit, (2) las paling sedikit, (3) sisa terkumpul di
+        // potongan panjang. Latar: aturan lama "kalau dua sisa digabung muat, belah
+        // saja" tak pernah mengecek apakah belahan itu MENGHEMAT batang — kasus
+        // nyata dari Elvan (400+300+400+300): keluar 3 batang + 1 las padahal
+        // 3 batang + 0 las mungkin (300+300 sekandang). Varian tanpa-belah menutup
+        // itu; varian boleh-belah tetap menang saat belahan sungguh menghemat
+        // (mis. 500+500+200 → 2 batang + 1 las vs 3 batang + 0 las).
+        $a = $this->potongVarian($pieces, $stock, true);
+        $b = $this->potongVarian($pieces, $stock, false);
+        return $this->lebihBaik($a, $b) ? $a : $b;
+    }
+
+    /** true kalau $a menang atas $b sesuai prioritas batang → las → sisa panjang. */
+    private function lebihBaik(array $a, array $b): bool
+    {
+        if (count($a) !== count($b)) return count($a) < count($b);
+        $las = function (array $bars): int {
+            $c = [];
+            foreach ($bars as $bar) foreach ($bar['seg'] as $s)
+                if (($s['jenis'] ?? '') === 'sambung') $c[$s['jid']] = ($c[$s['jid']] ?? 0) + 1;
+            $n = 0;
+            foreach ($c as $x) $n += max(0, $x - 1);
+            return $n;
+        };
+        if ($las($a) !== $las($b)) return $las($a) < $las($b);
+        // Sisa: lebih baik terkumpul panjang (sisa 300 lebih berguna dari 2×150).
+        $sa = array_column($a, 'sisa'); rsort($sa);
+        $sb = array_column($b, 'sisa'); rsort($sb);
+        return $sa >= $sb;
+    }
+
+    private function potongVarian(array $pieces, float $stock, bool $bolehBelah): array
+    {
         $jid = 0;
 
         // Pra-proses: potongan yang lebih panjang dari 1 batang (STOCK) tidak mungkin
@@ -75,7 +109,7 @@ class CuttingService
             foreach ($bars as $i => $b) if ($b['sisa'] > 0) $idx[] = $i;
             usort($idx, fn($a, $c) => $bars[$c]['sisa'] <=> $bars[$a]['sisa']);
 
-            if (count($idx) >= 2 && ($bars[$idx[0]]['sisa'] + $bars[$idx[1]]['sisa']) >= $len) {
+            if ($bolehBelah && count($idx) >= 2 && ($bars[$idx[0]]['sisa'] + $bars[$idx[1]]['sisa']) >= $len) {
                 // Segmen yang SUDAH bagian rangkaian sambungan (hasil pra-proses potongan
                 // > 1 batang) harus tetap memakai nomor rangkaian ASALNYA. Dulu selalu
                 // bikin nomor baru -> satu batang panjang tampil sebagai BEBERAPA rangkaian
