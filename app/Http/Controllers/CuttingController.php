@@ -41,9 +41,13 @@ class CuttingController extends Controller
         // cuma butuh NAMA besi (harga tidak dikirim ke halaman ini).
         $besi = collect();
         try {
-            $besi = DB::table('master_material')
-                ->where('kategori', 'rangka_besi')->where('aktif', 1)
-                ->orderBy('nama')->get(['id', 'nama']);
+            $besi = \App\Models\MasterMaterial::where('kategori', 'rangka_besi')->where('aktif', 1)
+                ->orderBy('nama')->get()
+                ->map(function ($m) {
+                    $p = $m->profilCm();
+                    return ['id' => $m->id, 'nama' => $m->nama,
+                            'lebar' => $p[0] ?? null, 'tinggi' => $p[1] ?? null];
+                })->values();
         } catch (\Throwable $e) { $besi = collect(); }
 
         // Pemilih lead utk cutting list dari denah RAB tersimpan. LIKE murah krn cuma

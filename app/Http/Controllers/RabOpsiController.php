@@ -14,9 +14,13 @@ class RabOpsiController extends Controller
 
         $besi = collect();
         try {
-            $besi = DB::table('master_material')
-                ->where('kategori', 'rangka_besi')->where('aktif', 1)
-                ->orderBy('nama')->get(['id', 'nama', 'harga_pokok']);
+            $besi = \App\Models\MasterMaterial::where('kategori', 'rangka_besi')->where('aktif', 1)
+                ->orderBy('nama')->get()
+                ->map(function ($m) {
+                    $p = $m->profilCm();
+                    return ['id' => $m->id, 'nama' => $m->nama, 'harga_pokok' => $m->harga_pokok,
+                            'lebar' => $p[0] ?? null, 'tinggi' => $p[1] ?? null];
+                })->values();
         } catch (\Throwable $e) {}
 
         $besiSemua = collect();

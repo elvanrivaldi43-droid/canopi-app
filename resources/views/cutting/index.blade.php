@@ -67,7 +67,7 @@ let ED = null;
 document.addEventListener('DOMContentLoaded', function(){
     // Harga sengaja 0 semua: halaman ini dokumen produksi/kalibrasi, tanpa harga.
     ED = new DenahEditor(document.getElementById('denahMount'), {
-        besi: BESI.map(function(b){ return { nama:b.nama, harga:0 }; }),
+        besi: BESI.map(function(b){ return { nama:b.nama, harga:0, lebar:b.lebar??null, tinggi:b.tinggi??null }; }),
         cuttingUrl: '{{ url("/rab-blok/cutting") }}',   // legend jumlah batang live (mesin yang sama)
         csrf: '{{ csrf_token() }}'
     });
