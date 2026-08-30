@@ -555,6 +555,11 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    dilewati). **Cara cek deploy yang benar tetap: bandingkan file live vs lokal
    (`curl` + `diff`)** — JANGAN percaya Actions hijau saja, pernah hijau tapi file tak
    naik. Notifikasi Telegram saat deploy merah: belum, Elvan pilih retry saja.
+   **Pola baru 30 Ags:** Niagahoster bisa MENOLAK PENULISAN ±30 menit (2 run × 3
+   percobaan gagal semua, situs & koneksi FTP tetap hidup, durasi gagal identik),
+   lalu pulih sendiri — sembuh dengan JEDA 20-30 menit + re-trigger, percobaan
+   pertama langsung sukses. Kalau 3x retry dalam satu run gagal: TUNGGU dulu,
+   jangan langsung curiga kuota disk/kredensial.
 3. `public/cron-kpi.php` masih dead code karena referensi
    `bootstrap/autoload.php` lama; notif KPI bulanan belum nyata sampai diperbaiki
    sebagai task terpisah.
