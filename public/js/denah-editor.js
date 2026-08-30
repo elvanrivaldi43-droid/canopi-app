@@ -208,7 +208,9 @@ const DenahConv = {
     mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { n++; map[m.id] = n; });
     return map;
   },
-  buildMembers(S) {
+  // tapakMap/warnsOut = tambahan "support beririsan" (spec 2026-08-30) dan SELALU opsional:
+  // buildMembers(S) polos wajib berperilaku persis seperti dulu (puluhan pemanggil lama).
+  buildMembers(S, tapakMap = null, warnsOut = null) {
     // K harus > 0: kotak<=0 (mis. input negatif / model tersimpan rusak) bikin loop scanline tak berhenti → freeze tab.
     const mem = [], V = S.verts, bb = bbox(V), K = (S.kotak > 0 ? S.kotak : 100), rem = S.removed || {};
     // frame: tiap sisi poligon
@@ -226,7 +228,9 @@ const DenahConv = {
         if (e.aktif === false) return;
         const id = 'SL' + e.no;
         const mat = (S.matOverride && S.matOverride[id]) || S.matDefault.support;
-        const push = (a, b) => mem.push({ id, nama: 'S', jenis: 'support', panjang: Math.round(dist(a, b)), material: mat, geom: { a, b } });
+        // nama 'S{no}' (bukan 'S' polos seperti dulu): nama ini ikut ke cutting list, dan ruas
+        // hasil pemecahan irisan ('S3·2') harus bisa dilacak balik ke garis di gambar.
+        const push = (a, b) => mem.push({ id, nama: 'S' + e.no, jenis: 'support', panjang: Math.round(dist(a, b)), material: mat, geom: { a, b } });
         if (e.manual) push({ ...e.a }, { ...e.b });
         else if (e.axis === 'h') {
           const xs = scanX(V, e.pos);
@@ -271,7 +275,10 @@ const DenahConv = {
       const mat = (S.matOverride && S.matOverride['B' + b.no]) || b.material;
       mem.push({ id: 'B' + b.no, nama: 'B' + b.no, jenis: 'balok', panjang: Math.round(dist(a, c)), material: mat, geom: { a, b: c } });
     });
-    return mem;
+    // Pemecahan ruas support beririsan dikerjakan sebagai POST-STEP di atas member yang sudah
+    // jadi (butuh balok juga sebagai pemotong) — blok pembangun di atas, terutama FASE
+    // PRATINJAU, sengaja tidak disentuh sama sekali.
+    return DenahConv._pecahIrisan(S, mem, tapakMap, warnsOut);
   },
   luasM2(S) { return Math.round(shoelace(S.verts) / 10000 * 100) / 100; },
   saranKotak(lebar, target) { const n = Math.max(1, Math.round(lebar / target)); return Math.round(lebar / n); },
@@ -454,6 +461,160 @@ const DenahConv = {
       for (let s = 0; s + 1 < ys.length; s += 2) out.push({ a: { x: pos, y: ys[s] }, b: { x: pos, y: ys[s + 1] } });
     }
     return out;
+  },
+  // ---- Support beririsan sebidang (spec 2026-08-30) ----
+  // Kasus lapangan: support melintang (h) & membujur (v) sering dipasang SEBIDANG, bukan
+  // ditumpuk. Satu arah MENERUS (batang utuh lewat di atas/di bawah), arah lain PUTUS
+  // (dipotong jadi ruas-ruas pendek di antara silangan). Mesin lama selalu menganggap
+  // dua-duanya utuh -> kebutuhan besi model sebidang selalu kelebihan. Panjang ruas nyata
+  // BUKAN jarak as-ke-as: tiap ujung dikurangi SETENGAH "tapak" (lebar fisik penampang) besi
+  // yang memotongnya di ujung itu — dan dua ujung ruas yang sama bisa beda tapak (ujung
+  // nempel frame 5x10 vs ujung ketemu support 4x8).
+  // Model lama tak punya field ini sama sekali -> bawaan "semua menerus" -> nol perubahan.
+  supMenerusOf(S) { const d = S.supMenerus || {}; return { h: d.h !== false, v: d.v !== false }; },
+  // Menerus efektif satu entri terkunci: override per-jalur (entry.menerus) menang atas bawaan
+  // global. Batang MIRING (manual tap-2-titik) selalu menerus — "dipotong sebidang" tak punya
+  // arti untuk batang diagonal, dan pengecekan arah dilakukan SEBELUM override supaya
+  // buildMembers & irisanKonflik tak pernah beda pendapat soal batang miring.
+  efektifMenerus(S, e) {
+    const ax = e.manual
+      ? (e.a.y === e.b.y ? 'h' : (e.a.x === e.b.x ? 'v' : null))
+      : e.axis;
+    if (ax !== 'h' && ax !== 'v') return true;
+    if (typeof e.menerus === 'boolean') return e.menerus;
+    return this.supMenerusOf(S)[ax];
+  },
+  // Tapak = sisi penampang besi yang "memakan" panjang batang lain di silangan. Besi BERDIRI
+  // (posisi normal, sisi pendek mendatar) makan sisi kecilnya; besi TIDUR makan sisi besar.
+  // Dimensi belum diketahui (kolom profil master_material masih kosong) -> 0 + peringatan
+  // sekali per material, hitungan jatuh balik ke as-ke-as (kelebihan sedikit, bukan kurang).
+  tapakCm(mat, tapakMap, orientasi, warnsOut, sudahWarn) {
+    const d = tapakMap && tapakMap[mat];
+    if (d && d.l > 0 && d.t > 0) return orientasi === 'tidur' ? Math.max(d.l, d.t) : Math.min(d.l, d.t);
+    if (warnsOut && sudahWarn && !sudahWarn.has(mat)) {
+      sudahWarn.add(mat);
+      warnsOut.push(`tapak besi "${mat}" belum diketahui — ruas dihitung as-ke-as`);
+    }
+    return 0;
+  },
+  // Dua jalur yang sama-sama diset PUTUS tapi saling bersilangan = mustahil dipasang (tak ada
+  // yang jadi batang menerus di titik itu). Di buildMembers pasangan begini sengaja dibiarkan
+  // utuh dua-duanya (jangan diam-diam memilihkan salah satu); daftar pasangan ini dipakai
+  // editor untuk memberi badge peringatan ke user.
+  irisanKonflik(S) {
+    if (!Array.isArray(S.supportsLocked)) return [];
+    const out = [];
+    const list = S.supportsLocked.filter(e => e.aktif !== false && !this.efektifMenerus(S, e));
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const A = list[i], B = list[j];
+      const ah = A.manual ? (A.a.y === A.b.y ? 'h' : 'v') : A.axis;
+      const bh = B.manual ? (B.a.y === B.b.y ? 'h' : 'v') : B.axis;
+      if (ah === bh) continue;                       // sejajar, tak mungkin bersilangan
+      const segs = (e, ax) => (e.manual ? [{ a: e.a, b: e.b }] : this.jalurSegments(S, ax, e.pos));
+      const H = ah === 'h' ? A : B, V = ah === 'h' ? B : A;
+      const hs = segs(H, 'h'), vs = segs(V, 'v');
+      const silang = hs.some(h => vs.some(v =>
+        v.a.x > Math.min(h.a.x, h.b.x) && v.a.x < Math.max(h.a.x, h.b.x) &&
+        h.a.y > Math.min(v.a.y, v.b.y) && h.a.y < Math.max(v.a.y, v.b.y)));
+      if (silang) out.push({ a: Math.min(A.no, B.no), b: Math.max(A.no, B.no) });
+    }
+    return out;
+  },
+  // Post-step buildMembers: member support PUTUS dipecah di titik silang pemotong MENERUS.
+  // Kalau tak ada satu pun yang putus (semua model lama), fungsi ini mengembalikan `mem` apa
+  // adanya — no-op mutlak, itu jaminan kompat mundurnya.
+  _pecahIrisan(S, mem, tapakMap, warnsOut) {
+    const axisOf = (m) => (m.geom.a.y === m.geom.b.y ? 'h' : (m.geom.a.x === m.geom.b.x ? 'v' : null));
+    const lockedByNo = {};
+    (Array.isArray(S.supportsLocked) ? S.supportsLocked : []).forEach(e => { lockedByNo[e.no] = e; });
+    // Fase PRATINJAU (id Sh_/Sv_/Sm_) belum punya entri per-jalur, jadi cuma bisa ikut flag
+    // global — sengaja: pilihan per-garis baru masuk akal setelah garisnya punya nomor stabil.
+    const menerus = (m) => {
+      const ax = axisOf(m);
+      if (ax === null) return true;                        // batang miring: selalu menerus
+      if (m.id.startsWith('SL')) {
+        const e = lockedByNo[+m.id.slice(2)];
+        return e ? DenahConv.efektifMenerus(S, e) : true;
+      }
+      return DenahConv.supMenerusOf(S)[ax];
+    };
+    const sups = mem.filter(m => m.jenis === 'support');
+    const putus = new Set(sups.filter(m => !menerus(m)));
+    if (!putus.size) return mem;
+    const orientasi = S.orientasi === 'tidur' ? 'tidur' : 'berdiri';
+    const sudahWarn = new Set();
+    const half = (mat) => (mat ? DenahConv.tapakCm(mat, tapakMap, orientasi, warnsOut, sudahWarn) / 2 : 0);
+    // Tapak ujung LUAR diambil dari besi FRAME tempat ujung itu menempel (bukan besi support).
+    // Materialnya dibaca dari member frame yang sudah jadi — override per-sisi sudah ter-resolve
+    // di sana. Ujung yang menggantung di udara (support manual) -> null -> tapak 0.
+    const frames = mem.filter(m => m.jenis === 'frame');
+    const frameMatAt = (p) => {
+      const f = frames.find(fm => dist(p, closestOnSegment(p, fm.geom.a, fm.geom.b)) < 0.5);
+      return f ? f.material : null;
+    };
+    // Pemotong = support MENERUS lurus-axis (yang tegak lurus ruas) + SEMUA balok (portal/
+    // bracing, secara struktur selalu menerus). Frame TIDAK ikut jadi pemotong interior: ruas
+    // memang sudah berhenti di frame, frame cuma menyumbang tapak di ujung luar.
+    const cutters = sups.filter(m => axisOf(m) !== null && menerus(m))
+      .map(m => ({ axis: axisOf(m), a: m.geom.a, b: m.geom.b, material: m.material }))
+      .concat(mem.filter(m => m.jenis === 'balok')
+        .map(m => ({ axis: null, a: m.geom.a, b: m.geom.b, material: m.material })));
+    const EPS = 1e-6;
+    const U = (ax, p) => (ax === 'h' ? p.x : p.y);   // koordinat SEPANJANG badan ruas
+    const W = (ax, p) => (ax === 'h' ? p.y : p.x);   // koordinat TEGAK LURUS badan ruas
+    const pecah = (m) => {
+      const ax = axisOf(m), w = W(ax, m.geom.a);
+      const A = U(ax, m.geom.a) <= U(ax, m.geom.b) ? m.geom.a : m.geom.b;
+      const B = A === m.geom.a ? m.geom.b : m.geom.a;
+      const u0 = U(ax, A), u1 = U(ax, B);
+      const cuts = [];
+      cutters.forEach(c => {
+        if (c.axis === ax) return;                   // sejajar: tak memotong
+        let u;
+        if (c.axis) {
+          // Pemotong lurus tegak lurus: badannya harus benar-benar melewati garis ruas ini.
+          // Toleransi EPS di ujung disengaja — sambungan T (pemotong berhenti PAS di ruas)
+          // secara fisik tetap memotong.
+          if (w < Math.min(W(ax, c.a), W(ax, c.b)) - EPS || w > Math.max(W(ax, c.a), W(ax, c.b)) + EPS) return;
+          u = U(ax, c.a);
+        } else {
+          const wa = W(ax, c.a), wb = W(ax, c.b);
+          if (Math.abs(wb - wa) < EPS) return;       // balok sejajar ruas
+          const t = (w - wa) / (wb - wa);
+          if (t < -EPS || t > 1 + EPS) return;
+          u = U(ax, c.a) + t * (U(ax, c.b) - U(ax, c.a));
+        }
+        if (u > u0 + EPS && u < u1 - EPS) cuts.push({ u, material: c.material });
+      });
+      if (!cuts.length) return null;                 // tak kena silangan -> biarkan utuh
+      cuts.sort((p, q) => p.u - q.u);
+      const bounds = [{ u: u0, material: frameMatAt(A) }, ...cuts, { u: u1, material: frameMatAt(B) }];
+      const pt = (u) => (ax === 'h' ? { x: u, y: w } : { x: w, y: u });
+      const lockNo = m.id.startsWith('SL') ? m.id.slice(2) : null;
+      const out = [];
+      for (let i = 0; i + 1 < bounds.length; i++) {
+        const L = bounds[i], R = bounds[i + 1];
+        const panjang = Math.round((R.u - L.u - half(L.material) - half(R.material)) * 10) / 10;
+        // Nomor ruas TIDAK dirapatkan setelah ada yang dibuang: i tetap merujuk posisi asli
+        // sepanjang batang, jadi peringatan "ruas S3·2 dibuang" bisa dicocokkan ke gambar.
+        const label = (lockNo ? 'S' + lockNo : m.id) + '·' + (i + 1);
+        if (!(panjang > 0)) {
+          if (warnsOut) warnsOut.push(`ruas ${label} ≤ 0 cm (silangan terlalu rapat) — dibuang`);
+          continue;
+        }
+        // geom sengaja AS-KE-AS (belum dipotong tapak): garis di kanvas tetap rapat ke batang
+        // pemotong & target ketuknya tak berlubang. Yang dikurangi hanya `panjang` — itu yang
+        // dipakai hitungan besi/cutting list. Fase pratinjau tetap bernama 'S' (belum bernomor).
+        out.push({ ...m, nama: lockNo ? label : 'S', panjang, geom: { a: pt(L.u), b: pt(R.u) } });
+      }
+      return out;
+    };
+    const hasil = [];
+    mem.forEach(m => {
+      const p = putus.has(m) ? pecah(m) : null;
+      if (p) hasil.push(...p); else hasil.push(m);
+    });
+    return hasil;
   },
   // Entri manual dari posisi KETIK (cm relatif tepi DEPAN/bb.y1 utk datar, kiri/bb.x0 utk tegak —
   // konvensi SAMA persis describeLockedSupport & panel Tiang). Satu entri per potongan (nomor
