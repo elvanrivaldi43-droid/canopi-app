@@ -10,11 +10,14 @@ class MasterMaterial extends Model
 
     protected $fillable = [
         'kode', 'nama', 'kategori', 'satuan', 'harga_pokok',
+        'lebar_profil_cm', 'tinggi_profil_cm',
         'keterangan', 'aktif', 'created_by'
     ];
 
     protected $casts = [
         'harga_pokok' => 'integer',
+        'lebar_profil_cm' => 'float',
+        'tinggi_profil_cm' => 'float',
         'aktif' => 'boolean',
     ];
 
@@ -48,5 +51,22 @@ class MasterMaterial extends Model
     public function scopeKategori($query, $kategori)
     {
         return $query->where('kategori', $kategori);
+    }
+
+    /** Tebak dimensi profil dari nama ("Hollow 4x8 1mm" -> [4.0, 8.0]). CADANGAN
+     *  saja — kolom DB sumber kebenaran (hollow "banci" 4x8 nyatanya 3,5cm). */
+    public static function parseProfil(?string $nama): ?array
+    {
+        if ($nama === null) return null;
+        if (!preg_match('/(\d+(?:[.,]\d+)?)\s*[xX×]\s*(\d+(?:[.,]\d+)?)/u', $nama, $m)) return null;
+        return [(float) str_replace(',', '.', $m[1]), (float) str_replace(',', '.', $m[2])];
+    }
+
+    /** [lebar, tinggi] cm: kolom DB kalau terisi, else tebak nama, else null. */
+    public function profilCm(): ?array
+    {
+        $l = $this->lebar_profil_cm; $t = $this->tinggi_profil_cm;
+        if ($l !== null && $t !== null && (float) $l > 0 && (float) $t > 0) return [(float) $l, (float) $t];
+        return self::parseProfil($this->nama);
     }
 }

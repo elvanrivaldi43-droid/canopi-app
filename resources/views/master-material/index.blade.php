@@ -89,6 +89,16 @@
                             @if($m->kode)
                             <span style="color:#64748b; font-size:11px; margin-left:6px;">[{{ $m->kode }}]</span>
                             @endif
+                            @if($m->kategori === 'rangka_besi')
+                                @php $profil = $m->profilCm(); @endphp
+                                @if($profil === null)
+                                <span title="Dimensi profil belum diisi & tak bisa ditebak dari nama"
+                                      style="background:#3f1515; color:#fca5a5; padding:2px 8px; border-radius:20px; font-size:10px; margin-left:6px;">profil!</span>
+                                @elseif($m->lebar_profil_cm === null || $m->tinggi_profil_cm === null)
+                                <span title="Dimensi profil belum diisi — sistem menebak dari nama"
+                                      style="background:#3a2a08; color:#fbbf24; padding:2px 8px; border-radius:20px; font-size:10px; margin-left:6px;">profil?</span>
+                                @endif
+                            @endif
                         </td>
                         <td style="padding:12px 16px;">
                             <span style="background:#334155; color:#94a3b8; padding:3px 10px; border-radius:20px; font-size:12px;">

@@ -93,6 +93,29 @@
                 </div>
             </div>
 
+            {{-- Profil besi (opsional) --}}
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; color:#94a3b8; font-size:13px; margin-bottom:6px; font-weight:600;">
+                        Lebar profil (cm) <span style="color:#64748b; font-weight:400;">(opsional)</span>
+                    </label>
+                    <input type="number" name="lebar_profil_cm" value="{{ old('lebar_profil_cm', $masterMaterial->lebar_profil_cm ?? '') }}"
+                           step="0.1" min="0.1" max="999"
+                           style="width:100%; background:#0f172a; border:1px solid {{ $errors->has('lebar_profil_cm') ? '#ef4444' : '#334155' }}; color:#e2e8f0; padding:11px 14px; border-radius:8px; font-size:14px; outline:none; box-sizing:border-box;">
+                    @error('lebar_profil_cm') <p style="color:#ef4444; font-size:12px; margin-top:4px;">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label style="display:block; color:#94a3b8; font-size:13px; margin-bottom:6px; font-weight:600;">
+                        Tinggi profil (cm) <span style="color:#64748b; font-weight:400;">(opsional)</span>
+                    </label>
+                    <input type="number" name="tinggi_profil_cm" value="{{ old('tinggi_profil_cm', $masterMaterial->tinggi_profil_cm ?? '') }}"
+                           step="0.1" min="0.1" max="999"
+                           style="width:100%; background:#0f172a; border:1px solid {{ $errors->has('tinggi_profil_cm') ? '#ef4444' : '#334155' }}; color:#e2e8f0; padding:11px 14px; border-radius:8px; font-size:14px; outline:none; box-sizing:border-box;">
+                    @error('tinggi_profil_cm') <p style="color:#ef4444; font-size:12px; margin-top:4px;">{{ $message }}</p> @enderror
+                </div>
+            </div>
+            <p style="color:#64748b; font-size:11px; margin:-10px 0 16px;">Utk hitung tapak ruas support. Kosong = ditebak dari nama — isi manual utk hollow banci.</p>
+
             {{-- Kode (opsional) --}}
             <div style="margin-bottom:16px;">
                 <label style="display:block; color:#94a3b8; font-size:13px; margin-bottom:6px; font-weight:600;">

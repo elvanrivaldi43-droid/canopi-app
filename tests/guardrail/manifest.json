@@ -390,6 +390,12 @@
       "runner": "php",
       "requires_db": false,
       "manual": false
+    },
+    {
+      "path": "tests/rangka/test_material_profil.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
     }
   ],
   "excluded": [

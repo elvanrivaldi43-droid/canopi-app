@@ -53,6 +53,8 @@ class MasterMaterialController extends Controller
             'kategori'    => 'required|in:rangka_besi,kaca,atap,cat_finishing,aksesori,talang,konsumabel,jasa,lainnya',
             'satuan'      => 'required|string|max:20',
             'harga_pokok' => 'required|integer|min:0',
+            'lebar_profil_cm'  => 'nullable|numeric|min:0.1|max:999',
+            'tinggi_profil_cm' => 'nullable|numeric|min:0.1|max:999',
         ]);
 
         $material = MasterMaterial::create([
@@ -68,6 +70,12 @@ class MasterMaterialController extends Controller
 
         if (Schema::hasColumn('master_material', 'sumber')) {
             $material->sumber = $request->sumber === 'pos' ? 'pos' : 'luar';
+            $material->save();
+        }
+
+        if (Schema::hasColumn('master_material', 'lebar_profil_cm')) {
+            $material->lebar_profil_cm  = $request->lebar_profil_cm ?: null;
+            $material->tinggi_profil_cm = $request->tinggi_profil_cm ?: null;
             $material->save();
         }
 
@@ -91,6 +99,8 @@ class MasterMaterialController extends Controller
             'kategori'    => 'required',
             'satuan'      => 'required|string|max:20',
             'harga_pokok' => 'required|integer|min:0',
+            'lebar_profil_cm'  => 'nullable|numeric|min:0.1|max:999',
+            'tinggi_profil_cm' => 'nullable|numeric|min:0.1|max:999',
         ]);
 
         $masterMaterial->update([
@@ -104,6 +114,12 @@ class MasterMaterialController extends Controller
 
         if (Schema::hasColumn('master_material', 'sumber')) {
             $masterMaterial->sumber = $request->sumber === 'pos' ? 'pos' : 'luar';
+            $masterMaterial->save();
+        }
+
+        if (Schema::hasColumn('master_material', 'lebar_profil_cm')) {
+            $masterMaterial->lebar_profil_cm  = $request->lebar_profil_cm ?: null;
+            $masterMaterial->tinggi_profil_cm = $request->tinggi_profil_cm ?: null;
             $masterMaterial->save();
         }
 
