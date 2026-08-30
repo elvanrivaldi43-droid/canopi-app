@@ -681,6 +681,10 @@ class DenahEditor {
     if (svg) {
       const k = svg.cloneNode(true);
       [].slice.call(k.querySelectorAll('[stroke="transparent"],[fill="transparent"],.vh,[id^=smh],[id^=slh],[id^=agx],[id^=agy],[data-boxprev],title')).forEach(e => e.remove());
+      // xmlns WAJIB: inline di halaman HTML boleh tanpa xmlns, tapi sebagai file gambar
+      // berdiri sendiri (<img src="data:image/svg+xml...">) browser MENOLAK render tanpa
+      // namespace -> ikon gambar rusak (kasus nyata cutting list 30 Ags).
+      k.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
       out = DenahConv.svgCetak(k.outerHTML);
     }
     if (sorot) { this.selSup = sSup; this.selBalok = sBal; this.render(); }
