@@ -1,7 +1,7 @@
 # Spec: Support Beririsan (Menerus vs Putus) + Panjang Ruas Nyata
 
 **Tanggal:** 30 Agustus 2026
-**Status:** Menunggu review Elvan
+**Status:** DISETUJUI Elvan 30 Ags 2026 (orientasi per denah dikonfirmasi; lihat catatan hollow banci di 1a)
 **Pemicu:** Diskusi kalibrasi Tahap 1 (rangka). Elvan: di lapangan support H & V
 tidak selalu tumpang tindih; sering beririsan sebidang — satu arah menerus, arah
 lain dipotong-potong, tergantung surveyor. Sistem sekarang cuma tahu satu dunia
@@ -36,6 +36,10 @@ Kolom baru `master_material`: `lebar_profil_cm` dan `tinggi_profil_cm`
 1. Kolom terisi → pakai (berdiri = min(lebar,tinggi); tidur = max).
 2. Kolom kosong → tebak dari nama material (regex `(\d+[.,]?\d*)\s*[xX×]\s*(\d+[.,]?\d*)`,
    mis. "Hollow 4x8 1mm" → 4 & 8). Satuan dianggap cm.
+   **PERHATIAN (dari Elvan 30 Ags): tebakan nama cuma CADANGAN.** Di pasar ada
+   hollow "banci"/kotak tak full — disebut 4x8 tapi nyatanya cuma 3,5 cm.
+   Kolom DB-lah sumber kebenaran; halaman Master Material perlu mendorong Owner
+   mengisinya (mis. tanda kuning di baris yang kolom profilnya masih kosong).
 3. Gagal menebak → tapak 0 (perilaku as-ke-as lama) + **peringatan di cutting
    list**: "tapak besi X belum diisi — panjang ruas masih as-ke-as".
 
