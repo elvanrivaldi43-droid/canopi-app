@@ -773,6 +773,12 @@ class DenahEditor {
       if (!this.S.matDefault.tiang) this.S.matDefault.tiang = cari('5x10');
       if (!this.S.matDefault.balok) this.S.matDefault.balok = cari('wf') || this.besi[0].nama;
     }
+    // Dimensi (lebar/tinggi cm) per nama besi -- dipakai buildMembers hitung tapak ruas support
+    // sebidang (irisan menerus/putus, Task 3/4). Besi tanpa dimensi (lebar/tinggi kosong di
+    // master_material) -> {l:0,t:0} -> buildMembers fallback as-ke-as + peringatan (lihat tapakCm).
+    this.tapakMap = {};
+    (this.besi || []).forEach(b => { if (b.nama) this.tapakMap[b.nama] = { l: +b.lebar || 0, t: +b.tinggi || 0 }; });
+    this._lastWarns = [];
     // Sumber angka batang: endpoint server (lihat _jadwalCutting). Kosong = fitur diam.
     this.cutUrl = this.opts.cuttingUrl || '';
     this.cutCsrf = this.opts.csrf || '';
@@ -832,6 +838,21 @@ class DenahEditor {
     this.syncInputs();
     this.render();
   }
+
+  // Titik TUNGGAL yang manggil buildMembers di dalam editor -- bawa this.tapakMap (Task 4) +
+  // kumpulkan peringatan (tapak besi belum diketahui, irisan putus×putus mustahil fisik) ke
+  // this._lastWarns supaya badge panel (renderSupportPanel) & getWarns() (Task 5) baca hasil yang
+  // sama. Ganti SEMUA DenahConv.buildMembers(this.S) polos di dalam class ke sini -- pemanggilan
+  // polos bikin ruas dihitung as-ke-as diam-diam (tapakMap kosong) + peringatan hilang.
+  _members() {
+    const w = [];
+    const mem = DenahConv.buildMembers(this.S, this.tapakMap, w);
+    const kf = DenahConv.irisanKonflik(this.S);
+    kf.forEach(k => w.push(`S${k.a} × S${k.b} dua-duanya PUTUS bersilangan — mustahil fisik, keduanya dibiarkan utuh`));
+    this._lastWarns = w;
+    return mem;
+  }
+  getWarns() { return this._lastWarns.slice(); }
 
   // Foto denah utk dokumen (penawaran cetak, cutting list): SVG di layar diklon,
   // alat bantu editor dibuang (pita sentuh transparan, bulatan titik sudut, handle
@@ -1062,6 +1083,10 @@ body,.page-content{overscroll-behavior-y:contain}
           <select data-role="inArah"><option value="2">Grid 2 arah</option><option value="h">1 arah horizontal (melintang)</option><option value="v">1 arah vertikal (membujur)</option></select>
         </label>
         <span class="de-mini" data-role="btnSaran" title="Isi Kotak (cm) otomatis dari Ideal per kotak"><svg class="de-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2Z"/></svg>Saran</span>
+      </div>
+      <div class="de-row" data-role="rowSupIris" style="margin-top:8px">
+        <label>Menerus<select data-role="inMenerus"><option value="2">Dua arah (tumpuk)</option><option value="h">Horizontal saja</option><option value="v">Vertikal saja</option></select></label>
+        <label>Pasang<select data-role="inOrientasi"><option value="berdiri">Berdiri</option><option value="tidur">Tidur</option></select></label>
       </div>
       <div class="de-row" data-role="rowSupIdeal" style="margin-top:8px">
         <label>Ideal per kotak (cm)<input type="number" data-role="inIdeal" value="100" step="5" min="1"></label>
@@ -1333,6 +1358,20 @@ body,.page-content{overscroll-behavior-y:contain}
     };
 
     this._q('[data-role=inArah]').onchange = e => { this.S.arah = e.target.value; this._syncSupportRows(); this.render(); };
+    // Menerus/Pasang (Task 4, irisan sebidang) -- beda dari inArah dkk: ini mengubah HASIL
+    // hitungan besi (potong/tak potong), bukan cuma tata letak spacing, jadi ikut pushUndo()
+    // (pola sama SEMUA mutasi model lain), tak seperti arah/spacing yang sengaja tak bisa di-Undo.
+    this._q('[data-role=inMenerus]').onchange = e => {
+      this.pushUndo();
+      const v = e.target.value;
+      this.S.supMenerus = { h: v !== 'v', v: v !== 'h' };
+      this.render();
+    };
+    this._q('[data-role=inOrientasi]').onchange = e => {
+      this.pushUndo();
+      this.S.orientasi = e.target.value;
+      this.render();
+    };
     this._q('[data-role=inIdeal]').oninput = e => { this.S.idealKotak = Math.max(1, +e.target.value) || 100; this.updSaranHint(); };
     // Per-sumbu: mode dropdown ganti field yang tampil (cm vs kolom) + tulis ke model + render.
     this._q('[data-role=modeH]').onchange = e => { this.S.modeH = e.target.value; this._syncSupportRows(); this.render(); };
@@ -1695,6 +1734,11 @@ body,.page-content{overscroll-behavior-y:contain}
   }
   syncInputs() {
     this._q('[data-role=inArah]').value = this.S.arah;
+    // Model lama tanpa S.supMenerus/S.orientasi -> supMenerusOf bawaan {h:true,v:true} ("2"),
+    // orientasi bawaan 'berdiri' -- kompat mundur, nol perubahan visual di denah lama.
+    const sm = DenahConv.supMenerusOf(this.S);
+    this._q('[data-role=inMenerus]').value = sm.h && sm.v ? '2' : (sm.h ? 'h' : 'v');
+    this._q('[data-role=inOrientasi]').value = this.S.orientasi === 'tidur' ? 'tidur' : 'berdiri';
     this._q('[data-role=inIdeal]').value = this.S.idealKotak != null ? this.S.idealKotak : 100;
     // Denah lama tanpa kotakH/kotakV -> tampilkan S.kotak sebagai nilai efektif (yang lagi tergambar).
     this._q('[data-role=modeH]').value = this.S.modeH || 'cm';
@@ -1868,7 +1912,7 @@ body,.page-content{overscroll-behavior-y:contain}
     // HANYA kalau belum aktif — tab yang sama kalau diklik ulang justru menutup (toggle).
     const tab = this._q('.de-ribbon-tab[data-tab=rangka]');
     if (tab && !tab.classList.contains('on')) tab.click();
-    this.renderSides(DenahConv.buildMembers(this.S));
+    this.renderSides(this._members());
     const inp = this._q(`[data-role=sisiInput][data-i="${i}"]`);
     if (!inp) return;
     // setTimeout: beri waktu panel selesai membuka (transition max-height) sebelum posisinya diukur.
@@ -2068,6 +2112,12 @@ body,.page-content{overscroll-behavior-y:contain}
     this.drawSupJalurPreview([]);
     if (this.mode !== 'support') { panel.style.display = 'none'; panel.innerHTML = ''; return; }
     const locked = DenahConv.isLocked(this.S);
+    // Peringatan buildMembers terakhir (tapak besi belum diketahui) + irisan putus×putus mustahil
+    // fisik (this._lastWarns, diisi tiap this._members() -- selalu jalan duluan lewat render()
+    // sebelum renderSupportPanel dipanggil). Kosong di fase pratinjau (supportsLocked belum ada).
+    const warnHtml = this._lastWarns.length
+      ? `<div style="background:#fef3c7;border:1px solid #f59e0b;color:#92400e;border-radius:6px;padding:4px 8px;font-size:11px;margin-bottom:6px">${this._lastWarns.map(w => `<div>${w}</div>`).join('')}</div>`
+      : '';
 
     if (!locked) {
       // ── PRATINJAU: baris ajakan + daftar manual lama (perilaku 21 Ags dipertahankan) ──
@@ -2083,7 +2133,7 @@ body,.page-content{overscroll-behavior-y:contain}
           </div>
         </div>`;
       }).join('');
-      panel.innerHTML =
+      panel.innerHTML = warnHtml +
         `<div class="de-tiang-head" data-role="supLockInvite" style="cursor:pointer">
            <b style="font-size:12px">Support — kelola per garis</b>
            <span class="de-mini">Kunci susunan</span>
@@ -2165,6 +2215,11 @@ body,.page-content{overscroll-behavior-y:contain}
             <input type="checkbox" data-role="slAktif" data-no="${e2.no}" ${e2.aktif === false ? '' : 'checked'}>
             <b>S${e2.no}</b> <span style="color:#64748b">${desc}</span>
           </label>
+          <select data-role="slMenerus" data-no="${e2.no}" style="font-size:12px;padding:2px">
+            <option value="">bawaan</option>
+            <option value="1"${e2.menerus === true ? ' selected' : ''}>menerus</option>
+            <option value="0"${e2.menerus === false ? ' selected' : ''}>putus</option>
+          </select>
           <div class="de-tiang-actions"><span class="de-mini" data-role="slFokus" data-no="${e2.no}">Fokus</span></div>
         </div>${editRow}
       </div>`;
@@ -2178,7 +2233,7 @@ body,.page-content{overscroll-behavior-y:contain}
           <div class="de-tiang-actions"><span class="de-mini de-tiang-apply" data-role="sjTambah">Tambah</span><span class="de-mini" data-role="sjBatal">Batal</span></div>
         </div>
       </div>`;
-    panel.innerHTML = head + picker + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows + formTambah;
+    panel.innerHTML = warnHtml + head + picker + `<div data-role="slMsg" style="font-size:11px;color:#dc2626"></div>` + rows + formTambah;
 
     const pickEl = this._q('[data-role=slPick]');
     if (pickEl) pickEl.onchange = e => { this.selSup = e.target.value === '' ? null : +e.target.value; this.renderSupportPanel(mem); };
@@ -2192,6 +2247,15 @@ body,.page-content{overscroll-behavior-y:contain}
       const e2 = entries.find(x => x.no === +cb.dataset.no);
       if (!e2) return;
       this.pushUndo(); e2.aktif = cb.checked; this.render();
+    });
+    // "bawaan" = hapus override -> ikut S.supMenerus global (arah), sama pola null-vs-boolean
+    // dipakai efektifMenerus/irisanKonflik (Task 3).
+    panel.querySelectorAll('[data-role=slMenerus]').forEach(sel => sel.onchange = () => {
+      const e2 = entries.find(x => x.no === +sel.dataset.no);
+      if (!e2) return;
+      this.pushUndo();
+      if (sel.value === '') delete e2.menerus; else e2.menerus = sel.value === '1';
+      this.render();
     });
     panel.querySelectorAll('[data-role=slFokus]').forEach(btn => btn.onclick = () => {
       this.selSup = +btn.dataset.no;
@@ -2742,7 +2806,7 @@ body,.page-content{overscroll-behavior-y:contain}
     if (mv) { mv.style.display = this.mode === 'support' ? '' : 'none'; mv.classList.toggle('on', this.moveOn); }
     this._syncSupportRows();
     const S = this.S;
-    const mem = DenahConv.buildMembers(S);
+    const mem = this._members();
     const cmap = colorMap(mem);
     // bbox HARUS ikut tiang (bukan cuma S.verts) -- tiang boleh digeser keluar bentuk utama (mis.
     // tiang pinggir kanopi yg menjorok), kalau kanvas cuma dihitung dari verts, tiang di luar situ
@@ -3095,7 +3159,7 @@ body,.page-content{overscroll-behavior-y:contain}
             return;
           }
           // Tap toleran: garis terdekat menang; tap lagi di tempat sama = kandidat berikutnya.
-          const mem2 = DenahConv.buildMembers(this.S);
+          const mem2 = this._members();
           const TH = 24 / this.screenScale(el) / this.SC;
           const ids = DenahConv.supportsNearPoint(mem2, cm, TH);
           if (!ids.length) { if (this.selSup != null) { this.selSup = null; this.render(); } return; }
@@ -3160,7 +3224,7 @@ body,.page-content{overscroll-behavior-y:contain}
           // kelas" jadi entri supportsManual (lihat end()). Tahan diam 450ms tanpa gerak = menu
           // Kecualikan + Ganti Material.
           const id = t.dataset.id;
-          const mem = DenahConv.buildMembers(this.S);
+          const mem = this._members();
           const m = mem.find(x => x.id === id);
           if (!m) return;
           const myDrag = { type: 'supgrid', id, startPt: cm, moved: false,
@@ -3525,7 +3589,7 @@ body,.page-content{overscroll-behavior-y:contain}
 
   // ---- API publik (dipakai Task 3) ----
   getModel() { return JSON.parse(JSON.stringify(this.S)); }
-  getMembers() { return DenahConv.buildMembers(this.S); }
+  getMembers() { return this._members(); }
   getLuas() { return DenahConv.luasM2(this.S); }
   setModel(m) { this.armed = null; this.boxPreview = null; this.S = JSON.parse(JSON.stringify(m)); this.selSup = null; this.selBalok = null; this.selSisi = null; this.sisiShowAll = false; this.selTiang = null; this.tiangShowAll = false; this.moveOn = false; this._lastPickPt = null; this.syncInputs(); this.render(); }
 }
