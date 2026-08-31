@@ -402,6 +402,12 @@
       "runner": "php",
       "requires_db": false,
       "manual": false
+    },
+    {
+      "path": "tests/penggajian/test_setting_gaji.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
     }
   ],
   "excluded": [

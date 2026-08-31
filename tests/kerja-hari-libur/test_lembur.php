@@ -162,8 +162,19 @@ $check('GajiService tidak memakai updateOrCreate untuk slip',
     str_contains($srcGaji, 'SlipGaji::updateOrCreate'), false);
 $check('GajiService tidak memakai upsert untuk slip',
     str_contains($srcGaji, 'SlipGaji::upsert'), false);
-$check('penjaga duplikat slip masih ada (slip yang sudah terbit tidak ditimpa)',
-    substr_count($srcGaji, 'sudah pernah digenerate'), 2);
+// Penjaga duplikat DIPERBARUI 31 Ags 2026 (keputusan Elvan, kasus nyata gajian
+// akhir Agustus): slip yang BELUM dibayar kini boleh dihitung ulang — dibutuhkan
+// saat absensi dikoreksi atau kebijakan berubah setelah slip terlanjur dibuat.
+// Yang dijaga sekarang lebih tajam, bukan lebih longgar: slip berstatus DIBAYAR
+// tetap TIDAK PERNAH bisa ditimpa (prosesBayar sudah memajukan cicilan kasbon &
+// menambah saldo tabungan; menimpanya menggandakan efek itu dan membuat bukti
+// transfer yang sudah dikirim tak cocok dengan slipnya).
+$check('penjaga slip DIBAYAR masih ada di kedua generator',
+    substr_count($srcGaji, 'sudah DIBAYAR'), 2);
+$check('keputusan boleh-tidaknya lewat SettingGajiService::bolehHitungUlang',
+    substr_count($srcGaji, 'SettingGajiService::bolehHitungUlang'), 2);
+$check('penghapusan slip lama dijaga if (tidak menghapus tanpa syarat)',
+    substr_count($srcGaji, '$existing->delete();'), 2);
 
 echo $fail ? "\n=== ADA YANG GAGAL ===\n" : "\n=== SEMUA TES LULUS ===\n";
 exit($fail ? 1 : 0);

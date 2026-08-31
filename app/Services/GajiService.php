@@ -8,6 +8,7 @@ use App\Models\Absensi;
 use App\Models\SlipGaji;
 use App\Models\Kasbon;
 use App\Models\TabunganKaryawan;
+use App\Services\SettingGajiService;
 use App\Services\LiburService;
 use App\Services\KerjaHariLiburService;
 use Carbon\Carbon;
@@ -78,7 +79,15 @@ class GajiService
                             ->first();
 
         if ($existing) {
-            throw new \Exception("Slip uang makan {$bulan}/{$tahun} sudah pernah digenerate.");
+            // Slip yang BELUM dibayar boleh dihitung ulang -- perlu saat absensi
+            // dikoreksi atau kebijakan berubah setelah slip terlanjur dibuat
+            // (kasus nyata 31 Ags: bonus KPI & tabungan wajib ditunda, slip draft
+            // sudah terlanjur ada). Slip "dibayar" TIDAK PERNAH: prosesBayar sudah
+            // memajukan cicilan kasbon & menambah saldo tabungan.
+            if (!SettingGajiService::bolehHitungUlang($existing->status)) {
+                throw new \Exception("Slip uang makan {$bulan}/{$tahun} sudah DIBAYAR — tidak bisa dihitung ulang.");
+            }
+            $existing->delete();
         }
 
         $user    = User::findOrFail($userId);
@@ -122,7 +131,15 @@ class GajiService
                             ->first();
 
         if ($existing) {
-            throw new \Exception("Slip gaji {$bulan}/{$tahun} sudah pernah digenerate.");
+            // Slip yang BELUM dibayar boleh dihitung ulang -- perlu saat absensi
+            // dikoreksi atau kebijakan berubah setelah slip terlanjur dibuat
+            // (kasus nyata 31 Ags: bonus KPI & tabungan wajib ditunda, slip draft
+            // sudah terlanjur ada). Slip "dibayar" TIDAK PERNAH: prosesBayar sudah
+            // memajukan cicilan kasbon & menambah saldo tabungan.
+            if (!SettingGajiService::bolehHitungUlang($existing->status)) {
+                throw new \Exception("Slip gaji {$bulan}/{$tahun} sudah DIBAYAR — tidak bisa dihitung ulang.");
+            }
+            $existing->delete();
         }
 
         $user = User::with('tunjangan')->findOrFail($userId);
@@ -188,8 +205,16 @@ class GajiService
         $totalTunjangan = $user->tunjangan->sum('pivot.nominal');
 
         // ── KPI ────────────────────────────────────────────
+        // Kelas KPI TETAP dihitung & disimpan (rapor kehadiran tetap jalan), tapi
+        // NOMINALNYA hanya dibayar kalau saklar bonus KPI nyala. Ditunda per
+        // keputusan Elvan 31 Ags 2026 — dinyalakan lagi lewat halaman Pengaturan Gaji,
+        // tanpa ubah kode. Default MATI (lihat SettingGajiService::aktifDari).
+        $setGaji   = SettingGajiService::ambil();
         $kelasKpi  = $this->hitungKelasKpi($hariTelat, $hariAlpha, $persenHadir);
-        $bonusKpi  = self::BONUS_KPI[$kelasKpi];
+        $bonusKpi  = SettingGajiService::nilaiBonusKpi(
+            self::BONUS_KPI[$kelasKpi],
+            SettingGajiService::aktifDari($setGaji, 'bonus_kpi_aktif')
+        );
 
         // ── Lembur ─────────────────────────────────────────
         // SATU-SATUNYA tempat lembur dibayar. `absensi.gaji_hari_ini` sengaja
@@ -205,7 +230,12 @@ class GajiService
         $potonganInsidental = $this->hitungPotonganInsidental($userId);
 
         // ── Tabungan ───────────────────────────────────────
-        $tabunganWajib   = self::TABUNGAN_WAJIB;
+        // Barisnya TETAP ada di slip (Rp 0 kalau saklar mati) — transparan, bukan
+        // disembunyikan: karyawan belum diberi tahu soal potongan ini (Elvan 31 Ags).
+        $tabunganWajib   = SettingGajiService::nilaiTabunganWajib(
+            self::TABUNGAN_WAJIB,
+            SettingGajiService::aktifDari($setGaji, 'tabungan_wajib_aktif')
+        );
         $tabungan        = TabunganKaryawan::firstOrCreate(['user_id' => $userId]);
         $tabunganLebaran = $tabungan->tabungan_lebaran_per_bulan ?? 0;
 
