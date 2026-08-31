@@ -186,6 +186,23 @@
                             <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
                                 @if($slipGaji)
                                     <a href="{{ route('penggajian.slip', $slipGaji) }}" style="font-size:11px;background:#334155;color:#e2e8f0;padding:4px 8px;border-radius:6px;text-decoration:none;">👁 Lihat</a>
+                                    {{-- Hitung ulang: slip adalah FOTO BEKU saat digenerate. Mengoreksi
+                                         absensi atau mengubah kebijakan TIDAK mengubah slip yang sudah ada —
+                                         harus dihitung ulang. Dulu tombolnya tak ada sama sekali, jadi slip
+                                         yang keburu dibuat mustahil diperbaiki dari layar (ketahuan saat
+                                         gajian 31 Ags 2026: koreksi hari izin Ria tak mengubah slipnya).
+                                         Hanya untuk yang BELUM dibayar — slip dibayar ditolak di service. --}}
+                                    @if(in_array($slipGaji->status, ['draft','menunggu_konfirmasi'], true))
+                                    <form method="POST" action="{{ route('penggajian.generate') }}" style="display:inline;">
+                                        @csrf
+                                        <input type="hidden" name="user_id" value="{{ $k->id }}">
+                                        <input type="hidden" name="periode" value="gaji_bulanan">
+                                        <input type="hidden" name="bulan" value="{{ $bulan }}">
+                                        <input type="hidden" name="tahun" value="{{ $tahun }}">
+                                        <button type="submit" onclick="return confirm('Hitung ulang slip {{ $k->name }}? Angka lama diganti hasil hitungan terbaru (absensi & kebijakan saat ini).')"
+                                            style="font-size:11px;background:#6366f1;color:#fff;padding:4px 8px;border-radius:6px;border:none;cursor:pointer;">&#8635; Hitung Ulang</button>
+                                    </form>
+                                    @endif
                                     @if($slipGaji->status === 'menunggu_konfirmasi')
                                     <form method="POST" action="{{ route('penggajian.konfirmasi', $slipGaji) }}" style="display:inline;">
                                         @csrf
