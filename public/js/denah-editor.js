@@ -198,6 +198,21 @@ const DenahConv = {
       ? { a: { x: a.x, y: snap(a.y) }, b: { x: b.x, y: snap(b.y) } }
       : { a: { x: snap(a.x), y: a.y }, b: { x: snap(b.x), y: b.y } };
   },
+  // Titik ekstrem GABUNGAN dari semua member ber-id sama = garis aslinya. Sejak pemecahan
+  // irisan (spec 2026-08-30) satu garis support bisa jadi BEBERAPA member ber-ID SAMA —
+  // dulu id grid pratinjau (Sh_/Sv_) selalu unik per potongan. `mem.find(id)` cuma dapat
+  // potongan PERTAMA: drag "naik kelas" jadi entri manual lalu bikin garis sependek potongan
+  // itu, sementara removed[id] menghapus SELURUH garis -> besi hilang diam-diam dari harga
+  // dan cutting list. Potongan ber-id sama selalu segaris & bersambung, jadi min/max titik
+  // ujungnya persis = ujung garis utuh.
+  spanOfId(mem, id) {
+    const pts = [];
+    (mem || []).forEach(x => { if (x.id === id && x.geom && x.geom.a) pts.push(x.geom.a, x.geom.b); });
+    if (!pts.length) return null;
+    const a = pts.reduce((p, q) => (q.x < p.x || (q.x === p.x && q.y < p.y)) ? q : p);
+    const b = pts.reduce((p, q) => (q.x > p.x || (q.x === p.x && q.y > p.y)) ? q : p);
+    return { a: { ...a }, b: { ...b } };
+  },
   // Nomor S{n} KHUSUS support manual (id "Sm_..."), independen dari support grid otomatis.
   // SATU sumber angka dipakai render() (label kanvas), openMatMenu() (label menu Ganti Material),
   // dan renderSupportPanel() (panel daftar) — jangan hitung ulang beda-beda di tiap tempat, itu
@@ -494,7 +509,16 @@ const DenahConv = {
   // sekali per material, hitungan jatuh balik ke as-ke-as (kelebihan sedikit, bukan kurang).
   tapakCm(mat, tapakMap, orientasi, warnsOut, sudahWarn) {
     const d = tapakMap && tapakMap[mat];
-    if (d && d.l > 0 && d.t > 0) return orientasi === 'tidur' ? Math.max(d.l, d.t) : Math.min(d.l, d.t);
+    if (d && d.l > 0 && d.t > 0) {
+      // Ukuran dari TEBAKAN nama (kolom profil master_material kosong) tetap dipakai, tapi
+      // harus kelihatan: hollow "banci" dinamai 4x8 aslinya 3,5 cm -> ruas 0,25 cm terlalu
+      // pendek per ujung interior, satu-satunya arah salah yang bikin besi KURANG.
+      if (d.tebak && warnsOut && sudahWarn && !sudahWarn.has(mat)) {
+        sudahWarn.add(mat);
+        warnsOut.push(`tapak besi "${mat}" DITEBAK dari nama — cek ukuran asli (hollow banci)`);
+      }
+      return orientasi === 'tidur' ? Math.max(d.l, d.t) : Math.min(d.l, d.t);
+    }
     if (warnsOut && sudahWarn && !sudahWarn.has(mat)) {
       sudahWarn.add(mat);
       warnsOut.push(`tapak besi "${mat}" belum diketahui — ruas dihitung as-ke-as`);
@@ -609,8 +633,13 @@ const DenahConv = {
         }
         // geom sengaja AS-KE-AS (belum dipotong tapak): garis di kanvas tetap rapat ke batang
         // pemotong & target ketuknya tak berlubang. Yang dikurangi hanya `panjang` — itu yang
-        // dipakai hitungan besi/cutting list. Fase pratinjau tetap bernama 'S' (belum bernomor).
-        out.push({ ...m, nama: lockNo ? label : 'S', panjang, geom: { a: pt(L.u), b: pt(R.u) } });
+        // dipakai hitungan besi/cutting list.
+        // Nama ruas PRATINJAU juga pakai `label` ('Sv_1_0·2', induk = id garisnya): dulu 'S'
+        // polos, jadi di halaman cetak SEMUA ruas pratinjau menumpuk di satu baris "S" berisi
+        // belasan ukuran — tak bisa dilacak balik ke garis mana. Yang berubah HANYA nama tampil;
+        // pasangan las (jid, dihitung CuttingService) tak disentuh. Fase terkunci tetap
+        // 'S{no}·{i}' persis seperti sebelumnya.
+        out.push({ ...m, nama: label, panjang, geom: { a: pt(L.u), b: pt(R.u) } });
       }
       return out;
     };
@@ -777,7 +806,9 @@ class DenahEditor {
     // sebidang (irisan menerus/putus, Task 3/4). Besi tanpa dimensi (lebar/tinggi kosong di
     // master_material) -> {l:0,t:0} -> buildMembers fallback as-ke-as + peringatan (lihat tapakCm).
     this.tapakMap = {};
-    (this.besi || []).forEach(b => { if (b.nama) this.tapakMap[b.nama] = { l: +b.lebar || 0, t: +b.tinggi || 0 }; });
+    // `tebak` = ukuran datang dari tebakan nama, bukan kolom profil master_material (dikirim
+    // controller lewat field `tebakan`) -> tapakCm memberi peringatan sendiri.
+    (this.besi || []).forEach(b => { if (b.nama) this.tapakMap[b.nama] = { l: +b.lebar || 0, t: +b.tinggi || 0, tebak: !!b.tebakan }; });
     this._lastWarns = [];
     // Sumber angka batang: endpoint server (lihat _jadwalCutting). Kosong = fitur diam.
     this.cutUrl = this.opts.cuttingUrl || '';
@@ -1156,6 +1187,7 @@ body,.page-content{overscroll-behavior-y:contain}
   </div>
   <div class="de-legend" data-role="legend"></div>
   <div class="de-legend" data-role="legendBatang" style="margin-top:4px"></div>
+  <div class="de-legend" data-role="legendWarn" style="margin-top:4px"></div>
   <div style="font-size:12px;color:#64748b;margin-top:4px">Luas denah: <b data-role="luas">–</b></div>
 </div>
 <div class="de-matmenu" data-role="matMenu">
@@ -2190,6 +2222,10 @@ body,.page-content{overscroll-behavior-y:contain}
     const rows = list.map(e2 => {
       const sel = e2.no === this.selSup;
       const desc = DenahConv.describeLockedSupport(this.S, e2, mem);
+      // Batang MIRING selalu menerus (lihat efektifMenerus): "dipotong sebidang" tak punya arti
+      // untuk garis diagonal. Dropdown Menerus disembunyikan di baris ini — dulu tetap tampil
+      // tapi memilih "putus" tak melakukan apa pun & tak berkata apa pun (kontrol no-op bisu).
+      const miring = e2.manual && e2.a.x !== e2.b.x && e2.a.y !== e2.b.y;
       // Arah difilter per tipe (spec 2.3): h cuma atas/bawah, v cuma kiri/kanan, manual 4 arah —
       // KECUALI manual LURUS: geser sejajar garisnya sendiri (mis. datar digeser kiri/kanan) tak
       // mengubah posisi jalur yg dipakai moveManualReclip buat re-clip, jadi no-op bisu. Cuma arah
@@ -2215,11 +2251,11 @@ body,.page-content{overscroll-behavior-y:contain}
             <input type="checkbox" data-role="slAktif" data-no="${e2.no}" ${e2.aktif === false ? '' : 'checked'}>
             <b>S${e2.no}</b> <span style="color:#64748b">${desc}</span>
           </label>
-          <select data-role="slMenerus" data-no="${e2.no}" style="font-size:12px;padding:2px">
+          ${miring ? '' : `<select data-role="slMenerus" data-no="${e2.no}" style="font-size:12px;padding:2px">
             <option value="">bawaan</option>
             <option value="1"${e2.menerus === true ? ' selected' : ''}>menerus</option>
             <option value="0"${e2.menerus === false ? ' selected' : ''}>putus</option>
-          </select>
+          </select>`}
           <div class="de-tiang-actions"><span class="de-mini" data-role="slFokus" data-no="${e2.no}">Fokus</span></div>
         </div>${editRow}
       </div>`;
@@ -2972,6 +3008,13 @@ body,.page-content{overscroll-behavior-y:contain}
       ? used.map(n => `<span><span class="de-sw" style="background:${cmap[n]}"></span><b>${n}</b></span>`).join('')
       : '<span style="color:#94a3b8">Belum ada batang</span>';
     this._jadwalCutting(mem);
+    // Penanda peringatan yang SELALU kelihatan: badge lengkapnya cuma dirender di panel
+    // Support (renderSupportPanel early-return kalau mode != 'support'), jadi denah tersimpan
+    // yang punya peringatan dulu tak memberi tanda apa pun sampai orang kebetulan buka tab itu.
+    const wEl = this._q('[data-role=legendWarn]');
+    if (wEl) wEl.innerHTML = this._lastWarns.length
+      ? `<span style="color:#b45309;font-weight:600">&#9888; ${this._lastWarns.length} peringatan — buka tab Support</span>`
+      : '';
     this._q('[data-role=luas]').textContent = (shoelace(S.verts) / 10000).toFixed(2) + ' m²';
     this.renderSides(mem);
     this.renderBoxPanel();
@@ -3224,11 +3267,13 @@ body,.page-content{overscroll-behavior-y:contain}
           // kelas" jadi entri supportsManual (lihat end()). Tahan diam 450ms tanpa gerak = menu
           // Kecualikan + Ganti Material.
           const id = t.dataset.id;
-          const mem = this._members();
-          const m = mem.find(x => x.id === id);
-          if (!m) return;
+          // spanOfId, BUKAN mem.find(): garis yang terpecah di silangan (irisan sebidang) punya
+          // beberapa member ber-id sama — potongan pertama saja bikin entri hasil "naik kelas"
+          // jadi jauh lebih pendek dari garis yang dihapus (removed[id] menghapus semuanya).
+          const span = DenahConv.spanOfId(this._members(), id);
+          if (!span) return;
           const myDrag = { type: 'supgrid', id, startPt: cm, moved: false,
-            startA: { ...m.geom.a }, startB: { ...m.geom.b }, hit: t };
+            startA: span.a, startB: span.b, hit: t };
           drag = myDrag;
           el.setPointerCapture(e.pointerId); e.preventDefault();
           myDrag.longPressTimer = setTimeout(() => {

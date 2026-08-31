@@ -45,6 +45,7 @@
 
   <h1>{{ $judul }}</h1>
   <div class="meta">Dicetak: {{ $tanggal }} &nbsp;&bull;&nbsp; Baca tabel <b>Bagian</b> dulu (apa yang dibuat &amp; dari batang mana), lalu potong per <b>Batang</b>. Kuning = perlu dilas.</div>
+  <div class="meta"><b>Penting:</b> ukuran support MENERUS dan frame di sini masih ukuran <b>kotor</b> (belum dikurangi tebal besi di ujungnya), jadi pasti agak kepanjangan &mdash; <b>ukur dulu di tempat sebelum dipotong</b>. Ukuran ruas support yang bernama pakai titik (contoh S3&middot;2) sudah dikurangi tebal besi, <b>jangan dipendekkan lagi</b>.</div>
 
   @if(!empty($peringatan))
     <div class="warnbox">&#9888; {!! implode('<br>', array_map('e', (array) $peringatan)) !!}</div>

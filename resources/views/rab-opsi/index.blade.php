@@ -522,7 +522,7 @@ function tambahBlok(pane, tipe, data){
     if(tipe==='denah'){
         const mount=card.querySelector('.b-denah');
         const ed=new DenahEditor(mount, {
-            besi: BESI.map(function(b){ return { nama:b.nama, harga:Number(b.harga_pokok)||0, lebar:b.lebar??null, tinggi:b.tinggi??null }; }),
+            besi: BESI.map(function(b){ return { nama:b.nama, harga:Number(b.harga_pokok)||0, lebar:b.lebar??null, tinggi:b.tinggi??null, tebakan:!!b.tebakan }; }),
             model: (data && data.denah) ? data.denah : null,
             // Jumlah batang di legend ditanyakan ke server (mesin cutting yang sama dgn harga),
             // bukan dihitung di browser -- lihat _jadwalCutting di denah-editor.js.

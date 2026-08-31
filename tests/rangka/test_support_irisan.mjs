@@ -143,4 +143,53 @@ check('dua support manual tegak masing-masing pecah 2', m10.filter(m => m.id.sta
 check('nomor S{n} manual tetap 1 dan 2 walau terpecah',
   DenahConv.numberSupportsManual(m10), { Sm_0: 1, Sm_1: 2 });
 
+// 11) I-1 (blocker) — garis grid PRATINJAU yang terpecah harus tetap "naik kelas" jadi entri
+//     manual SEPANJANG GARIS PENUH. Pemecahan irisan bikin beberapa member ber-ID SAMA (dulu
+//     id grid pratinjau selalu unik per potongan); drag supgrid dulu pakai mem.find(id) =
+//     potongan PERTAMA saja untuk startA/startB, padahal saat dilepas removed[id] menghapus
+//     SELURUH garis -> entri manual pendek menggantikan garis penuh, ±192 cm besi lenyap dari
+//     harga & cutting list tanpa pesan. spanOfId = bagian murni dari jalur drag itu.
+const s11 = {
+  verts: [{x:0,y:0},{x:400,y:0},{x:400,y:300},{x:0,y:300}],
+  grid: 20, kotak: 100, arah: '2', supportsManual: [], removed: {}, tiang: [], balok: [], balokSeq: 1,
+  tinggi: 300, matDefault: { frame: 'Hollow 5x10', support: 'Hollow 4x8', tiang: 'Hollow 5x10', balok: '' },
+  matOverride: {}, combinedBoxes: [], supMenerus: { h: true, v: false },
+};
+const m11 = DenahConv.buildMembers(s11, TAPAK, []);
+const idPecah = 'Sv_0_0';
+const pot11 = m11.filter(m => m.id === idPecah);
+check('prasyarat: garis grid pratinjau memang terpecah >1 potongan ber-id sama', pot11.length > 1, true);
+check('potongan pertama saja TIDAK mewakili garis (bukti bug lama)',
+  Math.round(DenahConv._dist(pot11[0].geom.a, pot11[0].geom.b)) < 300, true);
+const span11 = DenahConv.spanOfId(m11, idPecah);
+check('spanOfId memberi ujung garis PENUH (0..300), bukan potongan pertama',
+  [span11.a, span11.b], [{ x: 100, y: 0 }, { x: 100, y: 300 }]);
+// Yang dipakai end() drag: entri manual hasil naik-kelas panjangnya = garis penuh.
+const prom11 = DenahConv.snapPromotedSupport(idPecah, span11.a, span11.b, s11.grid);
+check('entri manual hasil naik-kelas sepanjang garis penuh',
+  Math.round(DenahConv._dist(prom11.a, prom11.b)), 300);
+check('spanOfId id tak dikenal -> null', DenahConv.spanOfId(m11, 'Sv_9_9'), null);
+// Garis yang TIDAK terpecah tetap apa adanya (jalur lama, tak boleh berubah).
+const m11b = DenahConv.buildMembers(s11, TAPAK, []);
+const span11b = DenahConv.spanOfId(m11b, 'Sh_0_0');
+check('garis utuh: spanOfId = geom member itu sendiri',
+  [span11b.a, span11b.b], [m11b.find(m => m.id === 'Sh_0_0').geom.a, m11b.find(m => m.id === 'Sh_0_0').geom.b]);
+
+// 12) I-2 — tapak hasil TEBAKAN nama (kolom profil master_material kosong) tetap dipakai, tapi
+//     wajib bersuara sendiri: hollow "banci" 4x8 aslinya 3,5 cm -> ruas kependekan, arah salah
+//     yang bikin besi KURANG. Peringatan tetap satu kali per material.
+const TAPAK_TEBAK = { 'Hollow 5x10': { l: 5, t: 10 }, 'Hollow 4x8': { l: 4, t: 8, tebak: true } };
+const s12 = base(); s12.supMenerus = { h: true, v: false };
+const w12 = [];
+check('tebakan: angka tapak tetap dipakai (panjang tak berubah)',
+  sup(DenahConv.buildMembers(s12, TAPAK_TEBAK, w12)).slice(1),
+  [{ nama: 'S2·1', panjang: 145.5 }, { nama: 'S2·2', panjang: 145.5 }]);
+check('tebakan: peringatan DITEBAK muncul sekali',
+  w12.filter(w => w.includes('DITEBAK')).length, 1);
+check('tebakan: peringatan menyebut materialnya',
+  w12.some(w => w.includes('DITEBAK') && w.includes('Hollow 4x8')), true);
+const w12b = [];
+DenahConv.buildMembers(s12, TAPAK, w12b);
+check('tanpa flag tebak: tak ada peringatan DITEBAK', w12b.some(w => w.includes('DITEBAK')), false);
+
 process.exit(fail ? 1 : 0);

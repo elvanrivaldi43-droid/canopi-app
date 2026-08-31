@@ -19,7 +19,8 @@ class RabOpsiController extends Controller
                 ->map(function ($m) {
                     $p = $m->profilCm();
                     return ['id' => $m->id, 'nama' => $m->nama, 'harga_pokok' => $m->harga_pokok,
-                            'lebar' => $p[0] ?? null, 'tinggi' => $p[1] ?? null];
+                            'lebar' => $p[0] ?? null, 'tinggi' => $p[1] ?? null,
+                            'tebakan' => $m->profilTebakan()];
                 })->values();
         } catch (\Throwable $e) {}
 

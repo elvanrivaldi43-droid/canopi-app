@@ -69,4 +69,14 @@ class MasterMaterial extends Model
         if ($l !== null && $t !== null && (float) $l > 0 && (float) $t > 0) return [(float) $l, (float) $t];
         return self::parseProfil($this->nama);
     }
+
+    /** true = profilCm() jatuh ke TEBAKAN nama karena kolom DB kosong. Dikirim ke editor
+     *  denah supaya tapak hasil tebakan diberi peringatan sendiri: hollow "banci" dinamai
+     *  4x8 tapi aslinya 3,5 cm -> ruas jadi 0,25 cm terlalu pendek per ujung interior,
+     *  satu-satunya arah kesalahan yang bikin besi KURANG. */
+    public function profilTebakan(): bool
+    {
+        $l = $this->lebar_profil_cm; $t = $this->tinggi_profil_cm;
+        return !($l !== null && $t !== null && (float) $l > 0 && (float) $t > 0);
+    }
 }
