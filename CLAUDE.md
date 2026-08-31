@@ -680,6 +680,53 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    diputuskan", BUKAN di sini (biar gak dobel + gak drift kalau salah
    satu diupdate). Intinya: BELUM diputuskan kapan/apakah dikerjakan,
    Elvan eksplisit minta "simpan di roadmap dulu".
+10. **Support Beririsan (Menerus vs Putus) + Panjang Ruas Nyata — LIVE 31 Ags
+    2026** (6 task via subagent-driven-development). Master Material dapat
+    kolom `lebar_profil_cm`/`tinggi_profil_cm` (SQL manual
+    `docs/sql/2026-08-30-master-material-profil.sql` **BELUM DIJALANKAN
+    Owner**) + fallback tebak dari nama; dimensi besi mengalir ke editor
+    denah; `buildMembers` memecah ruas support di titik silang (tapak
+    dikurangi per pemotong, arah campur per jalur lewat `S.supMenerus`/toggle
+    per entri, orientasi berdiri/tidur per denah); UI dropdown Menerus+Pasang
+    di tab Support (fase pratinjau) & toggle per baris (fase terkunci);
+    peringatan (tapak belum diisi, dua jalur putus bersilangan) mengalir ke
+    cutting list di 3 jalur (lead tersimpan, project pasca-deal, gambar
+    langsung). Spec
+    `docs/superpowers/specs/2026-08-30-denah-support-irisan-design.md`, plan
+    `docs/superpowers/plans/2026-08-30-denah-support-irisan.md`.
+    **Regresi ditemukan & dipulihkan saat kerja Task 5 (WAJIB dicek Bos):**
+    commit `4718d1a` (28 Ags, "pensiunkan blok tipe KANOPI") tanpa sengaja
+    menghapus SELURUH cabang `else if(tipe==='denah')` di `bacaBlok()` — blok
+    Denah selama 3 hari (28-31 Ags) berhenti mengirim
+    `members`/`denah`/`harga`/`jenis_kerja_id`/`kondisi_ids`/`luas_m2`/
+    `besi_extra` ke server: gambar denah tak tersimpan ke `rab_snapshot`,
+    harga besi denah jadi nol diam-diam. Sudah dipulihkan verbatim +
+    diverifikasi byte-per-byte thd versi pra-regresi. **DATA YANG TERLANJUR
+    TERSIMPAN KOSONG TIDAK SEMBUH DENGAN PERBAIKAN KODE** — lead yang RAB-nya
+    disentuh 28-31 Ags perlu dibuka & digambar/dihitung ulang Bos.
+    **Sengaja BELUM dikerjakan (jangan dilaporkan selesai):** koreksi tapak
+    menyeluruh. Keputusan Elvan 31 Ags: angka sisi yang diketik di denah =
+    UKURAN LUAR kanopi (bukan as-ke-as), sudut frame disambung miter 45°,
+    cutting list tak boleh campur dua konvensi angka — konsekuensinya ruas
+    yang ujungnya ketemu frame harus dikurangi tapak PENUH (bukan setengah),
+    support menerus ikut dikoreksi. Mengubah angka harga (batang jadi sedikit
+    lebih pendek) — sengaja dipisah jadi pekerjaan tersendiri berikutnya
+    karena menyentuh uang.
+    **Checklist manual utk Elvan** (item 0 = verifikasi akhir regresi di
+    atas, item 1-6 = spec Task 6):
+    0. Buka blok Denah yang sudah pernah digambar sejak fitur ini live →
+       refresh halaman → harga besi & jenis kerja HARUS tetap ada (tidak
+       hilang saat refresh).
+    1. Master Material → edit satu hollow → isi lebar/tinggi profil →
+       simpan; baris tanpa profil ber-badge kuning.
+    2. Denah baru → tab Support → "Menerus: Horizontal saja" → kunci → ruas
+       vertikal terpecah, panjang < jarak as (cek angka vs manual).
+    3. Satu jalur di-set "menerus" dari panel → jalur itu utuh lagi; Undo
+       mengembalikan.
+    4. Dua jalur silang di-set putus → badge kuning muncul; cutting list
+       menampilkan peringatan yang sama.
+    5. "Pasang: Tidur" → ruas memendek lagi (tapak sisi besar).
+    6. Buka RAB lama (sebelum fitur) → angka besi TIDAK berubah sama sekali.
 
 ### Pelajaran aktif dari kronologi (jangan hilang saat arsip tidak dibaca)
 

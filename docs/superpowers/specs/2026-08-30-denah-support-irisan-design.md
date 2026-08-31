@@ -1,7 +1,10 @@
 # Spec: Support Beririsan (Menerus vs Putus) + Panjang Ruas Nyata
 
 **Tanggal:** 30 Agustus 2026
-**Status:** DISETUJUI Elvan 30 Ags 2026 (orientasi per denah dikonfirmasi; lihat catatan hollow banci di 1a)
+**Status:** LIVE 31 Agustus 2026 (6 task via subagent-driven-development; lihat
+`CLAUDE.md` Utang aktif #10 utk regresi yang ditemukan+dipulihkan di Task 5 dan
+koreksi tapak menyeluruh yang SENGAJA belum dikerjakan). Disetujui Elvan 30
+Ags 2026 (orientasi per denah dikonfirmasi; lihat catatan hollow banci di 1a).
 **Pemicu:** Diskusi kalibrasi Tahap 1 (rangka). Elvan: di lapangan support H & V
 tidak selalu tumpang tindih; sering beririsan sebidang — satu arah menerus, arah
 lain dipotong-potong, tergantung surveyor. Sistem sekarang cuma tahu satu dunia
