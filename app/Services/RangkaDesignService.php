@@ -28,7 +28,7 @@ class RangkaDesignService
      * kosong diam-diam -- semua opsi dikembalikan, biar pemanggil yang menandai.
      * Blok nonaktif & blok tanpa members dilewati (tak ada yang bisa dipotong).
      *
-     * @return array{opsi:string, blok:string, members:array}[]
+     * @return array{opsi:string, blok:string, members:array, warns:string[]}[]
      */
     public function blokDenahDariSnapshot(array $snap, ?string $opsiDeal = null): array
     {
@@ -54,6 +54,7 @@ class RangkaDesignService
                         'opsi'    => $namaOpsi,
                         'blok'    => trim((string) ($b['nama'] ?? '')) ?: ('Blok ' . ($j + 1)),
                         'members' => $members,
+                        'warns'   => array_slice(array_map('strval', (array) ($b['denah_warns'] ?? [])), 0, 20),
                     ];
                 }
             }

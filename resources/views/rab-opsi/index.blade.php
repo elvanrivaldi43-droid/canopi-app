@@ -653,6 +653,30 @@ function bacaBlok(card){
     if(tipe==='kanopi'){
         // Blok format lama: tak ada field untuk dibaca (lihat tambahBlok). Dikirim apa adanya
         // supaya server membalas peringatan "buat ulang sebagai Denah", bukan hilang diam-diam.
+    } else if(tipe==='denah'){
+        // PENTING: cabang ini sempat KEHAPUS TAK SENGAJA di commit 4718d1a (niatnya cuma
+        // membongkar cabang 'kanopi', tapi 'denah' ikut ketiban jadi cabang else generik
+        // manual_items) -- ditemukan & dipulihkan saat Task 5 SDD 2026-08-30 (peringatan ke
+        // cutting list) krn isiBlok() & server (members/denah/harga/jenis_kerja_id) masih
+        // mengasumsikan field-field ini ada. Tanpa ini, blok Denah tersimpan TANPA batang besi
+        // sama sekali sejak commit itu -- lebih besar dari sekadar bug peringatan hilang.
+        const ed=DENAH.get(card);
+        const members=ed?ed.getMembers():[];
+        const hargaD={};
+        members.forEach(function(m){ hargaD[m.material]=hargaOf(m.material); });
+        b.besi_extra=[];
+        [].slice.call(card.querySelectorAll('.b-besiExtra .row3')).forEach(function(r){
+            var j=r.querySelector('.bx-jenis'), q=r.querySelector('.bx-batang');
+            var nm=j?j.value:''; var bt=q?(+q.value||0):0;
+            if(nm && bt>0){ b.besi_extra.push({material:nm, batang:bt}); hargaD[nm]=hargaOf(nm); }
+        });
+        b.luas_m2=ed?ed.getLuas():0;
+        b.members=members.map(function(m){ return { nama:m.nama, jenis:m.jenis, panjang:m.panjang, material:m.material }; });
+        b.harga=hargaD;
+        b.denah=ed?ed.getModel():null; // ikut ke rab_snapshot untuk rehidrasi
+        b.denah_warns=ed?ed.getWarns():[]; // Task 5: peringatan irisan support ikut ke cutting list
+        b.jenis_kerja_id=+g('.b-jk')||0;
+        b.kondisi_ids=[].slice.call(card.querySelectorAll('.b-kond:checked')).map(function(c){return +c.value;});
     } else {
         b.manual_items=[].slice.call(card.querySelectorAll('.b-manualRows .row3')).map(function(r){
             return { nama:(r.querySelector('.m-nama')||{}).value||'', qty:+((r.querySelector('.m-qty')||{}).value||0), harga:+((r.querySelector('.m-harga')||{}).value||0) };

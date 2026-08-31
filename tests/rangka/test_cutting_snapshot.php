@@ -30,7 +30,7 @@ $snap = [
                 ['tipe' => 'denah', 'nama' => 'Kanopi Depan', 'aktif' => true, 'members' => [
                     ['nama' => 'F1', 'jenis' => 'frame', 'panjang' => 400, 'material' => 'Hollow 5x10'],
                     ['nama' => 'S1', 'jenis' => 'support', 'panjang' => 300, 'material' => 'Hollow 4x8'],
-                ]],
+                ], 'denah_warns' => ['tapak besi "X" belum diketahui']],
                 ['tipe' => 'manual', 'nama' => 'Item Lain', 'aktif' => true],
                 // blok denah nonaktif tidak ikut diproduksi
                 ['tipe' => 'denah', 'nama' => 'Blok Mati', 'aktif' => false, 'members' => [
@@ -56,6 +56,8 @@ check('opsi tercatat', $out[0]['opsi'], 'Opsi Standar');
 check('nama blok tercatat', $out[0]['blok'], 'Kanopi Depan');
 check('members diteruskan utuh', count($out[0]['members']), 2);
 check('opsi kedua ikut', $out[1]['opsi'], 'Opsi Premium');
+check('warns diteruskan dari denah_warns', $out[0]['warns'][0] ?? null, 'tapak besi "X" belum diketahui');
+check('blok tanpa denah_warns -> warns kosong', $out[1]['warns'], []);
 
 // ── Dengan filter opsi deal (pintu produksi): hanya opsi itu.
 $deal = $svc->blokDenahDariSnapshot($snap, 'Opsi Premium');

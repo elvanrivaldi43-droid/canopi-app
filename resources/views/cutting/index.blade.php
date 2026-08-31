@@ -58,6 +58,7 @@
     <input type="hidden" name="judul" id="fJudul">
     <input type="hidden" name="members" id="fMembers">
     <input type="hidden" name="denah_svg" id="fSvg">
+    <input type="hidden" name="warns" id="fWarns">
 </form>
 
 <script src="{{ asset('js/denah-editor.js') }}?v={{ @filemtime(public_path('js/denah-editor.js')) ?: time() }}"></script>
@@ -79,6 +80,7 @@ function bukaCutting(){
     document.getElementById('fJudul').value = document.getElementById('ctJudul').value || 'Cutting List Denah';
     document.getElementById('fMembers').value = JSON.stringify(members);
     document.getElementById('fSvg').value = ED.snapshotCetak();
+    document.getElementById('fWarns').value = JSON.stringify(ED.getWarns());
     document.getElementById('formCutting').submit();
 }
 </script>

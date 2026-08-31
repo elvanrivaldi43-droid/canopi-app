@@ -81,13 +81,22 @@ class CuttingController extends Controller
         $snap = json_decode((string) $lead->rab_snapshot, true);
         $bloks = is_array($snap) ? $rd->blokDenahDariSnapshot($snap, $opsiDeal) : [];
 
-        $peringatan = '';
+        $peringatan = [];
         if ($opsiDeal !== null && $bloks && $bloks[0]['opsi'] !== $opsiDeal
             && !array_filter($bloks, fn ($b) => $b['opsi'] === $opsiDeal)) {
-            $peringatan = "Opsi deal \"{$opsiDeal}\" tidak ditemukan di RAB (mungkin diganti nama setelah deal) — menampilkan SEMUA opsi.";
+            $peringatan[] = "Opsi deal \"{$opsiDeal}\" tidak ditemukan di RAB (mungkin diganti nama setelah deal) — menampilkan SEMUA opsi.";
         }
         if (!$bloks) {
-            $peringatan = 'Lead ini tidak punya blok Denah dengan batang besi. Cutting list hanya tersedia untuk blok yang digambar di editor denah.';
+            $peringatan[] = 'Lead ini tidak punya blok Denah dengan batang besi. Cutting list hanya tersedia untuk blok yang digambar di editor denah.';
+        }
+        // Peringatan per-blok (mis. tapak besi belum diketahui, konflik support putus-silang)
+        // dikumpulkan juga ke kotak peringatan dokumen -- selain tampil sendiri di bawah judul
+        // tiap blok (lihat tampilkanCuttingDenah) -- supaya kelihatan sekali lihat tanpa harus
+        // gulir ke tiap blok satu-satu.
+        foreach ($bloks as $b) {
+            foreach ((array) ($b['warns'] ?? []) as $w) {
+                $peringatan[] = trim($b['blok'] . ': ' . $w);
+            }
         }
 
         // Gambar denah dari snapshot penawaran (kalau sudah pernah Buat Penawaran).
@@ -106,7 +115,7 @@ class CuttingController extends Controller
     }
 
     /** Bagian tampilan bersama: hitung daftar potong per blok lalu render halaman cetak. */
-    private function tampilkanCuttingDenah(array $bloks, string $judul, string $peringatan = '')
+    private function tampilkanCuttingDenah(array $bloks, string $judul, array $peringatan = [])
     {
         $rd = new \App\Services\RangkaDesignService();
         $stok = $this->stokMap();
@@ -144,11 +153,21 @@ class CuttingController extends Controller
         // Jangan telan SVG raksasa/aneh -- foto denah normal puluhan KB.
         if (strlen($svg) > 512 * 1024 || ($svg !== '' && !str_starts_with(ltrim($svg), '<svg'))) $svg = '';
 
+        // Peringatan dari editor (klien) -- jangan percaya mentah: batasi jumlah & panjang tiap
+        // string sebelum ikut dirender di halaman cetak.
+        $warnsRaw = json_decode((string) $request->input('warns', '[]'), true);
+        if (!is_array($warnsRaw)) $warnsRaw = [];
+        $warns = [];
+        foreach (array_slice($warnsRaw, 0, 20) as $w) {
+            $w = mb_substr(trim((string) $w), 0, 200);
+            if ($w !== '') $warns[] = $w;
+        }
+
         $judul = trim((string) $request->input('judul', '')) ?: 'Cutting List Denah';
-        $bloks = $bersih ? [['opsi' => '', 'blok' => 'Denah', 'members' => $bersih, 'denah_svg' => $svg ?: null]] : [];
+        $bloks = $bersih ? [['opsi' => '', 'blok' => 'Denah', 'members' => $bersih, 'denah_svg' => $svg ?: null, 'warns' => $warns]] : [];
 
         return $this->tampilkanCuttingDenah($bloks, $judul,
-            $bersih ? '' : 'Denah belum punya batang besi — gambar bentuknya dulu, baru buka cutting list.');
+            $bersih ? [] : ['Denah belum punya batang besi — gambar bentuknya dulu, baru buka cutting list.']);
     }
 
     public function cuttingDenahLead(Request $request)

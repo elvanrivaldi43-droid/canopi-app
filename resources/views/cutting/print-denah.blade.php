@@ -47,7 +47,7 @@
   <div class="meta">Dicetak: {{ $tanggal }} &nbsp;&bull;&nbsp; Baca tabel <b>Bagian</b> dulu (apa yang dibuat &amp; dari batang mana), lalu potong per <b>Batang</b>. Kuning = perlu dilas.</div>
 
   @if(!empty($peringatan))
-    <div class="warnbox">&#9888; {{ $peringatan }}</div>
+    <div class="warnbox">&#9888; {!! implode('<br>', array_map('e', (array) $peringatan)) !!}</div>
   @endif
 
   @php
@@ -59,6 +59,10 @@
     <div class="blok">
       @if($bd['opsi'] !== '' || count($bloks) > 1)
         <h2>@if($bd['opsi'] !== ''){{ $bd['opsi'] }} &mdash; @endif{{ $bd['blok'] }}</h2>
+      @endif
+
+      @if(!empty($bd['warns']))
+        <div class="warnbox">&#9888; {!! implode('<br>', array_map('e', (array) $bd['warns'])) !!}</div>
       @endif
 
       @if(!empty($bd['denah_svg']))
