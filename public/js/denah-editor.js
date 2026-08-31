@@ -205,7 +205,11 @@ const DenahConv = {
   numberSupportsManual(mem) {
     let n = 0;
     const map = {};
-    mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_')).forEach(m => { n++; map[m.id] = n; });
+    // Nomor diberikan per ID, BUKAN per member: 1 support bisa jadi beberapa member ber-id sama
+    // (kepotong coakan, atau dipecah di silangan sebidang) — kalau dihitung per member, S2 tiba-tiba
+    // jadi S4 begitu ada satu jalur diset putus.
+    mem.filter(m => m.jenis === 'support' && m.id.startsWith('Sm_'))
+      .forEach(m => { if (map[m.id] === undefined) map[m.id] = ++n; });
     return map;
   },
   // tapakMap/warnsOut = tambahan "support beririsan" (spec 2026-08-30) dan SELALU opsional:
@@ -572,16 +576,17 @@ const DenahConv = {
         if (c.axis === ax) return;                   // sejajar: tak memotong
         let u;
         if (c.axis) {
-          // Pemotong lurus tegak lurus: badannya harus benar-benar melewati garis ruas ini.
-          // Toleransi EPS di ujung disengaja — sambungan T (pemotong berhenti PAS di ruas)
-          // secara fisik tetap memotong.
-          if (w < Math.min(W(ax, c.a), W(ax, c.b)) - EPS || w > Math.max(W(ax, c.a), W(ax, c.b)) + EPS) return;
+          // Pemotong lurus tegak lurus: badannya harus BENAR-BENAR menyeberangi garis ruas ini
+          // (uji straddle ketat, bukan sekadar menyentuh). Batang yang BERHENTI pas di ruas =
+          // sambungan T / butt joint: yang berhenti itu justru yang kehilangan tapak, batang
+          // yang dilewatinya tetap utuh — jadi dia bukan pemotong.
+          if (Math.min(W(ax, c.a), W(ax, c.b)) > w - EPS || Math.max(W(ax, c.a), W(ax, c.b)) < w + EPS) return;
           u = U(ax, c.a);
         } else {
           const wa = W(ax, c.a), wb = W(ax, c.b);
           if (Math.abs(wb - wa) < EPS) return;       // balok sejajar ruas
           const t = (w - wa) / (wb - wa);
-          if (t < -EPS || t > 1 + EPS) return;
+          if (t <= EPS || t >= 1 - EPS) return;      // balok berhenti di ruas = butt joint, bukan pemotong
           u = U(ax, c.a) + t * (U(ax, c.b) - U(ax, c.a));
         }
         if (u > u0 + EPS && u < u1 - EPS) cuts.push({ u, material: c.material });
@@ -2786,7 +2791,10 @@ body,.page-content{overscroll-behavior-y:contain}
       // Grid support (fase pratinjau) tidak diberi nomor lagi (id-nya tak stabil lintas render, lihat Task 1).
       const fullLabel = lockedEntry ? `S${m.id.slice(2)} · ${m.panjang}` : (manual ? `S${supNum[m.id]} · ${m.panjang}` : `${m.panjang}`);
       const shortLabel = lockedEntry ? `S${m.id.slice(2)}` : (manual ? `S${supNum[m.id]}` : '');
-      const label = DenahConv.supportLabelText(fullLabel, shortLabel, m.panjang * this.SC, selected);
+      // Ruang muat label diukur dari GARIS yang digambar, bukan dari m.panjang: untuk ruas hasil
+      // pecah di silangan, m.panjang sudah dikurangi tapak jadi lebih pendek dari garisnya —
+      // labelnya kepotong lebih cepat dari seharusnya kalau pakai m.panjang.
+      const label = DenahConv.supportLabelText(fullLabel, shortLabel, dist(m.geom.a, m.geom.b) * this.SC, selected);
       // Support horizontal & vertikal yang berpotongan deket tengah kotak dulu labelnya numpuk
       // (dua-duanya persis di titik tengah garis masing-masing). Vertikal digeser ke titik 30%
       // (dari ujung "atas"/awal garis, bukan lagi persis di tengah) biar gak ketiban label
