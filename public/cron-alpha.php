@@ -112,14 +112,22 @@ if ($jam >= '20:00' && $jam <= '20:15') {
                           ->with('user')
                           ->get();
 
+    $svcStatus = app(\App\Services\KerjaHariLiburService::class);
     foreach ($belumPulang as $absen) {
+        // DULU: status di-ALPHA & gaji dinolkan — lupa menekan tombol pulang dihukum
+        // sama seperti tidak masuk sama sekali, DAN alpha menghanguskan bonus KPI
+        // sebulan penuh. Kasus nyata 31 Ags 2026: Sahrul absen masuk 07:35, absen
+        // pulang 20:00:25 (telat 25 detik dari cron ini), kerja 12+ jam, tetap dicap
+        // alpha. Keputusan Elvan: DIBAYAR SEPARUH (`setengah_hari`), bukan alpha.
+        $tarif  = (float) ($absen->user->gaji_harian ?? 0);
+        $status = $svcStatus->statusLupaPulang(true, false);   // dipilih query: masuk & belum pulang
         $absen->update([
-            'status'              => 'alpha',
-            'keterangan'          => 'Tidak absen pulang — otomatis alpha jam 20:00',
-            'gaji_hari_ini'       => 0,
+            'status'              => $status,
+            'keterangan'          => 'Tidak absen pulang — otomatis setengah hari jam 20:00',
+            'gaji_hari_ini'       => $svcStatus->gajiLupaPulang($tarif, (float) ($absen->potongan_telat ?? 0)),
             'uang_makan_hari_ini' => 0,
-            // Status alpha = 0 upah, termasuk kalau hari itu kerja hari libur —
-            // kalau tidak dinolkan, pegawai bulanan tetap kebayar 1x gaji harian.
+            // Upah hari libur tetap dinolkan: yang dibayar separuh adalah gaji hari
+            // biasa, bukan upah ekstra hari libur yang butuh kerja penuh terverifikasi.
             'upah_hari_libur'     => 0,
         ]);
 
@@ -127,19 +135,19 @@ if ($jam >= '20:00' && $jam <= '20:15') {
 
         app(TelegramService::class)->kirim($k->telegram_chat_id,
             "⚠️ *INFO ABSENSI*\n" .
-            "Hai {$k->name}, kamu tercatat ALPHA karena tidak absen pulang hari ini ({$tanggal->format('d/m/Y')}).\n" .
-            "Hubungi mandor jika ada kesalahan."
+            "Hai {$k->name}, kamu lupa absen pulang hari ini ({$tanggal->format('d/m/Y')}).\n" .
+            "Hari ini dihitung SETENGAH HARI. Hubungi mandor jika ada kesalahan."
         );
 
         $mandorOwner = User::whereIn('level', [1, 3])->whereNotNull('telegram_chat_id')->get();
         foreach ($mandorOwner as $m) {
             app(TelegramService::class)->kirim($m->telegram_chat_id,
-                "❌ *TIDAK ABSEN PULANG*\n" .
-                "{$k->name} ({$k->jabatan}) tidak absen pulang hari ini — otomatis ALPHA."
+                "⚠️ *TIDAK ABSEN PULANG*\n" .
+                "{$k->name} ({$k->jabatan}) tidak absen pulang hari ini — otomatis SETENGAH HARI. Koreksi kalau dia sebenarnya kerja penuh."
             );
         }
 
-        $log[] = "ALPHA tidak pulang: {$k->name}";
+        $log[] = "SETENGAH HARI tidak pulang: {$k->name}";
     }
 }
 

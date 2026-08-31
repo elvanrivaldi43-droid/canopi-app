@@ -87,14 +87,21 @@ class AbsensiController extends Controller
         $absenHariIni = Absensi::where('user_id', $user->id)->whereDate('tanggal', today())->first();
 
         // Checkpoint 1 "Lapor Progress": kalau kelewat jam 12:30 belum lapor sama sekali -> denda flat
+        // Denda HANYA untuk hari yang benar-benar hari kerja. Dulu tak ada penjaga ini:
+        // orang yang sudah di-alpha (gaji 0) tetap didenda saat membuka aplikasi ->
+        // gaji jadi MINUS, dan minus itu menggerus gaji hari-hari lain (gaji pokok
+        // harian = jumlah gaji_hari_ini sebulan). Ditemukan 31 Ags 2026 dari data
+        // production: 101 baris bergaji minus.
+        $svcCP = app(\App\Services\KerjaHariLiburService::class);
         if ($absenHariIni && $absenHariIni->jam_masuk
+            && $svcCP->bolehDendaCheckpoint($absenHariIni->status)
             && !$absenHariIni->jam_lapor_progress
             && !$absenHariIni->potongan_progress_dicatat
             && now()->format('H:i') >= self::JAM_BATAS_LAPOR_PROGRESS) {
             $potongan = self::POTONGAN_TELAT;
             $absenHariIni->update([
                 'potongan_telat'            => ($absenHariIni->potongan_telat ?? 0) + $potongan,
-                'gaji_hari_ini'             => ($absenHariIni->gaji_hari_ini ?? 0) - $potongan,
+                'gaji_hari_ini'             => $svcCP->kurangiDenda((float) ($absenHariIni->gaji_hari_ini ?? 0), $potongan),
                 'potongan_progress_dicatat' => true,
             ]);
             $absenHariIni->refresh();
@@ -103,13 +110,14 @@ class AbsensiController extends Controller
         // Checkpoint 2 "Kembali Kerja": kalau kelewat jam 14:00 belum lapor sama sekali -> denda flat
         // (LOGIC TIDAK BERUBAH dari sebelumnya, cuma nama kolom flag disamakan konteksnya)
         if ($absenHariIni && $absenHariIni->jam_masuk
+            && $svcCP->bolehDendaCheckpoint($absenHariIni->status)
             && !$absenHariIni->jam_absen_siang
             && !$absenHariIni->potongan_siang_dicatat
             && now()->format('H:i') >= self::JAM_SKIP_SIANG) {
             $potongan = self::POTONGAN_TELAT;
             $absenHariIni->update([
                 'potongan_telat'         => ($absenHariIni->potongan_telat ?? 0) + $potongan,
-                'gaji_hari_ini'          => ($absenHariIni->gaji_hari_ini ?? 0) - $potongan,
+                'gaji_hari_ini'          => $svcCP->kurangiDenda((float) ($absenHariIni->gaji_hari_ini ?? 0), $potongan),
                 'potongan_siang_dicatat' => true,
             ]);
             $absenHariIni->refresh();
@@ -667,7 +675,9 @@ class AbsensiController extends Controller
             'gps_valid_kembali_kerja' => true,
             'potongan_telat'          => ($absen->potongan_telat??0) + $potongan,
             'potongan_siang_dicatat'  => true,
-            'gaji_hari_ini'           => ($absen->gaji_hari_ini??0) - $potongan,
+            // mentok 0 — jangan pernah minus (lihat KerjaHariLiburService::kurangiDenda)
+            'gaji_hari_ini'           => app(\App\Services\KerjaHariLiburService::class)
+                                            ->kurangiDenda((float) ($absen->gaji_hari_ini ?? 0), (float) $potongan),
         ]);
 
         $pesan = $menitTelat>0

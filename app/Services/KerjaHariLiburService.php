@@ -216,6 +216,55 @@ class KerjaHariLiburService
         ];
     }
 
+    // ═══════════════════════════════════════════════════════
+    // LUPA ABSEN PULANG (keputusan Elvan 31 Ags 2026)
+    // ═══════════════════════════════════════════════════════
+    // Kasus nyata dari data production: Sahrul absen masuk 07:35, absen pulang
+    // 20:00:25, kerja 12+ jam — tapi cron jam 20:00 keburu menandainya ALPHA dan
+    // menolkan gajinya (telat 25 detik dari cron). Bryan & Sahrul kehilangan gaji
+    // harian PLUS bonus KPI sebulan (alpha > 0 -> kelas KPI 'none'), padahal
+    // dua-duanya benar-benar bekerja.
+    //
+    // Aturan baru: lupa menekan tombol pulang = DIBAYAR SEPARUH (`setengah_hari`,
+    // status yang memang sudah ada & sudah dihitung separuh di sistem), BUKAN alpha.
+    // Alpha tetap hanya untuk yang tidak absen masuk sama sekali.
+    //
+    // Fungsi-fungsi di bawah sengaja MURNI supaya bisa dites tanpa database.
+
+    /** Status untuk cron jam 20:00. null = jangan diapa-apakan. */
+    public function statusLupaPulang(bool $sudahMasuk, bool $sudahPulang): ?string
+    {
+        if (!$sudahMasuk) return null;   // belum masuk = urusan cabang alpha yang lain
+        if ($sudahPulang) return null;   // sudah pulang = normal, jangan diutak-atik
+        return 'setengah_hari';
+    }
+
+    /** Gaji hari itu kalau lupa absen pulang: separuh, dikurangi denda, mentok 0. */
+    public function gajiLupaPulang(float $gajiHarian, float $potonganTelat): float
+    {
+        return max(0.0, ($gajiHarian * 0.5) - $potonganTelat);
+    }
+
+    /**
+     * Boleh tidaknya denda checkpoint (lupa lapor progress / kembali kerja) dikenakan.
+     * Hari yang BUKAN hari kerja tidak boleh didenda — inilah yang dulu membuat gaji
+     * MINUS: orang sudah di-alpha (gaji 0), lalu membuka aplikasi, dendanya tetap
+     * dipotong dari nol. Minus itu lalu menggerus gaji hari-hari lain, karena gaji
+     * pokok harian = jumlah `gaji_hari_ini` sebulan.
+     * Status null/kosong = baris baru yang belum ditandai -> boleh (perilaku lama).
+     */
+    public function bolehDendaCheckpoint(?string $status): bool
+    {
+        if ($status === null || $status === '') return true;
+        return in_array($status, self::STATUS_BEKERJA, true);
+    }
+
+    /** Penjaga terakhir: gaji sehari tak pernah boleh di bawah nol. */
+    public function kurangiDenda(float $gajiSekarang, float $potongan): float
+    {
+        return max(0.0, $gajiSekarang - $potongan);
+    }
+
     // Nominal 1 hari hasil koreksi. Formula gaji/UM/potongan SAMA PERSIS dengan
     // aturan koreksi lama — yang berubah cuma dari mana tarifnya diambil (lihat tarifKoreksi).
     // Balikan null = status tidak dikenal, controller mempertahankan nilai lama.
