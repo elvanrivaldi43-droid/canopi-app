@@ -259,6 +259,19 @@ class KerjaHariLiburService
         return in_array($status, self::STATUS_BEKERJA, true);
     }
 
+    /**
+     * Gaji BERSIH sebulan tak pernah di bawah nol (keputusan Elvan 31 Ags 2026).
+     * Aturan dendanya TIDAK dilonggarkan — denda tetap dihitung & tercatat penuh di
+     * slip supaya transparan; yang dijaga cuma hasil akhirnya, agar karyawan tak
+     * pernah "berhutang" ke perusahaan. Sisa denda yang tak tertutup pendapatan
+     * HANGUS bulan itu (opsi bawa-ke-bulan-depan sengaja tidak dipilih).
+     * Kasus nyata Agustus 2026: 7 slip bergaji bersih minus sampai -696.333.
+     */
+    public function gajiBersihTidakMinus(float $gajiBersih): float
+    {
+        return max(0.0, $gajiBersih);
+    }
+
     /** Penjaga terakhir: gaji sehari tak pernah boleh di bawah nol. */
     public function kurangiDenda(float $gajiSekarang, float $potongan): float
     {

@@ -68,4 +68,13 @@ check('denda lebih besar dari gaji -> 0',        $svc->kurangiDenda(20000, 41666
 check('gaji sudah 0 -> tetap 0',                 $svc->kurangiDenda(0, 23000), 0.0);
 check('gaji sudah minus (data lama) -> dinormalkan ke 0', $svc->kurangiDenda(-40000, 0), 0.0);
 
+// ── Gaji bersih slip tidak pernah di bawah nol (keputusan Elvan 31 Ags).
+// Aturan dendanya TIDAK berubah — denda tetap dihitung & tercatat penuh di slip
+// (transparan). Yang dijaga cuma hasil akhirnya: karyawan tak pernah "berhutang".
+// Sisa denda yang tak tertutup pendapatan hangus bulan itu, tidak dibawa ke
+// bulan depan (opsi hutang sengaja tidak dipilih).
+check('gaji bersih normal tidak diubah', $svc->gajiBersihTidakMinus(3024000.0), 3024000.0);
+check('gaji bersih minus -> 0',          $svc->gajiBersihTidakMinus(-696333.35), 0.0);
+check('gaji bersih pas 0 -> 0',          $svc->gajiBersihTidakMinus(0.0), 0.0);
+
 exit($fail ? 1 : 0);

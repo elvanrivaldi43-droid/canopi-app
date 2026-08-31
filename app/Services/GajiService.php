@@ -247,7 +247,10 @@ class GajiService
             $user->tipe_gaji, $gajiPokok, $umSiang, $totalTunjangan, $bonusKpi, $bonusLembur, $upahHariLibur
         );
         $totalPotongan   = $potonganTelat + $potonganKasbon + $potonganInsidental + $tabunganWajib + $tabunganLebaran;
-        $gajiBersih      = $totalPendapatan - $totalPotongan;
+        // Denda tetap tercatat PENUH di baris potongan (transparan) — yang dijaga cuma
+        // hasil akhirnya: gaji bersih tak pernah minus, karyawan tak "berhutang".
+        // Keputusan Elvan 31 Ags 2026 (7 slip Agustus bergaji bersih minus).
+        $gajiBersih      = $svcLibur->gajiBersihTidakMinus($totalPendapatan - $totalPotongan);
 
         // ── Warning batas aman ─────────────────────────────
         $warningBatasAman = $gajiBersih < self::BATAS_AMAN;
