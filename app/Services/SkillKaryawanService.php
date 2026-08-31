@@ -13,7 +13,9 @@ class SkillKaryawanService
      */
     public function deteksiKategori(string $jabatan): ?string
     {
-        $j = mb_strtolower($jabatan);
+        // strtolower (bukan mb_strtolower): mbstring belum tentu ada di server
+        // (tak ada di CLI VPS ini), input jabatan ASCII ("Tukang"/"Kenek").
+        $j = strtolower($jabatan);
         if (str_contains($j, 'kenek')) return 'kenek';
         if (str_contains($j, 'tukang')) return 'tukang';
         return null;
