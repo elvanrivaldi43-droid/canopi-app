@@ -287,6 +287,44 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    buang air). Butuh data baru dulu → sesi `/plan` terpisah, sudah disetujui
    Elvan sbg "atas dulu, samping nyusul".
 
+0b. **Gelombang perbaikan PENGGAJIAN 31 Ags 2026 — LIVE, dipicu gajian nyata**
+   (kasus Ria lupa-absen → merembet ke serangkaian bug uang). Semua keputusan
+   kebijakan di sini adalah KEPUTUSAN ELVAN, jangan didebat ulang:
+   - Lupa absen pulang = SETENGAH HARI dibayar separuh (dulu: alpha + gaji hangus
+     + bonus KPI sebulan ikut hangus; kasus nyata Sahrul kerja 12 jam dicap alpha
+     krn absen pulang 20:00:25, telat 25 detik dari cron).
+   - Gaji sehari & gaji BERSIH slip mentok Rp 0, tak pernah minus (ditemukan 101
+     baris absensi minus + 7 slip bergaji bersih minus s/d -696rb; denda checkpoint
+     ~900rb/bln utk karyawan yang tak pakai fitur lapor progress). Aturan denda
+     SENGAJA TIDAK dilonggarkan (berlaku semua, tanpa batas) — cuma hasil akhirnya
+     yang dijaga; sisa denda hangus, TIDAK dibawa ke bulan depan.
+   - Denda checkpoint hanya utk status hari-kerja (alpha/izin/sakit tak bisa didenda).
+   - Izin/sakit/cuti TIDAK DIBAYAR (uang makan tetap penuh). Dua jalur (approval
+     izin vs menu Koreksi) dulu beda aturan — kini satu sumber: `nominalKoreksi()`.
+   - Saklar `setting_gaji`: bonus KPI & tabungan wajib MATI (KPI ditunda "mungkin
+     Oktober/Desember"; tabungan belum disosialisasikan — baris tampil Rp 0).
+     Halaman /setting-gaji (Owner). SQL `docs/sql/2026-08-31-setting-gaji.sql`
+     BELUM dijalankan — tanpa itu default tetap MATI (aman), saklar saja yang
+     belum bisa diubah dari halaman.
+   - Slip draft/menunggu_konfirmasi bisa DIHITUNG ULANG (tombol di halaman
+     Penggajian); slip DIBAYAR tak pernah bisa (efek samping kasbon/tabungan).
+     Slip = FOTO BEKU — koreksi absensi TIDAK mengubah slip yang sudah ada.
+   - Tombol uang di halaman Penggajian (Hitung Ulang/Bayar/Bayar Semua) pakai pola
+     TEKAN-DUA-KALI tanpa confirm() — Chrome bisa memblokir semua dialog diam-diam
+     ("jangan tampilkan lagi") dan tombol ber-confirm() mati total tanpa reaksi
+     (kejadian nyata di HP Elvan; dua-tap TERVALIDASI berhasil).
+   - Form aksi payroll DILARANG di slip.blade.php (halaman itu dibuka karyawan) —
+     test keamanan menolaknya dan itu benar; jangan coba lagi.
+   - Menu "Slip Gaji Saya" utk karyawan; "Profil Saya" dobel (href="#" mati) dihapus.
+   **Tervalidasi Elvan:** hitung ulang slip Ria berhasil (2,6jt → benar).
+   **Sisa utk Elvan:** (a) koreksi 3 hari alpha Sahrul (22 & 28/8) + Bryan (6/8)
+   lalu Hitung Ulang slip mereka; (b) 7 slip minus diurus manual via Koreksi
+   (keputusan Elvan); (c) opsional SQL setting-gaji di atas.
+   **Utang teknis dicatat, belum dikerjakan:** kolom uang di absensi/slip bertipe
+   FLOAT (angka 2.394.999,99 / 5.000,01) — harusnya DECIMAL; perlu migrasi
+   hati-hati terpisah. Prosedur gajian yang benar ada di percakapan 31 Ags:
+   umumkan H-3 → cek alpha di rekap → konfirmasi → koreksi → generate → bayar.
+
 1. **Kalibrasi RAB tetap prioritas roadmap #1.** Data masih tes dan belum boleh
    dipakai ke customer asli sampai kalibrasi tuntas. PA-DUTA 4x8 masih kurang foto
    bar #12 untuk menutup validasi target 9 batang. Luas referensi yang benar sekitar
