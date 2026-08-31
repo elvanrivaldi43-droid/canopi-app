@@ -50,11 +50,27 @@ class RangkaDesignService
                         fn ($m) => trim((string) ($m['material'] ?? '')) !== '' && (float) ($m['panjang'] ?? 0) > 0
                     ));
                     if (!$members) continue;
+                    // Penyimpangan sengaja dari brief (verbatim brief cuma array_slice+strval):
+                    // rab_snapshot ditulis klien lewat autosave, sama tak-terpercaya-nya dengan
+                    // 'warns' di cuttingDenahManual (CuttingController) -- disamakan supaya tak
+                    // asimetris: batasi PANJANG tiap item (bukan cuma jumlah), dan buang elemen
+                    // non-scalar (array/objek bersarang) SEBELUM strval -- strval atas array
+                    // memicu "Warning: Array to string conversion" dan hasilnya literal "Array".
+                    $warns = [];
+                    foreach (array_slice((array) ($b['denah_warns'] ?? []), 0, 20) as $w) {
+                        if (!is_scalar($w)) continue;
+                        $w = substr(trim((string) $w), 0, 200); // substr, bukan mb_substr: ext-mbstring
+                        // tak tersedia di CLI VPS ini (mb_substr FATAL saat dites nyata di sini,
+                        // padahal php -l/canopi-check --full tak pernah mengeksekusinya) --
+                        // dipotong per-byte, bukan per-karakter. Batas cuma pengaman panjang
+                        // wajar, bukan titik presisi UTF-8, jadi diterima.
+                        if ($w !== '') $warns[] = $w;
+                    }
                     $out[] = [
                         'opsi'    => $namaOpsi,
                         'blok'    => trim((string) ($b['nama'] ?? '')) ?: ('Blok ' . ($j + 1)),
                         'members' => $members,
-                        'warns'   => array_slice(array_map('strval', (array) ($b['denah_warns'] ?? [])), 0, 20),
+                        'warns'   => $warns,
                     ];
                 }
             }

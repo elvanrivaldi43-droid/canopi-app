@@ -59,6 +59,18 @@ check('opsi kedua ikut', $out[1]['opsi'], 'Opsi Premium');
 check('warns diteruskan dari denah_warns', $out[0]['warns'][0] ?? null, 'tapak besi "X" belum diketahui');
 check('blok tanpa denah_warns -> warns kosong', $out[1]['warns'], []);
 
+// ── Sanitasi warns (fix round 1): item sangat panjang dipotong 200 char, elemen
+// non-scalar (array bersarang) dibuang -- BUKAN jadi literal "Array".
+$snapKotor = ['panes' => [[
+    'nama' => 'Opsi Kotor',
+    'blok' => [['tipe' => 'denah', 'nama' => 'Blok Kotor', 'aktif' => true, 'members' => [
+        ['nama' => 'F1', 'jenis' => 'frame', 'panjang' => 400, 'material' => 'Hollow 5x10'],
+    ], 'denah_warns' => [str_repeat('x', 250), ['nested' => 'array'], 123, 'valid']]],
+]]];
+$outKotor = $svc->blokDenahDariSnapshot($snapKotor);
+check('warns: item panjang dipotong 200 char', strlen($outKotor[0]['warns'][0]), 200);
+check('warns: elemen array bersarang dibuang (bukan "Array")', $outKotor[0]['warns'], [str_repeat('x', 200), '123', 'valid']);
+
 // ── Dengan filter opsi deal (pintu produksi): hanya opsi itu.
 $deal = $svc->blokDenahDariSnapshot($snap, 'Opsi Premium');
 check('filter deal: hanya blok opsi itu', count($deal), 1);

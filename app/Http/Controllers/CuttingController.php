@@ -98,6 +98,10 @@ class CuttingController extends Controller
                 $peringatan[] = trim($b['blok'] . ': ' . $w);
             }
         }
+        // Dokumen banyak blok (N x 20 warns) bisa jadi puluhan baris duplikat -- batasi agregat
+        // & buang yang sama persis (warns identik dari blok berbeda, mis. "tapak besi X belum
+        // diketahui" muncul di tiap blok yang pakai material sama).
+        $peringatan = array_slice(array_values(array_unique($peringatan)), 0, 30);
 
         // Gambar denah dari snapshot penawaran (kalau sudah pernah Buat Penawaran).
         $svgMap = [];
@@ -159,7 +163,8 @@ class CuttingController extends Controller
         if (!is_array($warnsRaw)) $warnsRaw = [];
         $warns = [];
         foreach (array_slice($warnsRaw, 0, 20) as $w) {
-            $w = mb_substr(trim((string) $w), 0, 200);
+            if (!is_scalar($w)) continue; // buang array/objek bersarang, jangan jadi literal "Array"
+            $w = substr(trim((string) $w), 0, 200); // substr: ext-mbstring tak tersedia di CLI VPS ini
             if ($w !== '') $warns[] = $w;
         }
 
