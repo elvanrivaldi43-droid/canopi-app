@@ -263,16 +263,27 @@ class IzinAbsenController extends Controller
         $user = $izin->user;
 
         // Buat/update record absensi
+        // Nominalnya WAJIB lewat KerjaHariLiburService::nominalKoreksi -- SATU sumber
+        // aturan untuk dua pintu. Dulu jalur ini menghitung sendiri dan memberi GAJI
+        // PENUH untuk sakit/izin/cuti, sementara menu Koreksi memberi 0: dua karyawan
+        // yang sama-sama sakit diperlakukan beda tergantung lewat pintu mana. Ketahuan
+        // 31 Ags 2026 dari gaji pokok RIA NURAENI (Rp 2.600.000 = 25 hari kerja + 1
+        // hari IZIN yang ikut terbayar). Keputusan Elvan: izin/sakit/cuti TIDAK
+        // dibayar. Uang makan tetap penuh -- itu memang sudah sama di kedua jalur.
+        $nominal = app(\App\Services\KerjaHariLiburService::class)->nominalKoreksi(
+            $izin->tipe,
+            (float) ($user->gaji_harian ?? 0),
+            (float) ($user->uang_makan ?? 0),
+            0.0
+        ) ?? ['gaji_hari_ini' => 0.0, 'uang_makan_hari_ini' => 0.0];
+
         Absensi::updateOrCreate(
             ['user_id' => $izin->user_id, 'tanggal' => $izin->tanggal],
             [
                 'status'              => $izin->tipe, // sakit, izin, cuti, dinas_luar
                 'keterangan'          => $izin->alasan,
-                'uang_makan_hari_ini' => $user->uang_makan ?? 0, // semua dapat UM penuh
-                'gaji_hari_ini'       => match($izin->tipe) {
-                    'dinas_luar' => 0, // diliburkan = gaji 0
-                    default      => $user->gaji_harian ?? 0, // sakit/izin/cuti = gaji penuh
-                },
+                'uang_makan_hari_ini' => $nominal['uang_makan_hari_ini'],
+                'gaji_hari_ini'       => $nominal['gaji_hari_ini'],
             ]
         );
     }

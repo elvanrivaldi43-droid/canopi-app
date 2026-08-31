@@ -77,4 +77,26 @@ check('gaji bersih normal tidak diubah', $svc->gajiBersihTidakMinus(3024000.0), 
 check('gaji bersih minus -> 0',          $svc->gajiBersihTidakMinus(-696333.35), 0.0);
 check('gaji bersih pas 0 -> 0',          $svc->gajiBersihTidakMinus(0.0), 0.0);
 
+// ── Izin/sakit/cuti TIDAK dibayar (keputusan Elvan 31 Ags 2026).
+// Dulu ada DUA aturan untuk hal yang sama: lewat approval izin -> gaji PENUH,
+// lewat menu Koreksi -> gaji 0. Dua karyawan yang sama-sama sakit bisa berbeda
+// perlakuan tergantung lewat pintu mana. Kasus nyata: gaji pokok RIA NURAENI
+// Rp 2.600.000 = 25 hari kerja + 1 hari IZIN yang ikut terbayar Rp 100.000.
+// Sekarang jalur approval memakai nominalKoreksi() yang sama — satu sumber aturan.
+$n = fn($tipe) => $svc->nominalKoreksi($tipe, 100000.0, 20000.0, 0.0);
+check('izin: gaji 0',        $n('izin')['gaji_hari_ini'], 0.0);
+check('sakit: gaji 0',       $n('sakit')['gaji_hari_ini'], 0.0);
+check('cuti: gaji 0',        $n('cuti')['gaji_hari_ini'], 0.0);
+check('dinas_luar: gaji 0',  $n('dinas_luar')['gaji_hari_ini'], 0.0);
+// Uang makan TETAP dibayar untuk izin/sakit/cuti — tidak ikut diubah, memang
+// sudah sama di kedua jalur sebelum perubahan ini.
+check('izin: uang makan tetap penuh',  $n('izin')['uang_makan_hari_ini'], 20000.0);
+check('sakit: uang makan tetap penuh', $n('sakit')['uang_makan_hari_ini'], 20000.0);
+// Jalur approval WAJIB memakai aturan yang sama, bukan menghitung sendiri.
+$srcIzin = file_get_contents(__DIR__ . '/../../app/Http/Controllers/IzinAbsenController.php');
+check('approval izin memakai nominalKoreksi (satu sumber aturan)',
+    str_contains($srcIzin, 'nominalKoreksi'), true);
+check('approval izin tak lagi memberi gaji_harian penuh sebagai default',
+    str_contains($srcIzin, "default      => \$user->gaji_harian ?? 0"), false);
+
 exit($fail ? 1 : 0);
