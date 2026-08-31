@@ -9,6 +9,28 @@
     @else
         @include('partials.sidebar-pipeline')
     @endif
+<script>
+// Konfirmasi TANPA dialog confirm(): Chrome bisa memblokir semua dialog diam-diam
+// ("jangan tampilkan dialog lagi") -- begitu tercentang, tombol ber-confirm() mati
+// total tanpa reaksi (kasus nyata Elvan 31 Ags: Hitung Ulang ditekan, tak terjadi
+// apa pun, dialog tak pernah muncul). Pola dua-tap: tekan pertama tombol berubah
+// merah "Tekan lagi ...", tekan kedua dalam 4 detik = jalan. Batal = biarkan saja.
+function konfirmasi2Tap(btn){
+    var form = btn.closest('form');
+    if (!form) return;
+    if (btn.dataset.armed === '1') { form.submit(); return; }
+    btn.dataset.armed = '1';
+    btn.dataset.teksAsli = btn.innerHTML;
+    btn.dataset.bgAsli = btn.style.background;
+    btn.innerHTML = 'Tekan lagi \u2713';
+    btn.style.background = '#dc2626';
+    setTimeout(function(){
+        btn.dataset.armed = '';
+        btn.innerHTML = btn.dataset.teksAsli;
+        btn.style.background = btn.dataset.bgAsli;
+    }, 4000);
+}
+</script>
 @endsection
 
 @section('bottom-nav')
@@ -108,7 +130,7 @@
                 <input type="hidden" name="periode" value="gaji_bulanan">
                 <input type="hidden" name="bulan" value="{{ $bulan }}">
                 <input type="hidden" name="tahun" value="{{ $tahun }}">
-                <button type="submit" onclick="return confirm('Proses bayar semua slip draft?')"
+                <button type="button" onclick="konfirmasi2Tap(this)"
                     style="background:#10b981;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;">
                     ✅ Bayar Semua
                 </button>
@@ -199,7 +221,7 @@
                                         <input type="hidden" name="periode" value="gaji_bulanan">
                                         <input type="hidden" name="bulan" value="{{ $bulan }}">
                                         <input type="hidden" name="tahun" value="{{ $tahun }}">
-                                        <button type="submit" onclick="return confirm('Hitung ulang slip {{ $k->name }}? Angka lama diganti hasil hitungan terbaru (absensi & kebijakan saat ini).')"
+                                        <button type="button" onclick="konfirmasi2Tap(this)"
                                             style="font-size:11px;background:#6366f1;color:#fff;padding:4px 8px;border-radius:6px;border:none;cursor:pointer;">&#8635; Hitung Ulang</button>
                                     </form>
                                     @endif
@@ -212,7 +234,7 @@
                                     @if($slipGaji->status === 'draft')
                                     <form method="POST" action="{{ route('penggajian.bayar', $slipGaji) }}" style="display:inline;">
                                         @csrf
-                                        <button type="submit" onclick="return confirm('Proses bayar gaji {{ $k->name }}?')"
+                                        <button type="button" onclick="konfirmasi2Tap(this)"
                                             style="font-size:11px;background:#10b981;color:#fff;padding:4px 8px;border-radius:6px;border:none;cursor:pointer;">💰 Bayar</button>
                                     </form>
                                     @endif
