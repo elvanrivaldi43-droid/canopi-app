@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'level' => \App\Http\Middleware\CheckLevel::class,
+            'keuangan' => \App\Http\Middleware\KeuanganTerkunci::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             'telegram/karyawan/webhook',

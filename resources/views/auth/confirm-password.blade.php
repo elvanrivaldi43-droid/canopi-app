@@ -1,6 +1,7 @@
 <x-guest-layout>
     <div class="mb-4 text-sm text-gray-600">
-        {{ __('This is a secure area of the application. Please confirm your password before continuing.') }}
+        Data keuangan (gaji, kasbon, slip) dikunci. Masukkan password login kamu untuk melihatnya.
+        Setelah benar, data terbuka selama 5 menit lalu terkunci lagi.
     </div>
 
     <form method="POST" action="{{ route('password.confirm') }}">
@@ -8,7 +9,7 @@
 
         <!-- Password -->
         <div>
-            <x-input-label for="password" :value="__('Password')" />
+            <x-input-label for="password" value="Password" />
 
             <x-text-input id="password" class="block mt-1 w-full"
                             type="password"
@@ -20,8 +21,12 @@
 
         <div class="flex justify-end mt-4">
             <x-primary-button>
-                {{ __('Confirm') }}
+                Buka
             </x-primary-button>
         </div>
     </form>
+
+    <div class="mt-4 text-xs text-gray-500">
+        Lupa password? Minta reset ke Owner.
+    </div>
 </x-guest-layout>

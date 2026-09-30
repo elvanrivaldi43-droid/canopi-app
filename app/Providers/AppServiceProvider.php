@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Kunci Keuangan: @keuanganTerbuka ... @else ... @endkeuanganTerbuka
+        \Illuminate\Support\Facades\Blade::if('keuanganTerbuka', fn () => \App\Services\KunciKeuangan::terbukaSaatIni());
     }
 }

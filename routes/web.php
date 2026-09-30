@@ -314,6 +314,13 @@ Route::middleware('auth')->prefix('kasbon-saya')->name('kasbon.karyawan.')->grou
     Route::get('/{kasbon}/surat',   [KasbonKaryawanController::class, 'surat'])->name('surat');
 });
 
+// ─── KUNCI KEUANGAN: tombol "Lihat" pada angka yang disamarkan ─────
+// `kembali` divalidasi (path relatif saja) supaya tak jadi open-redirect.
+Route::middleware('auth')->get('/buka-keuangan', function () {
+    session(['url.intended' => url(\App\Services\KunciKeuangan::tujuanAman(request('kembali')))]);
+    return redirect()->route('password.confirm');
+})->name('keuangan.buka');
+
 // ─── PROFIL KARYAWAN ────────────────────────────────────────
 Route::middleware('auth')->prefix('profil')->name('profil.')->group(function () {
     Route::get('/', [ProfilController::class, 'index'])->name('index');
