@@ -59,6 +59,15 @@ foreach (['admin.dashboard', 'supervisor.dashboard', 'marketing.dashboard', 'tek
           'driver.dashboard', 'toko.dashboard', 'profil.index', 'absensi.index'] as $nama) {
     check("disamarkan: $nama", in_array('keuangan:samar', $peta[$nama] ?? [], true), true);
 }
+// POST yang menulis/membalas data uang juga WAJIB dikunci (temuan review: POST kasbon
+// membocorkan "3x gaji = Rp X" lewat pesan error ke halaman mana pun).
+$petaPost = [];
+foreach ($rute ?: [] as $r) {
+    if (!empty($r['name']) && str_starts_with($r['method'], 'POST')) $petaPost[$r['name']] = $r['middleware'] ?? [];
+}
+foreach (['kasbon.karyawan.store'] as $nama) {
+    check("POST dikunci penuh: $nama", in_array('keuangan', $petaPost[$nama] ?? [], true), true);
+}
 // Halaman konfirmasi & tombol Lihat TIDAK boleh dikunci oleh dirinya sendiri (loop redirect).
 foreach (['password.confirm', 'keuangan.buka'] as $nama) {
     $mw = $peta[$nama] ?? null;

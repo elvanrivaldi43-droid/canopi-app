@@ -310,7 +310,8 @@ Route::middleware(['auth', 'level:6'])->prefix('bensin')->name('bensin.')->group
 // ─── KASBON KARYAWAN ────────────────────────────────────────
 Route::middleware('auth')->prefix('kasbon-saya')->name('kasbon.karyawan.')->group(function () {
     Route::get('/',                 [KasbonKaryawanController::class, 'index'])->middleware('keuangan')->name('index');
-    Route::post('/',                [KasbonKaryawanController::class, 'store'])->name('store');
+    // Dikunci juga: tanpa ini pengajuan nominal raksasa membocorkan "3x gaji = Rp X" lewat flash error.
+    Route::post('/',                [KasbonKaryawanController::class, 'store'])->middleware('keuangan')->name('store');
     Route::get('/{kasbon}/surat',   [KasbonKaryawanController::class, 'surat'])->middleware('keuangan')->name('surat');
 });
 
