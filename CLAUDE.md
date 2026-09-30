@@ -366,12 +366,32 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    **Minor ditunda (dari review):** `/buka-keuangan?kembali[]=x` -> 500 (URL rakitan saja);
    throttle ~360 tebakan/jam/user tanpa lockout (mis. ganti `throttle:5,15`); user level=null
    tak bisa buka; dua kali ketik password setelah sesi idle habis (login lalu konfirmasi).
-   **Temuan terbuka di luar fitur:** kunci rahasia cron `canopi_cron_2026` tertulis di file publik
-   `public/cron-kpi.php` (+ cron-alpha) padahal repo PUBLIK — siapa pun bisa memicu cron; pindahkan
-   ke `.env` (tugas terpisah, jangan lupa ubah URL di crontab VPS). Checklist validasi Elvan:
+   Checklist validasi Elvan:
    (1) akun karyawan buka Slip Gaji Saya -> diminta password -> terbuka; (2) dashboard menampilkan
    `Rp •••`, tekan Lihat -> password -> kembali ke dashboard dengan angka; (3) tunggu 5 menit,
    buka slip lagi -> diminta lagi; (4) akun Owner tak pernah diminta apa pun.
+
+0e. **Kunci cron dipindah ke `.env` — LIVE 30 Sep 2026, TERUJI live (pemicu nyata 23:30 UTC belum dicek).**
+   Kunci lama `canopi_cron_2026` tertulis di 3 file publik padahal repo GitHub PUBLIK. Kini:
+   `CRON_KEY` di `.env` server (Niagahoster, `public_html/app/.env`, diisi Elvan manual) dicek lewat
+   `App\Services\CronAuth` (gagal TERTUTUP: kosong / <16 karakter = semua ditolak). Di VPS kunci
+   disimpan di `/root/.canopi-cron-key` (chmod 600), crontab membacanya lewat `$(cat ...)` — tak ada
+   kunci tertulis di kode/crontab; cadangan crontab lama `/root/crontab.backup-2026-09-30` (berisi kunci
+   lama yang sudah mati). **Cek aman tanpa efek samping: tambah `&cek=1`** ke URL cron (membalas `OK`
+   setelah kunci benar, tanpa menjalankan apa pun) — JANGAN uji endpoint cron asli, itu mengirim kode
+   Telegram ke semua karyawan / men-alpha orang. `cron-kpi.php` DINONAKTIFKAN (503; memang tak pernah jalan
+   & bonus KPI ditunda; saat dihidupkan samakan dengan cron-alpha). Test `tests/keamanan/test_cron_auth.php`.
+   **Rotasi kunci:** `openssl rand -hex 24`, tulis ke `.env` server + `/root/.canopi-cron-key`, uji `cek=1`
+   (urutan: .env dulu, baru kode/file VPS; jendela aman = di luar 23:30 / 06:00 / 13:00 UTC).
+   **Dibuang dari server:** setup.php, setup2.php, setup3.php, git-reset.php (menjalankan shell!),
+   debug_rab.php, ceklog_rab.php, storagelink.php (terverifikasi 404 live).
+   **MASIH TERBUKA (keputusan Elvan):** file `public/` lain masih dijaga kunci literal di repo publik:
+   `clearcache.php`, `bersih-bersih.php`, `cekroute.php`, `ceklog.php`, `lihat-log.php` (kunci `canopi2026`;
+   `lihat-log` membaca laravel.log) dan `foto-absen-bersih.php` (kunci `canopi_foto_2026_x7q`; MENGHAPUS foto).
+   **`bersih-bersih.php` dipanggil langkah terakhir `.github/workflows/deploy.yml` dengan kunci literal**
+   — memindahkan kuncinya WAJIB bersamaan dengan mengubah deploy.yml (pakai GitHub secret), kalau tidak
+   pembersihan cache tiap deploy berhenti diam-diam. Saran: pindahkan semua ke `CRON_KEY`/kunci di `.env`
+   atau hapus yang jarang dipakai.
 
 1. **Kalibrasi RAB tetap prioritas roadmap #1.** Data masih tes dan belum boleh
    dipakai ke customer asli sampai kalibrasi tuntas. PA-DUTA 4x8 masih kurang foto
