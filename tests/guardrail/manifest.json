@@ -422,6 +422,12 @@
       "manual": false
     },
     {
+      "path": "tests/keamanan/test_cron_auth.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/absensi/test_lupa_absen_pulang.php",
       "runner": "php",
       "requires_db": false,

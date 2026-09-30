@@ -97,8 +97,10 @@ $check('karyawan belum connect Telegram tetap punya kode di DB (fallback dashboa
     $posisi($cron, 'barisHariIniUntuk') < $posisi($cron, 'telegram_chat_id'), true);
 $check('satu karyawan error tidak menggagalkan sisanya (try/catch per karyawan)',
     (bool) preg_match('/foreach\s*\(\$karyawan as \$k\)\s*\{\s*try\s*\{/s', $cron), true);
-$check('kunci rahasia cron tetap dicek (jangan jadi endpoint publik)',
-    str_contains($cron, "canopi_cron_2026") && str_contains($cron, '403'), true);
+$check('kunci rahasia cron tetap dicek lewat CronAuth/.env (jangan jadi endpoint publik)',
+    str_contains($cron, 'CronAuth::valid(') && str_contains($cron, '403'), true);
+$check('kunci cron TIDAK tertulis di kode (repo publik)',
+    str_contains($cron, 'canopi_cron_2026'), false);
 
 if ($fail) { echo "\n=== ADA YANG GAGAL ===\n"; exit(1); }
 echo "\n=== SEMUA TES LULUS ===\n";

@@ -3,16 +3,24 @@
 // Dijalankan via cron job jam 06:30 WIB (23:30 UTC hari sebelumnya)
 // Otomatis generate kode harian PER KARYAWAN + kirim ke Telegram masing-masing
 
-$key = $argv[1] ?? $_GET['key'] ?? '';
-if ($key !== 'canopi_cron_2026') {
-    http_response_code(403);
-    die('Forbidden');
-}
-
+// Load Laravel dulu: kunci ada di .env, baru terbaca setelah bootstrap (belum ada query DB di sini).
 require __DIR__ . '/../vendor/autoload.php';
 $app = require_once __DIR__ . '/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
+
+// Security key — TIDAK boleh ditulis di kode (repo publik). Kunci ada di .env (CRON_KEY),
+// dicek lewat App\Services\CronAuth. Gagal tertutup bila CRON_KEY kosong/lemah.
+$key = $argv[1] ?? $_GET['key'] ?? '';
+if (!\App\Services\CronAuth::valid((string) $key)) {
+    http_response_code(403);
+    die('Forbidden');
+}
+
+// Mode cek (?cek=1): membuktikan kunci benar TANPA menjalankan apa pun — aman untuk uji di production.
+if (($_GET['cek'] ?? '') !== '') {
+    die('OK');
+}
 
 use App\Models\User;
 use App\Models\KodeAbsen;

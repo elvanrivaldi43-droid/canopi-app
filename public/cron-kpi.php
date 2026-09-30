@@ -3,15 +3,18 @@
  * cron-kpi.php
  * Simpan di: /home/u8221523/public_html/app/public/cron-kpi.php
  * Daftarkan di cron-job.org:
- *   URL: https://app.kanopibsd.co.id/cron-kpi.php?key=canopi_cron_2026
+ *   URL: https://app.kanopibsd.co.id/cron-kpi.php?key=<CRON_KEY dari .env>
  *   Jadwal: Setiap tanggal 1 jam 00:05 WIB (Asia/Bangkok)
  */
 
-$key = $_GET['key'] ?? '';
-if ($key !== 'canopi_cron_2026') {
-    http_response_code(403);
-    die('Forbidden');
-}
+// DINONAKTIFKAN 30 Sep 2026 (tutup, bukan dihapus):
+//  - Kunci lama tertulis di sini padahal repo GitHub PUBLIK, dan sudah dirotasi (kini CRON_KEY di .env).
+//  - File ini memang tak pernah jalan: bootstrap/autoload.php di bawah tidak ada, dan tidak ada jadwal
+//    cron yang memanggilnya. Bonus KPI juga sedang ditunda (saklar gaji mati), jangan sampai terkirim.
+// SAAT NOTIF KPI BULANAN DIHIDUPKAN: samakan pola dengan cron-alpha.php (vendor/autoload.php +
+// Console Kernel, lalu CronAuth::valid), hapus blok ini. Kode di bawahnya dibiarkan utuh untuk itu.
+http_response_code(503);
+die('Nonaktif');
 
 // Bootstrap Laravel
 require_once __DIR__ . '/../bootstrap/autoload.php';
