@@ -15,6 +15,7 @@ use App\Services\TelegramService;
 use App\Services\LiburService;
 use App\Services\KerjaHariLiburService;
 use App\Services\R2Service;
+use App\Services\RincianPotongan;
 
 class AbsensiController extends Controller
 {
@@ -103,6 +104,7 @@ class AbsensiController extends Controller
                 'potongan_telat'            => ($absenHariIni->potongan_telat ?? 0) + $potongan,
                 'gaji_hari_ini'             => $svcCP->kurangiDenda((float) ($absenHariIni->gaji_hari_ini ?? 0), $potongan),
                 'potongan_progress_dicatat' => true,
+                'rincian_potongan'          => RincianPotongan::tambah($absenHariIni->rincian_potongan, 'lupa_progress', $potongan),
             ]);
             $absenHariIni->refresh();
         }
@@ -119,6 +121,7 @@ class AbsensiController extends Controller
                 'potongan_telat'         => ($absenHariIni->potongan_telat ?? 0) + $potongan,
                 'gaji_hari_ini'          => $svcCP->kurangiDenda((float) ($absenHariIni->gaji_hari_ini ?? 0), $potongan),
                 'potongan_siang_dicatat' => true,
+                'rincian_potongan'       => RincianPotongan::tambah($absenHariIni->rincian_potongan, 'skip_siang', $potongan),
             ]);
             $absenHariIni->refresh();
         }
@@ -269,6 +272,7 @@ class AbsensiController extends Controller
                 'gps_valid_masuk' => true, // selalu true, GPS tetap dicatat
                 'status'          => $status,
                 'potongan_telat'  => $potongan,
+                'rincian_potongan' => RincianPotongan::tambah(null, 'telat_pagi', $potongan, $menitTelat),
                 'gaji_hari_ini'   => $gajiHariIni,
                 'uang_makan_hari_ini' => $uangMakan,
                 'kerja_hari_libur'    => (bool) $otorisasiLibur,
@@ -674,6 +678,7 @@ class AbsensiController extends Controller
             'lng_kembali_kerja'       => $request->lng,
             'gps_valid_kembali_kerja' => true,
             'potongan_telat'          => ($absen->potongan_telat??0) + $potongan,
+            'rincian_potongan'        => RincianPotongan::tambah($absen->rincian_potongan, 'telat_siang', $potongan, $menitTelat),
             'potongan_siang_dicatat'  => true,
             // mentok 0 — jangan pernah minus (lihat KerjaHariLiburService::kurangiDenda)
             'gaji_hari_ini'           => app(\App\Services\KerjaHariLiburService::class)
@@ -922,6 +927,9 @@ class AbsensiController extends Controller
             'jam_pulang'          => $request->jam_pulang ? $request->jam_pulang.':00' : $absen->jam_pulang,
             'status'              => $request->status,
             'potongan_telat'      => $potonganTelat,
+            // Selisih dari TOTAL lama -> jumlah rincian tetap = total baru. Selisih 0 (cuma
+            // ganti status/jam) tidak menambah entri.
+            'rincian_potongan'    => RincianPotongan::tambah($absen->rincian_potongan, 'koreksi', $potonganTelat - (float) ($absen->potongan_telat ?? 0), null, $request->alasan),
             'gaji_hari_ini'       => $gajiHariIni,
             'uang_makan_hari_ini' => $umHariIni,
             'upah_hari_libur'     => $upahHariLibur,
