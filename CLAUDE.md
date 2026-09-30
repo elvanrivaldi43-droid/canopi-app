@@ -260,6 +260,31 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
 
 ### Utang aktif / resume point
 
+**>>> TITIK LANJUT 30 Sep 2026 (akhir sesi) — baca ini dulu, detail di butir 0c/0d/0e di bawah <<<**
+   Tiga fitur LIVE hari ini, repo bersih & ter-push (HEAD = `origin/main`), tak ada pekerjaan setengah jalan:
+   rincian potongan absensi (0c), Kunci Keuangan ketik-ulang-password (0d), kunci cron ke `.env` (0e).
+   1. **Elvan: ketik "cek cron"** -> baca `tail -40 /root/cron-logs/kode-absen.log` (sukses = `KODE ABSEN HARIAN`
+      + `Terkirim`; gagal = `Forbidden`, picu manual aman). Ini pemicu NYATA pertama dgn kunci baru
+      (23:30 UTC 30 Sep = 06:30 WIB 1 Okt). Cek juga `alpha.log` (06:00 & 13:00 UTC). Memory:
+      `cek-cron-kode-absen-1-okt` — hapus setelah terbukti.
+   2. **Belum divalidasi Elvan di HP/web:** checklist 0c (rincian potongan) dan 0d (kunci keuangan, akun
+      karyawan). Umumkan ke karyawan soal ketik-ulang-password sebelum dipakai luas.
+   3. **Keputusan Elvan yang masih terbuka (jangan dikerjakan sendiri):**
+      a. 6 file `public/` masih berkunci literal di repo publik (`bersih-bersih` dipakai `deploy.yml`!, `lihat-log`,
+         `foto-absen-bersih` yg MENGHAPUS foto, `clearcache`, `cekroute`, `ceklog`) — saran: hapus yg jarang dipakai,
+         sisanya pindah ke kunci `.env` bersama ubah `deploy.yml` (detail di 0e).
+      b. Denda Lapor Progress / tak absen siang hanya tercatat saat karyawan MEMBUKA halaman Absensi (tak ada cron).
+      c. Slip DRAFT/menunggu_konfirmasi bisa dilihat karyawan (`slipSaya`) — usul: tampilkan hanya yg `dibayar`.
+      d. Modal Koreksi: kotak potongan kelipatan Rp1.000 saja (pecahan per-menit tak bisa dikirim ulang apa adanya).
+      e. Potongan telat per-menit membuat telat 5-15 menit tiap hari nyaris tak terasa (Bryan 22x telat = ~Rp117rb);
+         kebijakan (mis. potongan minimum per kejadian) belum diputuskan.
+      f. Sisa dari 0b: koreksi 3 alpha Sahrul + Bryan lalu Hitung Ulang slip; 7 slip minus diurus manual via Koreksi.
+   4. **Pelajaran sesi ini (jangan terulang):** guardrail `canopi-check` sempat MERAH 31 Ags-30 Sep (3 SQL perbaikan
+      data bentrok aturan "tanpa UPDATE/DELETE") dan itu MEMBLOKIR deploy diam-diam — kini di-allowlist per nama di
+      `tests/keamanan/test_regresi_minor.php`; kalau deploy "tak berubah", jalankan `php scripts/canopi-check --full`
+      dulu. Jangan uji endpoint cron asli (kirim Telegram/alpha betulan): pakai `&cek=1`. Cek deploy nyata
+      dengan `curl` ke route/file live, bukan cuma Actions hijau.
+
 0. **Gambar denah ikut ke penawaran cetak — LIVE 27/28 Ags 2026, GAMBARNYA
    BELUM DILIHAT Bos** (alurnya sendiri sudah tervalidasi: tombol "Buat
    Penawaran" kini membuka halaman penawaran dengan benar di HP; yang belum
