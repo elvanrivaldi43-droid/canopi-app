@@ -41,4 +41,28 @@ foreach (['//evil.com', 'https://evil.com', '/\\evil.com', 'javascript:alert(1)'
     check('ditolak: ' . var_export($jahat, true), K::tujuanAman($jahat), '/dashboard');
 }
 
+// ── Peta route: route uang WAJIB berbeban middleware (pintu belakang = bocor)
+$json = shell_exec('cd ' . escapeshellarg(dirname(__DIR__, 2)) . ' && ' . escapeshellarg(PHP_BINARY) . ' artisan route:list --json 2>/dev/null');
+$rute = json_decode((string) $json, true);
+check('route:list terbaca', is_array($rute) && count($rute) > 50, true);
+
+$peta = [];
+foreach ($rute ?: [] as $r) {
+    if (!empty($r['name']) && str_starts_with($r['method'], 'GET')) $peta[$r['name']] = $r['middleware'] ?? [];
+}
+foreach (['penggajian.slip-saya', 'penggajian.slip', 'kasbon.karyawan.index', 'kasbon.karyawan.surat',
+          'absensi.rekap-bulanan', 'kpi.detail', 'kpi.ujian.hasil'] as $nama) {
+    $mw = $peta[$nama] ?? [];
+    check("dikunci penuh: $nama", in_array('keuangan', $mw, true) && !in_array('keuangan:samar', $mw, true), true);
+}
+foreach (['admin.dashboard', 'supervisor.dashboard', 'marketing.dashboard', 'teknisi.dashboard',
+          'driver.dashboard', 'toko.dashboard', 'profil.index', 'absensi.index'] as $nama) {
+    check("disamarkan: $nama", in_array('keuangan:samar', $peta[$nama] ?? [], true), true);
+}
+// Halaman konfirmasi & tombol Lihat TIDAK boleh dikunci oleh dirinya sendiri (loop redirect).
+foreach (['password.confirm', 'keuangan.buka'] as $nama) {
+    $mw = $peta[$nama] ?? null;
+    check("bebas kunci (anti-loop): $nama", $mw !== null && !in_array('keuangan', $mw, true) && !in_array('keuangan:samar', $mw, true), true);
+}
+
 exit($fail ? 1 : 0);

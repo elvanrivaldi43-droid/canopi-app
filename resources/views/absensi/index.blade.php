@@ -197,13 +197,21 @@
             <div class="stat-card" style="padding:14px;">
                 <div style="font-size:11px;color:#64748B;margin-bottom:4px;">Total Uang Makan</div>
                 <div style="font-size:15px;font-weight:700;color:#C9A84C;">
+                    @keuanganTerbuka
                     Rp {{ number_format($stats['total_um'] ?? 0, 0, ',', '.') }}
+                    @else
+                    @include('partials.rp-samar')
+                    @endkeuanganTerbuka
                 </div>
             </div>
             <div class="stat-card" style="padding:14px;">
                 <div style="font-size:11px;color:#64748B;margin-bottom:4px;">Potongan Telat</div>
                 <div style="font-size:15px;font-weight:700;color:#EF4444;">
+                    @keuanganTerbuka
                     Rp {{ number_format($stats['total_potongan'] ?? 0, 0, ',', '.') }}
+                    @else
+                    @include('partials.rp-samar')
+                    @endkeuanganTerbuka
                 </div>
             </div>
         </div>
@@ -238,14 +246,14 @@
                         Tidak ada catatan
                     @endif
                 </div>
-                @if(($r->potongan_telat ?? 0) > 0)
+                @if(($r->potongan_telat ?? 0) > 0 && \App\Services\KunciKeuangan::terbukaSaatIni())
                     @include('absensi._rincian-potongan', ['rincian' => $r->rincian_potongan, 'total' => (float) $r->potongan_telat])
                 @endif
             </div>
 
             {{-- Badge potongan --}}
             <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0;background:{{ $r->statusColor() }}20;color:{{ $r->statusColor() }};border:1px solid {{ $r->statusColor() }}40;">
-                @if(($r->potongan_telat ?? 0) > 0)
+                @if(($r->potongan_telat ?? 0) > 0 && \App\Services\KunciKeuangan::terbukaSaatIni())
                     -Rp{{ number_format($r->potongan_telat/1000,0) }}rb
                 @else
                     {{ $r->statusLabel() }}

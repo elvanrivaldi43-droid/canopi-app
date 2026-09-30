@@ -58,32 +58,32 @@ Route::middleware(['auth', 'level:1'])->prefix('owner')->name('owner.')->group(f
 
 // ─── ADMIN OPERASIONAL (Level 1,2) ─────────────────────────
 Route::middleware(['auth', 'level:1,2'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'admin'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'admin'])->middleware('keuangan:samar')->name('dashboard');
 });
 
 // ─── SUPERVISOR LAPANGAN (Level 1,2,3) ─────────────────────
 Route::middleware(['auth', 'level:1,2,3'])->prefix('supervisor')->name('supervisor.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'supervisor'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'supervisor'])->middleware('keuangan:samar')->name('dashboard');
 });
 
 // ─── MARKETING (Level 1,2,4) ───────────────────────────────
 Route::middleware(['auth', 'level:1,2,4'])->prefix('marketing')->name('marketing.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'marketing'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'marketing'])->middleware('keuangan:samar')->name('dashboard');
 });
 
 // ─── TEKNISI (Level 1,2,3,5) ───────────────────────────────
 Route::middleware(['auth', 'level:1,2,3,5'])->prefix('teknisi')->name('teknisi.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'teknisi'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'teknisi'])->middleware('keuangan:samar')->name('dashboard');
 });
 
 // ─── DRIVER (Level 1,2,3,6) ────────────────────────────────
 Route::middleware(['auth', 'level:1,2,3,6'])->prefix('driver')->name('driver.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'driver'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'driver'])->middleware('keuangan:samar')->name('dashboard');
 });
 
 // ─── ADMIN TOKO BESI (Level 1,7) ───────────────────────────
 Route::middleware(['auth', 'level:1,7'])->prefix('toko')->name('toko.')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'toko'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'toko'])->middleware('keuangan:samar')->name('dashboard');
 });
 
 // ─── KARYAWAN (Level 1,2) ──────────────────────────────────
@@ -102,7 +102,7 @@ Route::middleware(['auth', 'level:1,2'])->prefix('karyawan')->name('karyawan.')-
 
 // ─── ABSENSI ───────────────────────────────────────────────
 Route::middleware('auth')->prefix('absensi')->name('absensi.')->group(function () {
-    Route::get('/',                         [AbsensiController::class, 'index'])->name('index');
+    Route::get('/',                         [AbsensiController::class, 'index'])->middleware('keuangan:samar')->name('index');
     Route::get('/masuk',                    [AbsensiController::class, 'formMasuk'])->name('form-masuk');
     Route::post('/masuk',                   [AbsensiController::class, 'absenMasuk'])->name('masuk');
     Route::get('/lapor-progress',           [AbsensiController::class, 'formLaporProgress'])->name('form-lapor-progress');
@@ -125,7 +125,7 @@ Route::middleware('auth')->prefix('absensi')->name('absensi.')->group(function (
     // SENDIRI, jadi tidak boleh dikunci level:1 (itu memutus akses 13 orang).
     // Pagarnya di controller: semua level kecuali Owner dipaksa self-only —
     // lihat AbsensiController::bolehRekapSemua().
-    Route::get('/rekap-bulanan',            [AbsensiController::class, 'rekapBulanan'])->name('rekap-bulanan');
+    Route::get('/rekap-bulanan',            [AbsensiController::class, 'rekapBulanan'])->middleware('keuangan')->name('rekap-bulanan');
     Route::get('/kode-hari-ini',            [AbsensiController::class, 'kodeHariIni'])->middleware('level:1,3')->name('kode-hari-ini');
     Route::post('/kerja-hari-libur/{userId}', [AbsensiController::class, 'aktifkanKerjaHariLibur'])->middleware('level:1,3')->name('kerja-hari-libur');
     // Buat & kirim kode absen manual untuk 1 karyawan (jaring pengaman kalau cron
@@ -188,8 +188,8 @@ Route::middleware('auth')->prefix('penggajian')->name('penggajian.')->group(func
     // Self-service: slip milik sendiri tetap bisa dibuka semua user login.
     // Detail slip dijaga per-objek di controller (Owner ATAU pemilik slip),
     // bukan lewat level — lihat PenggajianController::bolehLihatSlip().
-    Route::get('/slip-saya',                    [PenggajianController::class, 'slipSaya'])->name('slip-saya');
-    Route::get('/slip/{slip}',                  [PenggajianController::class, 'show'])->name('slip');
+    Route::get('/slip-saya',                    [PenggajianController::class, 'slipSaya'])->middleware('keuangan')->name('slip-saya');
+    Route::get('/slip/{slip}',                  [PenggajianController::class, 'show'])->middleware('keuangan')->name('slip');
 });
 
 // ─── PIPELINE SURVEY (Level 1,2,3,4) ─────────────────────────
@@ -309,9 +309,9 @@ Route::middleware(['auth', 'level:6'])->prefix('bensin')->name('bensin.')->group
 
 // ─── KASBON KARYAWAN ────────────────────────────────────────
 Route::middleware('auth')->prefix('kasbon-saya')->name('kasbon.karyawan.')->group(function () {
-    Route::get('/',                 [KasbonKaryawanController::class, 'index'])->name('index');
+    Route::get('/',                 [KasbonKaryawanController::class, 'index'])->middleware('keuangan')->name('index');
     Route::post('/',                [KasbonKaryawanController::class, 'store'])->name('store');
-    Route::get('/{kasbon}/surat',   [KasbonKaryawanController::class, 'surat'])->name('surat');
+    Route::get('/{kasbon}/surat',   [KasbonKaryawanController::class, 'surat'])->middleware('keuangan')->name('surat');
 });
 
 // ─── KUNCI KEUANGAN: tombol "Lihat" pada angka yang disamarkan ─────
@@ -323,7 +323,7 @@ Route::middleware('auth')->get('/buka-keuangan', function () {
 
 // ─── PROFIL KARYAWAN ────────────────────────────────────────
 Route::middleware('auth')->prefix('profil')->name('profil.')->group(function () {
-    Route::get('/', [ProfilController::class, 'index'])->name('index');
+    Route::get('/', [ProfilController::class, 'index'])->middleware('keuangan:samar')->name('index');
     Route::put('/', [ProfilController::class, 'update'])->name('update');
 });
 
@@ -355,7 +355,7 @@ Route::middleware(['auth', 'level:1'])->group(function () {
 
 // Detail KPI — Owner lihat semua, karyawan lihat sendiri
 Route::middleware(['auth', 'level:1,2,3,4,5,6'])->group(function () {
-    Route::get('/kpi/detail/{userId?}', [KpiController::class, 'detail'])->name('kpi.detail');
+    Route::get('/kpi/detail/{userId?}', [KpiController::class, 'detail'])->middleware('keuangan')->name('kpi.detail');
 });
 
 // Ujian Online — Karyawan level 2-6
@@ -365,7 +365,7 @@ Route::middleware(['auth', 'level:2,3,4,5,6'])->group(function () {
     Route::get('/kpi/ujian/kerjakan', [KpiController::class, 'ujianKerjakan'])->name('kpi.ujian.kerjakan');
     Route::post('/kpi/ujian/jawab', [KpiController::class, 'ujianSimpanJawaban'])->name('kpi.ujian.jawab');
     Route::post('/kpi/ujian/submit', [KpiController::class, 'ujianSubmit'])->name('kpi.ujian.submit');
-    Route::get('/kpi/ujian/hasil', [KpiController::class, 'ujianHasil'])->name('kpi.ujian.hasil');
+    Route::get('/kpi/ujian/hasil', [KpiController::class, 'ujianHasil'])->middleware('keuangan')->name('kpi.ujian.hasil');
 });
 
 // ================================================================

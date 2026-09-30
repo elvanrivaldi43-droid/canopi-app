@@ -60,13 +60,21 @@
         <div class="stat-card" style="padding:14px;">
             <div style="font-size:11px;color:#64748B;margin-bottom:4px;">Gaji/Hari</div>
             <div style="font-size:15px;font-weight:700;color:#C9A84C;">
+                @keuanganTerbuka
                 Rp {{ number_format(auth()->user()->gaji_harian ?? 0, 0, ',', '.') }}
+                @else
+                @include('partials.rp-samar')
+                @endkeuanganTerbuka
             </div>
         </div>
         <div class="stat-card" style="padding:14px;">
             <div style="font-size:11px;color:#64748B;margin-bottom:4px;">Uang Makan/Hari</div>
             <div style="font-size:15px;font-weight:700;color:#10B981;">
+                @keuanganTerbuka
                 Rp {{ number_format(auth()->user()->uang_makan ?? 0, 0, ',', '.') }}
+                @else
+                @include('partials.rp-samar')
+                @endkeuanganTerbuka
             </div>
         </div>
     </div>

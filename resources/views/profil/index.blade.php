@@ -106,7 +106,11 @@
         <div class="kpi-lbl">Kerja Hari Libur</div>
       </div>
       <div class="kpi-item" style="grid-column:span 2;">
-        <div class="kpi-val" style="color:#06b6d4; font-size:14px;">Rp {{ number_format($stats['total_gaji'],0,',','.') }}</div>
+        <div class="kpi-val" style="color:#06b6d4; font-size:14px;">@keuanganTerbuka
+Rp {{ number_format($stats['total_gaji'],0,',','.') }}
+@else
+@include('partials.rp-samar')
+@endkeuanganTerbuka</div>
         <div class="kpi-lbl">Estimasi Gaji</div>
       </div>
     </div>
@@ -125,11 +129,19 @@
     </div>
     <div class="info-row">
       <span class="info-label">Gaji Harian</span>
-      <span class="info-value">Rp {{ number_format($user->gaji_harian ?? 0, 0, ',', '.') }}</span>
+      <span class="info-value">@keuanganTerbuka
+Rp {{ number_format($user->gaji_harian ?? 0, 0, ',', '.') }}
+@else
+@include('partials.rp-samar')
+@endkeuanganTerbuka</span>
     </div>
     <div class="info-row">
       <span class="info-label">Uang Makan</span>
-      <span class="info-value">Rp {{ number_format($user->uang_makan ?? 0, 0, ',', '.') }}</span>
+      <span class="info-value">@keuanganTerbuka
+Rp {{ number_format($user->uang_makan ?? 0, 0, ',', '.') }}
+@else
+@include('partials.rp-samar')
+@endkeuanganTerbuka</span>
     </div>
     <div class="info-row">
       <span class="info-label">Bank</span>
@@ -137,7 +149,11 @@
     </div>
     <div class="info-row">
       <span class="info-label">No. Rekening</span>
-      <span class="info-value">{{ $user->no_rekening ?? '—' }}</span>
+      <span class="info-value">@keuanganTerbuka
+{{ $user->no_rekening ?? '—' }}
+@else
+@include('partials.rp-samar', ['tanpaRp' => true])
+@endkeuanganTerbuka</span>
     </div>
     <div class="info-row">
       <span class="info-label">Email</span>
