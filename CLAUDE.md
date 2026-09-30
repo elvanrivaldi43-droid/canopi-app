@@ -343,6 +343,36 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    Owner menampilkan rincian; (3) Koreksi angka potongan → entri "Koreksi Owner";
    (4) Hitung Ulang slip draft → ringkasan per jenis di bawah Potongan Telat.
 
+0d. **Kunci Keuangan (ketik ulang password) — LIVE 30 Sep 2026, BELUM divalidasi Elvan di HP.**
+   Karyawan level 2-7 wajib ketik ulang password login untuk melihat data uang sendiri;
+   terbuka **300 detik sejak password diketik** (bukan sejak aktivitas terakhir), lalu
+   terkunci lagi. **Owner (level 1) BEBAS** (keputusan Elvan). Gaji ORANG LAIN = Owner saja
+   (sudah berlaku di semua halaman sebelum fitur ini — audit 30 Sep, tak ada yang diubah).
+   Mekanisme: `App\Services\KunciKeuangan` (logika murni) + middleware alias `keuangan[:samar]`
+   (`KeuanganTerkunci`) + `@keuanganTerbuka` + route `GET /buka-keuangan` (tombol "Lihat").
+   **Dikunci penuh:** slip-saya, detail slip, kasbon-saya (+surat, +POST pengajuan),
+   rekap-bulanan, kpi detail, hasil ujian. **Disamarkan `Rp •••` + tombol Lihat:** dashboard
+   6 level karyawan, profil (termasuk no. rekening), halaman absensi harian. Halaman uang diberi
+   `Cache-Control: no-store` (Back tak memunculkan slip lama). `POST confirm-password` di-throttle 6/menit.
+   Spec/plan `docs/superpowers/{specs,plans}/2026-09-30-kunci-keuangan*`. Tes
+   `tests/keamanan/test_kunci_keuangan.php` (termasuk peta route: **route uang BARU harus
+   ditambahkan ke daftar tes itu dan diberi middleware `keuangan` — daftarnya manual**).
+   **Sengaja tidak termasuk:** pesan Telegram bernominal, pesan JSON "potongan Rp X" sesaat setelah
+   absen, log bensin, RAB/penawaran. **Perilaku disengaja (jangan salah lapor):** form kasbon yang
+   diisi >5 menit hilang saat minta password lagi; lupa password = minta Owner reset (menu Karyawan,
+   Admin hanya level 3-7); Owner yang lupa password TIDAK punya jalur reset di aplikasi (email belum
+   aktif) — cadangan lewat SQL phpMyAdmin. **Umumkan ke karyawan sebelum dipakai** (yang login
+   lama via "ingat saya" mungkin lupa password).
+   **Minor ditunda (dari review):** `/buka-keuangan?kembali[]=x` -> 500 (URL rakitan saja);
+   throttle ~360 tebakan/jam/user tanpa lockout (mis. ganti `throttle:5,15`); user level=null
+   tak bisa buka; dua kali ketik password setelah sesi idle habis (login lalu konfirmasi).
+   **Temuan terbuka di luar fitur:** kunci rahasia cron `canopi_cron_2026` tertulis di file publik
+   `public/cron-kpi.php` (+ cron-alpha) padahal repo PUBLIK — siapa pun bisa memicu cron; pindahkan
+   ke `.env` (tugas terpisah, jangan lupa ubah URL di crontab VPS). Checklist validasi Elvan:
+   (1) akun karyawan buka Slip Gaji Saya -> diminta password -> terbuka; (2) dashboard menampilkan
+   `Rp •••`, tekan Lihat -> password -> kembali ke dashboard dengan angka; (3) tunggu 5 menit,
+   buka slip lagi -> diminta lagi; (4) akun Owner tak pernah diminta apa pun.
+
 1. **Kalibrasi RAB tetap prioritas roadmap #1.** Data masih tes dan belum boleh
    dipakai ke customer asli sampai kalibrasi tuntas. PA-DUTA 4x8 masih kurang foto
    bar #12 untuk menutup validasi target 9 batang. Luas referensi yang benar sekitar
