@@ -410,6 +410,12 @@
       "manual": false
     },
     {
+      "path": "tests/penggajian/test_rincian_potongan.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/absensi/test_lupa_absen_pulang.php",
       "runner": "php",
       "requires_db": false,
