@@ -26,11 +26,14 @@ class Absensi extends Model
         'lat_kembali_kerja','lng_kembali_kerja','gps_valid_kembali_kerja',
         // Kerja hari libur (15 Agustus)
         'kerja_hari_libur','upah_hari_libur',
+        // Rincian asal potongan_telat (30 September) — lihat App\Services\RincianPotongan
+        'rincian_potongan',
     ];
 
     protected $casts = [
         'tanggal'          => 'date',
         'kerja_hari_libur' => 'boolean',
+        'rincian_potongan' => 'array',
     ];
 
     public function user() { return $this->belongsTo(User::class); }

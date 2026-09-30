@@ -16,6 +16,7 @@ class SlipGaji extends Model
         'gaji_pokok', 'upah_hari_libur', 'total_uang_makan', 'total_tunjangan',
         'bonus_kpi', 'kelas_kpi', 'bonus_lembur', 'jam_lembur',
         'potongan_telat', 'potongan_kasbon', 'potongan_insidental',
+        'rincian_potongan',
         'tabungan_wajib', 'tabungan_lebaran',
         'total_pendapatan', 'total_potongan', 'gaji_bersih',
         'warning_batas_aman', 'owner_konfirmasi', 'catatan',
@@ -26,6 +27,7 @@ class SlipGaji extends Model
         'tanggal_bayar'      => 'date',
         'warning_batas_aman' => 'boolean',
         'owner_konfirmasi'   => 'boolean',
+        'rincian_potongan'   => 'array',
     ];
 
     const BATAS_AMAN = 500000; // Rp 500.000
