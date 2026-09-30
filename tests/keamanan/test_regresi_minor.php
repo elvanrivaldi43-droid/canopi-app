@@ -215,7 +215,16 @@ $check('ProfilController: komentar statistik menyebut hari kerja biasa/normal',
 // ═══════════════════════════════════════════════════════════
 // 5. Tidak ada data production yang disentuh oleh Task ini
 // ═══════════════════════════════════════════════════════════
+// Skrip PERBAIKAN DATA sekali-pakai yang sengaja berisi UPDATE/DELETE — disetujui
+// Elvan 31 Ags 2026 (gajian Agustus, pola SELECT dulu). Daftar eksplisit per nama:
+// file SQL BARU tetap dijaga aturan di bawah; jangan ganti jadi pola/wildcard.
+$sqlPerbaikanDisetujui = [
+    '2026-08-31-hapus-alpha-bryan-rizko.sql',
+    '2026-08-31-hapus-potongan-17-18.sql',
+    '2026-08-31-hapus-potongan-pkl.sql',
+];
 foreach (glob($base . '/docs/sql/*.sql') as $f) {
+    if (in_array(basename($f), $sqlPerbaikanDisetujui, true)) continue;
     $isi = strtoupper((string) preg_replace('/--[^\n]*/', '', (string) file_get_contents($f)));
     // Lookbehind mengecualikan "ON DELETE"/"ON UPDATE" — itu klausa FK constraint
     // (DDL, mis. "ON DELETE CASCADE"), bukan perintah UPDATE/DELETE yang menyentuh
