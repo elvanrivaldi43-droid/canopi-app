@@ -277,6 +277,8 @@ class GajiService
             'bonus_lembur'          => $bonusLembur,
             'jam_lembur'            => $totalLembur,
             'potongan_telat'        => $potonganTelat,
+            // Penjelasan saja (dibekukan bersama slip) — angka tetap dari potongan_telat.
+            'rincian_potongan'      => RincianPotongan::ringkasBulan($absensi),
             'potongan_kasbon'       => $potonganKasbon,
             'potongan_insidental'   => $potonganInsidental,
             'tabungan_wajib'        => $tabunganWajib,

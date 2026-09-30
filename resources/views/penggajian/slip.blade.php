@@ -207,6 +207,11 @@
     <div class="section-header">❤️ Potongan</div>
     @if($slip->potongan_telat > 0)
     <div class="info-row"><span class="info-label">Potongan Telat</span><span class="info-value" style="color:#ef4444;">- Rp {{ number_format($slip->potongan_telat,0,',','.') }}</span></div>
+    @foreach(\App\Services\RincianPotongan::LABEL as $j => $label)
+    @if(abs($slip->rincian_potongan[$j]['n'] ?? 0) >= 1)
+    <div class="info-row" style="font-size:12px;padding-left:14px;"><span class="info-label">&middot; {{ $label }} ({{ $slip->rincian_potongan[$j]['x'] }}x)</span><span class="info-value" style="color:#94a3b8;">Rp {{ number_format($slip->rincian_potongan[$j]['n'],0,',','.') }}</span></div>
+    @endif
+    @endforeach
     @endif
     @if($slip->potongan_kasbon > 0)
     <div class="info-row"><span class="info-label">Cicilan Kasbon</span><span class="info-value" style="color:#ef4444;">- Rp {{ number_format($slip->potongan_kasbon,0,',','.') }}</span></div>
