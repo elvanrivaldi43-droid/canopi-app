@@ -325,6 +325,24 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    hati-hati terpisah. Prosedur gajian yang benar ada di percakapan 31 Ags:
    umumkan H-3 → cek alpha di rekap → konfirmasi → koreksi → generate → bayar.
 
+0c. **Rincian potongan absensi — LIVE 30 Sep 2026, BELUM divalidasi Elvan di web.**
+   `absensi.potongan_telat` (tetap patokan uang, rumus tak berubah) kini punya
+   penjelasan `rincian_potongan` (telat pagi/siang, lupa Lapor Progress, tak absen
+   Kembali Kerja, Koreksi Owner). Tampil di riwayat karyawan, rekap harian, slip.
+   Logika murni `App\Services\RincianPotongan` + `tests/penggajian/test_rincian_potongan.php`.
+   Spec/plan `docs/superpowers/{specs,plans}/2026-09-30-rincian-potongan*`. SQL kolom
+   SUDAH dijalankan Elvan 30 Sep. **Disengaja:** data sebelum 30 Sep tampil "Belum
+   terinci (data lama)"; alasan koreksi Owner TERLIHAT karyawan (keputusan Elvan —
+   tulis alasan yang pantas dibaca). **Skrip SQL perbaikan potongan ke depan WAJIB
+   ikut `SET rincian_potongan = NULL`** saat menolkan `potongan_telat`. Guardrail:
+   3 SQL perbaikan data 31 Ags di-allowlist eksplisit di `test_regresi_minor.php`
+   (guardrail sempat merah 31 Ags–30 Sep, deploy terblokir diam-diam).
+   **Temuan terbuka (keputusan Elvan):** denda Lapor Progress/tak absen siang hanya
+   tercatat saat karyawan MEMBUKA halaman Absensi (tak ada cron) — yang tak buka lolos.
+   Checklist validasi: (1) riwayat absen menampilkan rincian telat; (2) rekap harian
+   Owner menampilkan rincian; (3) Koreksi angka potongan → entri "Koreksi Owner";
+   (4) Hitung Ulang slip draft → ringkasan per jenis di bawah Potongan Telat.
+
 1. **Kalibrasi RAB tetap prioritas roadmap #1.** Data masih tes dan belum boleh
    dipakai ke customer asli sampai kalibrasi tuntas. PA-DUTA 4x8 masih kurang foto
    bar #12 untuk menutup validasi target 9 batang. Luas referensi yang benar sekitar
