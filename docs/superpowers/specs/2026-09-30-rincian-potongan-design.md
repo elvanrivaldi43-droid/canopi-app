@@ -59,7 +59,8 @@ total 0), approval izin, cron lupa pulang (hanya baca).
 
 - `absensi/index.blade.php` riwayat per hari: di bawah angka potongan, daftar
   `baris()` kecil.
-- `absensi/rekap.blade.php` rekap harian + modal Koreksi: daftar `baris()`.
+- `absensi/rekap.blade.php` rekap harian: daftar `baris()` di sel status, sebaris
+  dengan tombol Koreksi (modal Koreksi tak diubah).
 - `penggajian/slip.blade.php`: di bawah baris "Potongan Telat", ringkasan per
   jenis dari `slip_gaji.rincian_potongan` (slip lama tanpa data → tak tampil apa-apa).
 - `rekap-bulanan.blade.php` TIDAK diubah (grid, tak ada ruang di HP).

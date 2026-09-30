@@ -238,6 +238,9 @@
                         Tidak ada catatan
                     @endif
                 </div>
+                @if(($r->potongan_telat ?? 0) > 0)
+                    @include('absensi._rincian-potongan', ['rincian' => $r->rincian_potongan, 'total' => (float) $r->potongan_telat])
+                @endif
             </div>
 
             {{-- Badge potongan --}}

@@ -145,6 +145,9 @@
                             @if($absen->dikoreksi ?? false)
                             <div style="font-size:10px;color:#94a3b8;margin-top:2px;">✏️ dikoreksi</div>
                             @endif
+                            @if(($absen->potongan_telat ?? 0) > 0)
+                                @include('absensi._rincian-potongan', ['rincian' => $absen->rincian_potongan, 'total' => (float) $absen->potongan_telat])
+                            @endif
                             @else
                             <span style="font-size:10px;color:#475569;">Belum absen</span>
                             @endif
