@@ -146,7 +146,7 @@
             Edit Data Karyawan
         </a>
 
-        @if($karyawan->status_registrasi === 'menunggu')
+        @if($belumRegistrasi)
         <form method="POST" action="{{ route('karyawan.kirim-ulang', $karyawan) }}">
             @csrf
             <button type="submit"

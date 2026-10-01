@@ -144,7 +144,9 @@ class KaryawanController extends Controller
         $levels = $this->levels;
         $banks  = $this->banks;
         $karyawan->load('tunjangan');
-        return view('karyawan.show', compact('karyawan','levels','banks'));
+        // status_registrasi tak ikut fillable (semua tercatat 'lengkap'), jadi penanda "belum registrasi" = ada token belum dipakai.
+        $belumRegistrasi = RegistrasiToken::where('user_id', $karyawan->id)->where('used', false)->exists();
+        return view('karyawan.show', compact('karyawan','levels','banks','belumRegistrasi'));
     }
 
     public function edit(User $karyawan)
