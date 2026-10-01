@@ -128,14 +128,10 @@ class KaryawanController extends Controller
         ]);
 
         $link = url('/registrasi-karyawan/' . $token);
-        Mail::send('emails.undangan-karyawan', [
-            'link'    => $link,
-            'jabatan' => $request->jabatan,
-            'level'   => $this->levels[$request->level] ?? '',
-        ], function($mail) use ($request) {
-            $mail->to($request->email)
-                 ->subject('Undangan Registrasi — Pusat Kanopi BSD');
-        });
+        if (! $this->kirimUndangan($request->email, $link, $request->jabatan, $request->level, 'Undangan Registrasi — Pusat Kanopi BSD')) {
+            return redirect()->route('karyawan.index')
+                ->with('error', 'Karyawan dibuat, tapi email GAGAL terkirim. Kirim link ini manual (berlaku 24 jam): '.$link);
+        }
 
         return redirect()->route('karyawan.index')
             ->with('success', 'Undangan registrasi berhasil dikirim ke '.$request->email.'. Link berlaku 24 jam.');
@@ -253,6 +249,22 @@ class KaryawanController extends Controller
             ->with('success', 'Data karyawan berhasil diperbarui.');
     }
 
+    // Email gagal (mis. SMTP ditolak) tidak boleh jadi 500 di tengah proses: user & token sudah tersimpan.
+    private function kirimUndangan(string $email, string $link, ?string $jabatan, $level, string $subjek): bool
+    {
+        try {
+            Mail::send('emails.undangan-karyawan', [
+                'link'    => $link,
+                'jabatan' => $jabatan,
+                'level'   => $this->levels[$level] ?? '',
+            ], fn($mail) => $mail->to($email)->subject($subjek));
+            return true;
+        } catch (\Throwable $e) {
+            \Log::error('Gagal kirim email undangan karyawan: '.$e->getMessage());
+            return false;
+        }
+    }
+
     public function kirimUlang(User $karyawan)
     {
         $this->pastikanBolehKelola($karyawan);
@@ -267,14 +279,9 @@ class KaryawanController extends Controller
         ]);
 
         $link = url('/registrasi-karyawan/'.$token);
-        Mail::send('emails.undangan-karyawan', [
-            'link'    => $link,
-            'jabatan' => $karyawan->jabatan,
-            'level'   => $this->levels[$karyawan->level] ?? '',
-        ], function($mail) use ($karyawan) {
-            $mail->to($karyawan->email)
-                 ->subject('Undangan Registrasi (Kirim Ulang) — Pusat Kanopi BSD');
-        });
+        if (! $this->kirimUndangan($karyawan->email, $link, $karyawan->jabatan, $karyawan->level, 'Undangan Registrasi (Kirim Ulang) — Pusat Kanopi BSD')) {
+            return back()->with('error', 'Email GAGAL terkirim. Kirim link ini manual (berlaku 24 jam): '.$link);
+        }
 
         return back()->with('success', 'Link registrasi baru berhasil dikirim ke '.$karyawan->email);
     }
