@@ -146,6 +146,16 @@
             Edit Data Karyawan
         </a>
 
+        @if($karyawan->status_registrasi === 'menunggu')
+        <form method="POST" action="{{ route('karyawan.kirim-ulang', $karyawan) }}">
+            @csrf
+            <button type="submit"
+                    style="width:100%;padding:12px;border-radius:12px;font-size:13px;font-weight:700;border:1.5px solid #C9A84C;cursor:pointer;background:transparent;color:#C9A84C;">
+                Kirim Ulang Undangan Registrasi
+            </button>
+        </form>
+        @endif
+
         {{-- Reset Password --}}
         <div x-data="{ showReset: false }">
             <button @click="showReset = !showReset"
