@@ -111,6 +111,8 @@ Route::middleware('auth')->prefix('absensi')->name('absensi.')->group(function (
     Route::get('/pulang',                   [AbsensiController::class, 'formPulang'])->name('form-pulang');
     Route::post('/pulang',                  [AbsensiController::class, 'absenPulang'])->name('pulang');
     Route::post('/cek-gps',                 [AbsensiController::class, 'cekGps'])->name('cek-gps');
+    // Ajuan kerja di luar kantor (Admin Ops & Toko Besi). Sengaja tanpa level: — aturan di LuarKota::bolehAjukan.
+    Route::post('/ajukan-luar-kantor',      [AbsensiController::class, 'ajukanLuarKantor'])->name('ajukan-luar-kantor');
     // Rekap memuat absensi + NOMINAL GAJI seluruh karyawan -> Owner (level 1) SAJA.
     // Mandor (level 3) sengaja tidak diberi rekap penuh; dia tetap punya halaman
     // kode absen & aktivasi masuk hari libur di bawah (keputusan Bos, 15 Agustus).

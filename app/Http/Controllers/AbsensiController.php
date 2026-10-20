@@ -146,7 +146,12 @@ class AbsensiController extends Controller
         $fase          = $this->getFaseAbsen($absenHariIni);
         $luarKotaAktif = LuarKota::getAktif($user->id);
 
-        return view('absensi.index', compact('user','absenHariIni','riwayat','stats','fase','luarKotaAktif'));
+        $ajuanLuar     = LuarKota::where('user_id', $user->id)
+            ->whereDate('tanggal_mulai', today())
+            ->whereIn('status', ['menunggu', 'ditolak'])
+            ->latest('id')->first();
+
+        return view('absensi.index', compact('user','absenHariIni','riwayat','stats','fase','luarKotaAktif','ajuanLuar'));
     }
 
     public function formMasuk()
@@ -571,6 +576,46 @@ class AbsensiController extends Controller
     public static function gpsSiangWajib(int $level): bool
     {
         return in_array($level, self::LEVEL_GPS_SIANG);
+    }
+
+    public function ajukanLuarKantor(Request $request)
+    {
+        $user = Auth::user();
+        $request->validate(['lokasi' => 'required|string|max:255']);
+
+        $absen = Absensi::where('user_id', $user->id)->whereDate('tanggal', today())->first();
+        $ada   = LuarKota::where('user_id', $user->id)
+            ->whereIn('status', ['aktif', 'menunggu'])
+            ->whereDate('tanggal_mulai', '<=', today())
+            ->whereDate('tanggal_selesai', '>=', today())
+            ->exists();
+
+        if ($alasan = LuarKota::bolehAjukan((int) $user->level, (bool) $absen?->jam_masuk, (bool) $absen?->jam_pulang, $ada)) {
+            return back()->with('error', $alasan);
+        }
+
+        LuarKota::create([
+            'user_id'         => $user->id,
+            'dibuat_oleh'     => $user->id,
+            'tanggal_mulai'   => today(),
+            'tanggal_selesai' => today(),
+            'lokasi'          => $request->lokasi,
+            'status'          => 'menunggu',
+        ]);
+
+        $penerima = User::whereIn('level', [1, 2])->where('status', 'aktif')
+            ->where('id', '!=', $user->id)->whereNotNull('telegram_chat_id')->get();
+        foreach ($penerima as $p) {
+            app(TelegramService::class)->kirim($p->telegram_chat_id,
+                "📍 *AJUAN KERJA DI LUAR KANTOR*\n"
+                . "Dari: {$user->name}\n"
+                . "Tujuan: {$request->lokasi}\n"
+                . "Tanggal: " . today()->format('d/m/Y') . "\n"
+                . "---\n"
+                . "Setujui/tolak di: app.kanopibsd.co.id/luar-kota");
+        }
+
+        return back()->with('success', 'Ajuan terkirim. Tunggu persetujuan Owner/Admin.');
     }
 
     public function formLaporProgress()

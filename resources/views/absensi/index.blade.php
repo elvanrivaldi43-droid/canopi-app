@@ -168,6 +168,32 @@
             </div>
         </div>
         @endif
+
+        @if(\App\Http\Controllers\AbsensiController::gpsSiangWajib((int) $user->level) && $absenHariIni?->jam_masuk && !$absenHariIni->jam_pulang && !$luarKotaAktif)
+        <div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+            @if($ajuanLuar?->status === 'menunggu')
+            <div style="font-size:13px;color:#93C5FD;">
+                Ajuan kerja di luar kantor ({{ $ajuanLuar->lokasi }}) menunggu persetujuan Owner/Admin.
+            </div>
+            @else
+                @if($ajuanLuar?->status === 'ditolak')
+                <div style="font-size:12px;color:#FCA5A5;margin-bottom:8px;">
+                    Ajuan sebelumnya ditolak: {{ $ajuanLuar->keterangan }}
+                </div>
+                @endif
+            <form method="POST" action="{{ route('absensi.ajukan-luar-kantor') }}" onsubmit="this.querySelector('button').disabled=true">
+                @csrf
+                <label for="lokasiLuar" style="display:block;font-size:12px;color:#94A3B8;margin-bottom:6px;">Perlu kerja di luar kantor hari ini?</label>
+                <input id="lokasiLuar" name="lokasi" required maxlength="255" placeholder="Tujuan, mis. ke supplier besi Cikupa"
+                       style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #334155;background:#0F172A;color:#E2E8F0;font-size:14px;margin-bottom:8px;">
+                <button type="submit"
+                        style="width:100%;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:14px;color:#0F1117;background:#93C5FD;min-height:44px;cursor:pointer;">
+                    Ajukan Kerja di Luar Kantor
+                </button>
+            </form>
+            @endif
+        </div>
+        @endif
     </div>
 
     {{-- Stats Bulan Ini --}}
