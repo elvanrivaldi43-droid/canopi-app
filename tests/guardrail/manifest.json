@@ -62,6 +62,12 @@
       "manual": false
     },
     {
+      "path": "tests/keamanan/test_akses_izin.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/keamanan/test_akses_payroll_rekap.php",
       "runner": "php",
       "requires_db": false,

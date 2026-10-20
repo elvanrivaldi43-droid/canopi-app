@@ -139,10 +139,13 @@ Route::middleware('auth')->prefix('izin')->name('izin.')->group(function () {
     Route::get('/',                     [IzinAbsenController::class, 'index'])->name('index');
     Route::get('/ajukan',               [IzinAbsenController::class, 'create'])->name('create');
     Route::post('/',                    [IzinAbsenController::class, 'store'])->name('store');
-    Route::get('/approval',             [IzinAbsenController::class, 'approval'])->name('approval');
-    Route::patch('/{izin}/approve',     [IzinAbsenController::class, 'approve'])->name('approve');
-    Route::patch('/{izin}/reject',      [IzinAbsenController::class, 'reject'])->name('reject');
-    Route::post('/dinas-luar',          [IzinAbsenController::class, 'dinasLuar'])->name('dinas-luar');
+    // Owner & Mandor saja (= penerima notif pengajuan). Dulu cuma `auth`: karyawan bisa approve izinnya sendiri.
+    Route::middleware('level:1,3')->group(function () {
+        Route::get('/approval',         [IzinAbsenController::class, 'approval'])->name('approval');
+        Route::patch('/{izin}/approve', [IzinAbsenController::class, 'approve'])->name('approve');
+        Route::patch('/{izin}/reject',  [IzinAbsenController::class, 'reject'])->name('reject');
+        Route::post('/dinas-luar',      [IzinAbsenController::class, 'dinasLuar'])->name('dinas-luar');
+    });
 });
 
 // ─── JADWAL LIBUR KARYAWAN ──────────────────────────────────
