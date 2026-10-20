@@ -292,6 +292,9 @@ Route::middleware(['auth', 'level:1,2,3'])->prefix('luar-kota')->name('luar-kota
     Route::put('/{id}',         [App\Http\Controllers\LuarKotaController::class, 'update'])->name('update');
     Route::post('/{id}/selesai',[App\Http\Controllers\LuarKotaController::class, 'selesai'])->name('selesai');
     Route::post('/{id}/batal',  [App\Http\Controllers\LuarKotaController::class, 'batalkan'])->name('batalkan');
+    // Ajuan kerja di luar kantor: Owner & Admin Ops saja; "bukan ajuan sendiri" dicek di controller.
+    Route::post('/{id}/setujui', [App\Http\Controllers\LuarKotaController::class, 'setujui'])->middleware('level:1,2')->name('setujui');
+    Route::post('/{id}/tolak',   [App\Http\Controllers\LuarKotaController::class, 'tolak'])->middleware('level:1,2')->name('tolak');
 });
 
 

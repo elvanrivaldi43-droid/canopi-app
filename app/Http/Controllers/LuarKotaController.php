@@ -29,7 +29,14 @@ class LuarKotaController extends Controller
             ->aktifPadaTanggal()
             ->get();
 
-        return view('luar-kota.index', compact('daftar', 'status', 'sedangLuarKota'));
+        // Ajuan kerja di luar kantor; 7 hari ke belakang cukup (yang lewat tampil "Kedaluwarsa")
+        $ajuanMenunggu = LuarKota::with('karyawan')
+            ->where('status', 'menunggu')
+            ->whereDate('tanggal_mulai', '>=', today()->subDays(7))
+            ->orderByDesc('tanggal_mulai')
+            ->get();
+
+        return view('luar-kota.index', compact('daftar', 'status', 'sedangLuarKota', 'ajuanMenunggu'));
     }
 
     // ─── CREATE — form aktifkan luar kota ──────────────────────────────
@@ -150,6 +157,43 @@ class LuarKotaController extends Controller
         $luarKota->update(['status' => 'dibatalkan']);
 
         return back()->with('success', 'Mode luar kota dibatalkan.');
+    }
+
+    // ─── AJUAN KERJA DI LUAR KANTOR: setujui / tolak ───────────────────
+    public function setujui($id)
+    {
+        $lk = LuarKota::with('karyawan')->findOrFail($id);
+        if ($alasan = LuarKota::alasanTolakProses($lk->status, $lk->tanggal_mulai->toDateString(), (int) $lk->user_id, (int) Auth::id(), today()->toDateString())) {
+            return back()->with('error', $alasan);
+        }
+
+        $lk->update(['status' => 'aktif', 'dibuat_oleh' => Auth::id()]);
+
+        app(TelegramService::class)->kirim($lk->karyawan?->telegram_chat_id,
+            "✅ *AJUAN KERJA DI LUAR KANTOR DISETUJUI*\n"
+            . "Tujuan: {$lk->lokasi}\n"
+            . "Hari ini lapor siang, lanjut kerja, dan absen pulang bebas lokasi (GPS tetap dicatat).");
+
+        return back()->with('success', "Ajuan {$lk->karyawan?->name} disetujui.");
+    }
+
+    public function tolak(Request $request, $id)
+    {
+        $request->validate(['alasan' => 'required|string|max:255']);
+
+        $lk = LuarKota::with('karyawan')->findOrFail($id);
+        if ($alasan = LuarKota::alasanTolakProses($lk->status, $lk->tanggal_mulai->toDateString(), (int) $lk->user_id, (int) Auth::id(), today()->toDateString())) {
+            return back()->with('error', $alasan);
+        }
+
+        $lk->update(['status' => 'ditolak', 'dibuat_oleh' => Auth::id(), 'keterangan' => $request->alasan]);
+
+        app(TelegramService::class)->kirim($lk->karyawan?->telegram_chat_id,
+            "❌ *AJUAN KERJA DI LUAR KANTOR DITOLAK*\n"
+            . "Tujuan: {$lk->lokasi}\n"
+            . "Alasan: {$request->alasan}");
+
+        return back()->with('success', "Ajuan {$lk->karyawan?->name} ditolak.");
     }
 
     // ─── AUTO-UPDATE STATUS: tandai selesai kalau tanggal sudah lewat ──

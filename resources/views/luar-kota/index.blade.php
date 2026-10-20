@@ -108,6 +108,9 @@ body { background: #0f172a; color: #e2e8f0; }
     @if(session('success'))
     <div class="alert-success">{{ session('success') }}</div>
     @endif
+    @if(session('error'))
+    <div class="alert-success" style="background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.3);color:#FCA5A5;">{{ session('error') }}</div>
+    @endif
 
     <div class="page-header">
         <h1 class="page-title">
@@ -119,6 +122,39 @@ body { background: #0f172a; color: #e2e8f0; }
             Aktifkan Luar Kota
         </a>
     </div>
+
+    {{-- Ajuan kerja di luar kantor (Admin Ops & Toko Besi) --}}
+    @if($ajuanMenunggu->count() > 0)
+    <div class="hari-ini-card">
+        <div class="hari-ini-title">Ajuan Kerja di Luar Kantor ({{ $ajuanMenunggu->count() }})</div>
+        @foreach($ajuanMenunggu as $aj)
+        @php
+            $kedaluwarsa = !$aj->tanggal_mulai->isToday();
+            $bisaProses  = !$kedaluwarsa && in_array((int) auth()->user()->level, [1, 2]) && (int) $aj->user_id !== (int) auth()->id();
+        @endphp
+        <div style="padding:10px 0;border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="font-size:14px;font-weight:600;">{{ $aj->karyawan?->name }} — {{ $aj->lokasi }}</div>
+            <div style="font-size:12px;color:#94A3B8;">
+                {{ $aj->tanggal_mulai->format('d/m/Y') }} · {{ $kedaluwarsa ? 'Kedaluwarsa' : 'Menunggu' }}
+            </div>
+            @if($bisaProses)
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                <form method="POST" action="{{ route('luar-kota.setujui', $aj->id) }}" onsubmit="this.querySelector('button').disabled=true">
+                    @csrf
+                    <button type="submit" style="padding:8px 14px;border-radius:8px;border:none;background:#22c55e;color:#0F1117;font-weight:700;min-height:40px;">Setujui</button>
+                </form>
+                <form method="POST" action="{{ route('luar-kota.tolak', $aj->id) }}" style="display:flex;gap:6px;flex:1;min-width:220px;" onsubmit="this.querySelector('button').disabled=true">
+                    @csrf
+                    <input name="alasan" required maxlength="255" placeholder="Alasan tolak" aria-label="Alasan tolak"
+                           style="flex:1;padding:8px;border-radius:8px;border:1px solid #334155;background:#0F172A;color:#E2E8F0;">
+                    <button type="submit" style="padding:8px 14px;border-radius:8px;border:none;background:#ef4444;color:white;font-weight:700;min-height:40px;">Tolak</button>
+                </form>
+            </div>
+            @endif
+        </div>
+        @endforeach
+    </div>
+    @endif
 
     {{-- Sedang luar kota hari ini --}}
     @if($sedangLuarKota->count() > 0)
@@ -146,6 +182,8 @@ body { background: #0f172a; color: #e2e8f0; }
            class="filter-btn {{ $status=='selesai'?'active':'' }}">Selesai</a>
         <a href="{{ route('luar-kota.index', ['status'=>'dibatalkan']) }}"
            class="filter-btn {{ $status=='dibatalkan'?'active':'' }}">Dibatalkan</a>
+        <a href="{{ route('luar-kota.index', ['status'=>'ditolak']) }}"
+           class="filter-btn {{ $status=='ditolak'?'active':'' }}">Ditolak</a>
         <a href="{{ route('luar-kota.index', ['status'=>'semua']) }}"
            class="filter-btn {{ $status=='semua'?'active':'' }}">Semua</a>
     </div>
