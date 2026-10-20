@@ -148,7 +148,7 @@ function refreshGPS() {
       gpsValid = data.valid;
       document.getElementById('gpsIcon').textContent = data.valid ? '✅' : '❌';
       document.getElementById('gpsStatus').innerHTML = data.valid
-        ? '<span style="color:#10b981">Lokasi valid ✓</span>'
+        ? (data.wajib === false ? '<span style="color:#10b981">Lokasi tercatat ✓</span>' : '<span style="color:#10b981">Lokasi valid ✓</span>')
         : '<span style="color:#ef4444">Di luar radius!</span>';
       document.getElementById('gpsDetail').textContent = data.jarak + ' dari kantor';
       cekSubmit();

@@ -8,6 +8,12 @@
       "manual": false
     },
     {
+      "path": "tests/absensi/test_gps_wajib_siang.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/absensi/test_jam_individu.php",
       "runner": "php",
       "requires_db": false,

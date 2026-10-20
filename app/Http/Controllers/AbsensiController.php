@@ -27,7 +27,7 @@ class AbsensiController extends Controller
     const RADIUS_MASUK_PULANG = 100;
     const RADIUS_SIANG        = 200;
     const LEVEL_WORKSHOP      = [3, 5, 6];
-    const LEVEL_KANTOR        = [2, 4, 7];
+    const LEVEL_GPS_SIANG     = [2, 7]; // keputusan Elvan 20 Okt 2026: level lain lapor siang bebas lokasi (cukup dicatat)
     const JAM_BUKA_ABSEN      = '06:30';
     const JAM_SETENGAH        = '10:00';
     const JAM_MASUK_SIANG     = '13:00';
@@ -563,7 +563,14 @@ class AbsensiController extends Controller
         $lokasi = $this->getLokasiCek($user->level, $tipe);
         $radius = $tipe==='siang' ? self::RADIUS_SIANG : self::RADIUS_MASUK_PULANG;
         $jarak  = $this->hitungJarak($request->lat,$request->lng,$lokasi['lat'],$lokasi['lng']);
-        return response()->json(['valid'=>$jarak<=$radius,'jarak'=>$this->formatJarak($jarak),'meter'=>round($jarak),'luar_kota'=>false]);
+        // Siang & bukan level wajib: selalu valid, jarak tetap ditampilkan/dicatat
+        $wajib  = $tipe!=='siang' || self::gpsSiangWajib($user->level);
+        return response()->json(['valid'=>!$wajib || $jarak<=$radius,'wajib'=>$wajib,'jarak'=>$this->formatJarak($jarak),'meter'=>round($jarak),'luar_kota'=>false]);
+    }
+
+    public static function gpsSiangWajib(int $level): bool
+    {
+        return in_array($level, self::LEVEL_GPS_SIANG);
     }
 
     public function formLaporProgress()
@@ -574,7 +581,7 @@ class AbsensiController extends Controller
         if ($absen?->jam_lapor_progress) return redirect()->route('absensi.index')->with('info','Kamu sudah lapor progress hari ini.');
 
         $lokasi        = $this->getLokasiCek($user->level,'siang');
-        $gpsWajib      = in_array($user->level, self::LEVEL_KANTOR);
+        $gpsWajib      = self::gpsSiangWajib($user->level);
         $luarKotaAktif = LuarKota::getAktif($user->id);
         $pertanyaan    = self::pilihPertanyaanProgress($user->id, today());
 
@@ -602,7 +609,7 @@ class AbsensiController extends Controller
         $sedangLuarKota = LuarKota::sedangLuarKota($user->id);
 
         $gpsValid = true;
-        if (in_array($user->level, self::LEVEL_KANTOR) && !$sedangLuarKota) {
+        if (self::gpsSiangWajib($user->level) && !$sedangLuarKota) {
             $lokasi   = $this->getLokasiCek($user->level,'siang');
             $jarak    = $this->hitungJarak($request->lat,$request->lng,$lokasi['lat'],$lokasi['lng']);
             $gpsValid = $jarak <= self::RADIUS_SIANG;
@@ -659,7 +666,7 @@ class AbsensiController extends Controller
         $sedangLuarKota = LuarKota::sedangLuarKota($user->id);
 
         $gpsValid = true;
-        if (in_array($user->level, self::LEVEL_KANTOR) && !$sedangLuarKota) {
+        if (self::gpsSiangWajib($user->level) && !$sedangLuarKota) {
             $lokasi   = $this->getLokasiCek($user->level,'siang');
             $jarak    = $this->hitungJarak($request->lat,$request->lng,$lokasi['lat'],$lokasi['lng']);
             $gpsValid = $jarak <= self::RADIUS_SIANG;
