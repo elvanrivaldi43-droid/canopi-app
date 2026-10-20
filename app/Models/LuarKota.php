@@ -104,6 +104,22 @@ class LuarKota extends Model
         return null;
     }
 
+    // Form Luar Kota manual: selain Owner tak boleh mengaktifkan untuk diri sendiri
+    // (kalau boleh, aturan "ajuan harus disetujui orang lain" bisa dilewati).
+    public static function alasanTolakBuatManual(array $userIds, int $aktorId, int $aktorLevel): ?string
+    {
+        if ($aktorLevel !== 1 && in_array($aktorId, array_map('intval', $userIds), true)) {
+            return 'Tidak bisa mengaktifkan luar kota untuk diri sendiri. Ajukan lewat halaman Absensi.';
+        }
+        return null;
+    }
+
+    // Edit/selesai/batal manual hanya untuk baris aktif; ajuan menunggu cuma lewat setujui/tolak.
+    public static function bisaDiubahManual(string $status): bool
+    {
+        return $status === 'aktif';
+    }
+
     // Static: cek apakah user sedang luar kota hari ini
     public static function sedangLuarKota(int $userId): bool
     {

@@ -33,6 +33,16 @@ foreach (['aktif', 'ditolak', 'selesai', 'dibatalkan'] as $st) {
     $check("status $st -> ditolak (sudah diproses)", $boleh(LuarKota::alasanTolakProses($st, $h, 5, 9, $h)), false);
 }
 
+// ── Form Luar Kota manual tak boleh jadi jalan pintas (review 20 Okt) ──
+$check('owner aktifkan dirinya sendiri -> boleh',      $boleh(LuarKota::alasanTolakBuatManual([3, 1], 1, 1)), true);
+$check('admin aktifkan karyawan lain -> boleh',        $boleh(LuarKota::alasanTolakBuatManual([5, 6], 2, 2)), true);
+$check('admin centang dirinya sendiri -> ditolak',     $boleh(LuarKota::alasanTolakBuatManual([5, 2], 2, 2)), false);
+$check('admin centang dirinya (id string) -> ditolak', $boleh(LuarKota::alasanTolakBuatManual(['5', '2'], 2, 2)), false);
+$check('edit/selesai/batal baris aktif -> boleh',      LuarKota::bisaDiubahManual('aktif'), true);
+foreach (['menunggu', 'ditolak', 'selesai', 'dibatalkan'] as $st) {
+    $check("edit/selesai/batal baris $st -> ditolak", LuarKota::bisaDiubahManual($st), false);
+}
+
 // ── Regresi: hanya status `aktif` yang membebaskan GPS ──
 // Koneksi mysql "malas": cukup untuk toSql(), tak pernah benar-benar connect ke DB.
 $capsule = new \Illuminate\Database\Capsule\Manager;

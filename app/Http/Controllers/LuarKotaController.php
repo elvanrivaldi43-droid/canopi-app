@@ -62,6 +62,10 @@ class LuarKotaController extends Controller
             'keterangan'      => 'nullable|string',
         ]);
 
+        if ($alasan = LuarKota::alasanTolakBuatManual($request->user_ids, (int) Auth::id(), (int) Auth::user()->level)) {
+            return back()->withInput()->with('error', $alasan);
+        }
+
         foreach ($request->user_ids as $userId) {
             // Cek kalau sudah ada luar kota aktif di rentang yang sama
             $existing = LuarKota::where('user_id', $userId)
@@ -106,6 +110,7 @@ class LuarKotaController extends Controller
     public function edit($id)
     {
         $luarKota = LuarKota::with('karyawan')->findOrFail($id);
+        abort_unless(LuarKota::bisaDiubahManual((string) $luarKota->status), 404);
         return view('luar-kota.edit', compact('luarKota'));
     }
 
@@ -113,6 +118,7 @@ class LuarKotaController extends Controller
     public function update(Request $request, $id)
     {
         $luarKota = LuarKota::findOrFail($id);
+        abort_unless(LuarKota::bisaDiubahManual((string) $luarKota->status), 404);
 
         $request->validate([
             'tanggal_mulai'   => 'required|date',
@@ -142,6 +148,7 @@ class LuarKotaController extends Controller
     public function selesai($id)
     {
         $luarKota = LuarKota::findOrFail($id);
+        abort_unless(LuarKota::bisaDiubahManual((string) $luarKota->status), 404);
         $luarKota->update([
             'status'          => 'selesai',
             'tanggal_selesai' => today(),
@@ -154,6 +161,7 @@ class LuarKotaController extends Controller
     public function batalkan($id)
     {
         $luarKota = LuarKota::findOrFail($id);
+        abort_unless(LuarKota::bisaDiubahManual((string) $luarKota->status), 404);
         $luarKota->update(['status' => 'dibatalkan']);
 
         return back()->with('success', 'Mode luar kota dibatalkan.');

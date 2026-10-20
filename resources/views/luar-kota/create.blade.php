@@ -102,6 +102,10 @@ textarea.form-control { min-height: 80px; resize: vertical; }
             Selama mode luar kota aktif, karyawan tetap bisa absen seperti biasa. GPS akan dicatat tapi tidak mempengaruhi validasi (tidak ditolak karena jauh).
         </div>
 
+        @if(session('error'))
+        <div class="info-box" style="background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.3);color:#FCA5A5;">{{ session('error') }}</div>
+        @endif
+
         <form method="POST" action="{{ route('luar-kota.store') }}">
             @csrf
 
