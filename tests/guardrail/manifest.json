@@ -2,6 +2,12 @@
   "version": 1,
   "tests": [
     {
+      "path": "tests/absensi/test_ajuan_luar_kantor.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/absensi/test_gate_buka_absen.php",
       "runner": "php",
       "requires_db": false,

@@ -64,6 +64,8 @@ class LuarKota extends Model
             'aktif'      => 'Aktif',
             'selesai'    => 'Selesai',
             'dibatalkan' => 'Dibatalkan',
+            'menunggu'   => 'Menunggu',
+            'ditolak'    => 'Ditolak',
             default      => '-',
         };
     }
@@ -75,8 +77,31 @@ class LuarKota extends Model
             'aktif'      => '#f59e0b',
             'selesai'    => '#22c55e',
             'dibatalkan' => '#ef4444',
+            'menunggu'   => '#3b82f6',
+            'ditolak'    => '#ef4444',
             default      => '#64748b',
         };
+    }
+
+    // ─── Ajuan kerja di luar kantor (spec 2026-10-20) ──────────────────
+    // Hanya level yang wajib GPS siang yang perlu (dan boleh) minta pengecualian.
+    public static function bolehAjukan(int $level, bool $sudahMasuk, bool $sudahPulang, bool $adaAktifAtauMenunggu): ?string
+    {
+        if (!\App\Http\Controllers\AbsensiController::gpsSiangWajib($level)) {
+            return 'Fitur ini khusus Admin Operasional & Admin Toko Besi.';
+        }
+        if (!$sudahMasuk)          return 'Absen masuk dulu di kantor, baru ajukan kerja di luar kantor.';
+        if ($sudahPulang)          return 'Kamu sudah absen pulang hari ini.';
+        if ($adaAktifAtauMenunggu) return 'Hari ini sudah ada ajuan atau mode luar kota.';
+        return null;
+    }
+
+    public static function alasanTolakProses(string $status, string $tanggal, int $pemilikId, int $aktorId, string $hariIni): ?string
+    {
+        if ($status !== 'menunggu')  return 'Ajuan ini sudah diproses.';
+        if ($tanggal !== $hariIni)   return 'Ajuan sudah kedaluwarsa (bukan untuk hari ini).';
+        if ($pemilikId === $aktorId) return 'Tidak bisa memproses ajuan sendiri.';
+        return null;
     }
 
     // Static: cek apakah user sedang luar kota hari ini
