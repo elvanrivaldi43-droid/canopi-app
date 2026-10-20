@@ -260,6 +260,27 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
 
 ### Utang aktif / resume point
 
+**>>> TITIK LANJUT 20 Okt 2026 (akhir sesi) — baca ini dulu <<<**
+   Butir 1 & 2 titik lanjut 30 Sep sudah divalidasi Elvan (cron kode absen jalan, 0c/0d oke). LIVE hari ini:
+   - `16d129a` Lapor progress & Kembali Kerja (siang) wajib di titik lokasi HANYA level 2 (Admin Ops) & 7 (Toko
+     Besi) — `AbsensiController::LEVEL_GPS_SIANG`. Level lain (termasuk Marketing) bebas, lokasi tetap dicatat.
+     Dulu tombol kirim di HP terkunci di luar radius walau server membebaskan level lapangan. Masuk/pulang TAK berubah.
+   - `b574d1b` KEAMANAN: `izin.approval/approve/reject/dinas-luar` dulu cuma `auth` (karyawan bisa approve izinnya
+     sendiri) -> kini `level:1,3`. Tes `tests/keamanan/test_akses_izin.php`.
+   - Ajuan Kerja di Luar Kantor (spec/plan `docs/superpowers/*/2026-10-20-ajuan-kerja-luar-kantor*`): level 2/7,
+     hari ini saja, setelah absen masuk -> baris `luar_kota` status `menunggu` -> Owner/Admin Ops (bukan diri
+     sendiri) setujui (`aktif`) / tolak (`ditolak`, alasan di `keterangan`, penyetuju di `dibuat_oleh`) di `/luar-kota`.
+     SQL ENUM `docs/sql/2026-10-20-luar-kota-status-ajuan.sql` SUDAH dijalankan Elvan. Form Luar Kota manual kini:
+     selain Owner tak bisa aktifkan untuk diri sendiri; edit/selesai/batal hanya baris `aktif`.
+   1. **Belum divalidasi Elvan di HP (ajuan luar kantor):** (a) akun Admin/Toko Besi sudah absen masuk -> tombol
+      "Ajukan Kerja di Luar Kantor" muncul, kirim -> Owner dapat Telegram; (b) sebelum disetujui lapor siang dari
+      luar -> masih "Di luar radius!"; (c) Owner `/luar-kota` -> Setujui -> karyawan dapat Telegram, lapor siang dari
+      luar lolos; (d) Tolak dgn alasan -> alasan tampil di halaman Absensi; (e) besoknya normal lagi.
+      Juga: teknisi lapor siang dari lokasi pelanggan -> "Lokasi tercatat".
+   2. Minor ditunda: ajuan dobel bila 2 request benar-benar bersamaan; Owner & Admin proses ajuan di detik sama ->
+      2 notif. Halaman `/luar-kota` masih tanpa link menu (link ada di notif Telegram).
+   3. Keputusan terbuka 30 Sep butir 3a-3f di bawah masih berlaku (belum disentuh).
+
 **>>> TITIK LANJUT 30 Sep 2026 (akhir sesi) — baca ini dulu, detail di butir 0c/0d/0e di bawah <<<**
    Tiga fitur LIVE hari ini, repo bersih & ter-push (HEAD = `origin/main`), tak ada pekerjaan setengah jalan:
    rincian potongan absensi (0c), Kunci Keuangan ketik-ulang-password (0d), kunci cron ke `.env` (0e).
