@@ -239,10 +239,13 @@ body { background: #0f172a; color: #e2e8f0; }
         {{-- Aksi --}}
         @if($lk->status === 'aktif')
         <div class="lk-actions">
+            {{-- Sama dengan penjaga server di LuarKotaController::edit/update --}}
+            @if(!\App\Models\LuarKota::alasanTolakBuatManual([$lk->user_id], [$lk->karyawan?->level], (int) auth()->id(), (int) auth()->user()->level))
             <a href="{{ route('luar-kota.edit', $lk->id) }}" class="btn-sm btn-edit">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 Edit Tanggal
             </a>
+            @endif
             <form method="POST" action="{{ route('luar-kota.selesai', $lk->id) }}" style="display:inline;"
                   onsubmit="return confirm('Tandai selesai hari ini?')">
                 @csrf
