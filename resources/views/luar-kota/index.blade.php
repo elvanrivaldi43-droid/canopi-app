@@ -123,7 +123,7 @@ body { background: #0f172a; color: #e2e8f0; }
         </a>
     </div>
 
-    {{-- Ajuan kerja di luar kantor (Admin Ops & Toko Besi) --}}
+    {{-- Ajuan kerja di luar kantor (Admin Ops, Marketing & Toko Besi) --}}
     @if($ajuanMenunggu->count() > 0)
     <div class="hari-ini-card">
         <div class="hari-ini-title">Ajuan Kerja di Luar Kantor ({{ $ajuanMenunggu->count() }})</div>

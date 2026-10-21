@@ -169,7 +169,7 @@
         </div>
         @endif
 
-        @if(\App\Http\Controllers\AbsensiController::gpsSiangWajib((int) $user->level) && $absenHariIni?->jam_masuk && !$absenHariIni->jam_pulang && !$luarKotaAktif)
+        @if(in_array((int) $user->level, \App\Models\LuarKota::LEVEL_BOLEH_AJUKAN, true) && $absenHariIni?->jam_masuk && !$absenHariIni->jam_pulang && !$luarKotaAktif)
         <div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
             @if($ajuanLuar?->status === 'menunggu')
             <div style="font-size:13px;color:#93C5FD;">

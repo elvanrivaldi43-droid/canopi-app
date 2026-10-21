@@ -84,11 +84,14 @@ class LuarKota extends Model
     }
 
     // ─── Ajuan kerja di luar kantor (spec 2026-10-20) ──────────────────
-    // Hanya level yang wajib GPS siang yang perlu (dan boleh) minta pengecualian.
+    // Admin Ops (2) & Toko Besi (7) = level wajib GPS siang; Marketing (4) ditambah 21 Okt
+    // (siangnya bebas, ajuan berguna utk absen pulang dari lokasi klien).
+    const LEVEL_BOLEH_AJUKAN = [2, 4, 7];
+
     public static function bolehAjukan(int $level, bool $sudahMasuk, bool $sudahPulang, bool $adaAktifAtauMenunggu): ?string
     {
-        if (!\App\Http\Controllers\AbsensiController::gpsSiangWajib($level)) {
-            return 'Fitur ini khusus Admin Operasional & Admin Toko Besi.';
+        if (!in_array($level, self::LEVEL_BOLEH_AJUKAN, true)) {
+            return 'Fitur ini khusus Admin Operasional, Marketing & Admin Toko Besi.';
         }
         if (!$sudahMasuk)          return 'Absen masuk dulu di kantor, baru ajukan kerja di luar kantor.';
         if ($sudahPulang)          return 'Kamu sudah absen pulang hari ini.';

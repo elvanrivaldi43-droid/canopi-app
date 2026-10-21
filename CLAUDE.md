@@ -286,6 +286,8 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
       terbaca 350 m saat lapor siang (absen masuk 06:31 lolos 100 m) -> dugaan GPS HP meleset di dalam ruangan;
       jendela lapor progress 11:00-12:30 lewat -> denda lupa_progress kemungkinan tercatat, Owner bisa Koreksi.
       Opsi "longgarkan radius siang admin" BELUM diputuskan.
+      Marketing (4) kini juga BOLEH mengajukan (`LuarKota::LEVEL_BOLEH_AJUKAN = [2,4,7]`), disetujui Owner; lapor
+      siang marketing TETAP bebas (bukan `LEVEL_GPS_SIANG`); Admin/Supervisor tetap bisa aktifkan manual utk marketing.
    4. **Asumsi yang belum dibuktikan:** (a) "staff toko besi" = level 7 (tak ada level khusus staf toko); (b) hasil
       SHOW kolom `luar_kota.status` terpotong di phpMyAdmin (`...'menunggu','di...`) — dianggap `'ditolak'`, terbukti
       saat ajuan pertama ditolak; (c) log kode absen 20 Okt: "Muhammad ilham" muncul 2x (1 terkirim, 1 skip kode

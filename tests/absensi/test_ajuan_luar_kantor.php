@@ -17,9 +17,12 @@ $boleh = fn (?string $alasan) => $alasan === null;
 // ── bolehAjukan(level, sudahMasuk, sudahPulang, adaAktifAtauMenunggu) ──
 $check('admin ops, sudah masuk -> boleh',        $boleh(LuarKota::bolehAjukan(2, true, false, false)), true);
 $check('toko besi, sudah masuk -> boleh',        $boleh(LuarKota::bolehAjukan(7, true, false, false)), true);
-foreach ([1, 3, 4, 5, 6] as $lv) {
-    $check("level $lv -> ditolak (bukan level wajib GPS)", $boleh(LuarKota::bolehAjukan($lv, true, false, false)), false);
+// Keputusan Elvan 21 Okt: Marketing (4) juga boleh mengajukan (lapor siangnya tetap bebas lokasi)
+$check('marketing, sudah masuk -> boleh',        $boleh(LuarKota::bolehAjukan(4, true, false, false)), true);
+foreach ([1, 3, 5, 6] as $lv) {
+    $check("level $lv -> ditolak (bukan level yang boleh mengajukan)", $boleh(LuarKota::bolehAjukan($lv, true, false, false)), false);
 }
+$check('marketing tetap BEBAS GPS siang (tidak ikut wajib)', \App\Http\Controllers\AbsensiController::gpsSiangWajib(4), false);
 $check('belum absen masuk -> ditolak',           $boleh(LuarKota::bolehAjukan(2, false, false, false)), false);
 $check('sudah absen pulang -> ditolak',          $boleh(LuarKota::bolehAjukan(2, true, true, false)), false);
 $check('sudah ada aktif/menunggu -> ditolak',    $boleh(LuarKota::bolehAjukan(2, true, false, true)), false);
