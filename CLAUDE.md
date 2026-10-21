@@ -280,6 +280,15 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    2. Minor ditunda: ajuan dobel bila 2 request benar-benar bersamaan; Owner & Admin proses ajuan di detik sama ->
       2 notif. Link menu "Luar Kota" ditambahkan (`20e2e94`) di sidebar Owner + Admin Ops & Supervisor (juga drawer HP).
    3. Keputusan terbuka 30 Sep butir 3a-3f di bawah masih berlaku (belum disentuh).
+   4. **Asumsi yang belum dibuktikan:** (a) "staff toko besi" = level 7 (tak ada level khusus staf toko); (b) hasil
+      SHOW kolom `luar_kota.status` terpotong di phpMyAdmin (`...'menunggu','di...`) — dianggap `'ditolak'`, terbukti
+      saat ajuan pertama ditolak; (c) log kode absen 20 Okt: "Muhammad ilham" muncul 2x (1 terkirim, 1 skip kode
+      DFQBR9). Elvan bilang akun itu sudah nonaktif — cek apakah cron kode absen masih memproses karyawan nonaktif.
+   5. **Pelajaran teknis sesi ini:** skema `luar_kota.status` kini diketahui = ENUM (5 nilai, NOT NULL, default
+      `aktif`) — status baru WAJIB lewat ALTER dulu. `tests/bootstrap.php` tak menyalakan DB: tes yang butuh `toSql()`
+      pakai Capsule mysql "malas" (contoh `tests/absensi/test_ajuan_luar_kantor.php`). `gh` tak terpasang di VPS —
+      cek deploy via `curl https://api.github.com/repos/elvanrivaldi43-droid/canopi-app/actions/runs?per_page=1`.
+      Route baru terbukti live bila POST tanpa token -> 419 (vs 404 utk alamat palsu).
 
 **>>> TITIK LANJUT 30 Sep 2026 (akhir sesi) — baca ini dulu, detail di butir 0c/0d/0e di bawah <<<**
    Tiga fitur LIVE hari ini, repo bersih & ter-push (HEAD = `origin/main`), tak ada pekerjaan setengah jalan:
