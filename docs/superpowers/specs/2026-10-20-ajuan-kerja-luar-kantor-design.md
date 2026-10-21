@@ -28,7 +28,7 @@ satu-satunya jalan adalah Owner/Admin/Supervisor membuat "Luar Kota" manual di
 |---|---|
 | Siapa boleh mengajukan | Level 2 & 7 saja |
 | Kapan | Hari ini saja, setelah absen masuk |
-| Penyetuju | Owner (1) atau Admin Operasional (2); tak boleh menyetujui ajuan sendiri |
+| Penyetuju | ~~Owner (1) atau Admin Operasional (2)~~ → **Owner saja** (revisi 21 Okt: cegah admin saling setujui/aktifkan) |
 | Yang dibebaskan | Lapor siang, Kembali Kerja, absen pulang (= perilaku Luar Kota yang ada) |
 
 ## Pendekatan: pakai ulang tabel `luar_kota`

@@ -25,11 +25,12 @@ $adaLevel = false;
 foreach ($mw('absensi.ajukan-luar-kantor') as $m) if (str_starts_with((string) $m, 'level:')) $adaLevel = true;
 $check('ajukan-luar-kantor TIDAK dikunci level', $adaLevel, false);
 
-// Memproses: Owner & Admin Operasional saja (Supervisor level 3 boleh LIHAT halaman, tak boleh proses)
+// Memproses ajuan: Owner SAJA (keputusan Elvan 21 Okt: cegah admin saling setujui)
 foreach (['luar-kota.setujui', 'luar-kota.tolak'] as $n) {
     $check("$n terdaftar", isset($r[$n]), true);
     $check("$n POST", $r[$n]['method'] ?? null, 'POST');
-    $check("$n dikunci level:1,2", in_array('level:1,2', $mw($n), true), true);
+    $check("$n dikunci level:1 (Owner saja)", in_array('level:1', $mw($n), true), true);
+    $check("$n TIDAK lagi level:1,2", in_array('level:1,2', $mw($n), true), false);
 }
 
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";

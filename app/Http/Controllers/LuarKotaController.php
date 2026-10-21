@@ -42,8 +42,11 @@ class LuarKotaController extends Controller
     // ─── CREATE — form aktifkan luar kota ──────────────────────────────
     public function create()
     {
+        // Admin Ops (2) & Toko Besi (7) hanya Owner yang bisa mengaktifkan (keputusan Elvan 21 Okt)
+        $owner    = (int) Auth::user()->level === 1;
         $karyawan = User::where('status', 'aktif')
-            ->whereIn('level', [2, 3, 4, 5, 6])
+            ->whereIn('level', $owner ? [2, 3, 4, 5, 6, 7] : [3, 4, 5, 6])
+            ->where('id', '!=', $owner ? 0 : Auth::id())
             ->orderBy('name')
             ->get(['id', 'name', 'jabatan', 'level']);
 
@@ -62,7 +65,8 @@ class LuarKotaController extends Controller
             'keterangan'      => 'nullable|string',
         ]);
 
-        if ($alasan = LuarKota::alasanTolakBuatManual($request->user_ids, (int) Auth::id(), (int) Auth::user()->level)) {
+        $levelTarget = User::whereIn('id', $request->user_ids)->pluck('level')->all();
+        if ($alasan = LuarKota::alasanTolakBuatManual($request->user_ids, $levelTarget, (int) Auth::id(), (int) Auth::user()->level)) {
             return back()->withInput()->with('error', $alasan);
         }
 
@@ -111,14 +115,16 @@ class LuarKotaController extends Controller
     {
         $luarKota = LuarKota::with('karyawan')->findOrFail($id);
         abort_unless(LuarKota::bisaDiubahManual((string) $luarKota->status), 404);
+        abort_if(LuarKota::alasanTolakBuatManual([$luarKota->user_id], [$luarKota->karyawan?->level], (int) Auth::id(), (int) Auth::user()->level), 403);
         return view('luar-kota.edit', compact('luarKota'));
     }
 
     // ─── UPDATE — perpanjang / perpendek tanggal ───────────────────────
     public function update(Request $request, $id)
     {
-        $luarKota = LuarKota::findOrFail($id);
+        $luarKota = LuarKota::with('karyawan')->findOrFail($id);
         abort_unless(LuarKota::bisaDiubahManual((string) $luarKota->status), 404);
+        abort_if(LuarKota::alasanTolakBuatManual([$luarKota->user_id], [$luarKota->karyawan?->level], (int) Auth::id(), (int) Auth::user()->level), 403);
 
         $request->validate([
             'tanggal_mulai'   => 'required|date',

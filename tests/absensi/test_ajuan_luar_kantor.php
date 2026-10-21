@@ -34,10 +34,16 @@ foreach (['aktif', 'ditolak', 'selesai', 'dibatalkan'] as $st) {
 }
 
 // ── Form Luar Kota manual tak boleh jadi jalan pintas (review 20 Okt) ──
-$check('owner aktifkan dirinya sendiri -> boleh',      $boleh(LuarKota::alasanTolakBuatManual([3, 1], 1, 1)), true);
-$check('admin aktifkan karyawan lain -> boleh',        $boleh(LuarKota::alasanTolakBuatManual([5, 6], 2, 2)), true);
-$check('admin centang dirinya sendiri -> ditolak',     $boleh(LuarKota::alasanTolakBuatManual([5, 2], 2, 2)), false);
-$check('admin centang dirinya (id string) -> ditolak', $boleh(LuarKota::alasanTolakBuatManual(['5', '2'], 2, 2)), false);
+// alasanTolakBuatManual(userIds, levelTarget, aktorId, aktorLevel)
+// Keputusan Elvan 21 Okt: Luar Kota utk Admin Ops (2) & Toko Besi (7) HANYA Owner (cegah admin saling aktifkan).
+$check('owner aktifkan dirinya sendiri -> boleh',        $boleh(LuarKota::alasanTolakBuatManual([3, 1], [3, 1], 1, 1)), true);
+$check('owner aktifkan admin & toko besi -> boleh',      $boleh(LuarKota::alasanTolakBuatManual([2, 7], [2, 7], 1, 1)), true);
+$check('admin aktifkan teknisi/driver -> boleh',         $boleh(LuarKota::alasanTolakBuatManual([5, 6], [5, 6], 2, 2)), true);
+$check('admin centang dirinya sendiri -> ditolak',       $boleh(LuarKota::alasanTolakBuatManual([5, 2], [5, 2], 2, 2)), false);
+$check('admin centang dirinya (id string) -> ditolak',   $boleh(LuarKota::alasanTolakBuatManual(['5', '2'], [5, 2], 2, 2)), false);
+$check('admin aktifkan admin lain -> ditolak',           $boleh(LuarKota::alasanTolakBuatManual([8], [2], 2, 2)), false);
+$check('supervisor aktifkan admin -> ditolak',           $boleh(LuarKota::alasanTolakBuatManual([8], [2], 3, 3)), false);
+$check('supervisor aktifkan toko besi (str) -> ditolak', $boleh(LuarKota::alasanTolakBuatManual([9], ['7'], 3, 3)), false);
 $check('edit/selesai/batal baris aktif -> boleh',      LuarKota::bisaDiubahManual('aktif'), true);
 foreach (['menunggu', 'ditolak', 'selesai', 'dibatalkan'] as $st) {
     $check("edit/selesai/batal baris $st -> ditolak", LuarKota::bisaDiubahManual($st), false);

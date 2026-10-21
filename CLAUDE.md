@@ -280,6 +280,12 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
    2. Minor ditunda: ajuan dobel bila 2 request benar-benar bersamaan; Owner & Admin proses ajuan di detik sama ->
       2 notif. Link menu "Luar Kota" ditambahkan (`20e2e94`) di sidebar Owner + Admin Ops & Supervisor (juga drawer HP).
    3. Keputusan terbuka 30 Sep butir 3a-3f di bawah masih berlaku (belum disentuh).
+   3b. **21 Okt — keputusan Elvan "opsi 1":** Luar Kota utk Admin Ops (2) & Toko Besi (7) HANYA Owner — setujui/tolak
+      ajuan (`level:1`), aktifkan manual, edit/update. Admin & Supervisor tetap bisa utk teknisi/driver/marketing.
+      Alasan: admin bisa saling mengaktifkan. Notif ajuan kini hanya ke Owner. Kasus pemicu 21 Okt: Admin di kantor
+      terbaca 350 m saat lapor siang (absen masuk 06:31 lolos 100 m) -> dugaan GPS HP meleset di dalam ruangan;
+      jendela lapor progress 11:00-12:30 lewat -> denda lupa_progress kemungkinan tercatat, Owner bisa Koreksi.
+      Opsi "longgarkan radius siang admin" BELUM diputuskan.
    4. **Asumsi yang belum dibuktikan:** (a) "staff toko besi" = level 7 (tak ada level khusus staf toko); (b) hasil
       SHOW kolom `luar_kota.status` terpotong di phpMyAdmin (`...'menunggu','di...`) — dianggap `'ditolak'`, terbukti
       saat ajuan pertama ditolak; (c) log kode absen 20 Okt: "Muhammad ilham" muncul 2x (1 terkirim, 1 skip kode

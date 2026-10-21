@@ -130,7 +130,7 @@ body { background: #0f172a; color: #e2e8f0; }
         @foreach($ajuanMenunggu as $aj)
         @php
             $kedaluwarsa = !$aj->tanggal_mulai->isToday();
-            $bisaProses  = !$kedaluwarsa && in_array((int) auth()->user()->level, [1, 2]) && (int) $aj->user_id !== (int) auth()->id();
+            $bisaProses  = !$kedaluwarsa && (int) auth()->user()->level === 1 && (int) $aj->user_id !== (int) auth()->id();
         @endphp
         <div style="padding:10px 0;border-top:1px solid rgba(255,255,255,0.06);">
             <div style="font-size:14px;font-weight:600;">{{ $aj->karyawan?->name }} — {{ $aj->lokasi }}</div>

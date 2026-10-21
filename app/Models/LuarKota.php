@@ -104,12 +104,19 @@ class LuarKota extends Model
         return null;
     }
 
-    // Form Luar Kota manual: selain Owner tak boleh mengaktifkan untuk diri sendiri
-    // (kalau boleh, aturan "ajuan harus disetujui orang lain" bisa dilewati).
-    public static function alasanTolakBuatManual(array $userIds, int $aktorId, int $aktorLevel): ?string
+    // Form Luar Kota manual (& edit). Selain Owner: tak boleh untuk diri sendiri, dan
+    // tak boleh untuk level wajib GPS (Admin Ops/Toko Besi) — keputusan Elvan 21 Okt,
+    // supaya admin tak bisa saling mengaktifkan.
+    public static function alasanTolakBuatManual(array $userIds, array $levelTarget, int $aktorId, int $aktorLevel): ?string
     {
-        if ($aktorLevel !== 1 && in_array($aktorId, array_map('intval', $userIds), true)) {
+        if ($aktorLevel === 1) return null;
+        if (in_array($aktorId, array_map('intval', $userIds), true)) {
             return 'Tidak bisa mengaktifkan luar kota untuk diri sendiri. Ajukan lewat halaman Absensi.';
+        }
+        foreach ($levelTarget as $lv) {
+            if (\App\Http\Controllers\AbsensiController::gpsSiangWajib((int) $lv)) {
+                return 'Luar kota untuk Admin Operasional & Toko Besi hanya bisa diaktifkan Owner.';
+            }
         }
         return null;
     }
