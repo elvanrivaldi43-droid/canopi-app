@@ -26,7 +26,7 @@ class AbsensiController extends Controller
 
     const RADIUS_MASUK_PULANG = 100;
     const RADIUS_SIANG        = 200;
-    const LEVEL_WORKSHOP      = [3, 5, 6];
+    const LEVEL_WORKSHOP      = [3, 4, 5, 6]; // Marketing (4) ikut titik workshop sejak 22 Okt 2026 (keputusan Elvan)
     const LEVEL_GPS_SIANG     = [2, 7]; // keputusan Elvan 20 Okt 2026: level lain lapor siang bebas lokasi (cukup dicatat)
     const JAM_BUKA_ABSEN      = '06:30';
     const JAM_SETENGAH        = '10:00';

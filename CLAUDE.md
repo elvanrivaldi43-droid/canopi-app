@@ -291,6 +291,10 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
       REVISI penyetuju AJUAN (21 Okt, sumber tunggal `LuarKota::alasanTolakProses`): ajuan Admin Ops (2) -> Owner saja;
       ajuan Marketing (4) & Toko Besi (7) -> Owner ATAU Admin Ops (route `level:1,2`). Notif ikut aturan ini.
       Aktifkan MANUAL/edit utk level 2 & 7 tetap Owner saja (`alasanTolakBuatManual`, belum diubah).
+      22 Okt 09:0x WIB: Marketing (4) masuk `LEVEL_WORKSHOP` -> absen masuk/pulang diukur dari titik WORKSHOP
+      (100 m), sama dgn teknisi; lapor siang tetap bebas. Di-push pagi atas perintah Elvan: marketing yg masuk di
+      kantor 22 Okt harus pulang lewat workshop / diberi Luar Kota hari itu. Toko Besi masih titik kantor —
+      Elvan belum konfirmasi apakah toko besi satu lokasi dgn kantor.
    4. **Asumsi yang belum dibuktikan:** (a) "staff toko besi" = level 7 (tak ada level khusus staf toko); (b) hasil
       SHOW kolom `luar_kota.status` terpotong di phpMyAdmin (`...'menunggu','di...`) — dianggap `'ditolak'`, terbukti
       saat ajuan pertama ditolak; (c) log kode absen 20 Okt: "Muhammad ilham" muncul 2x (1 terkirim, 1 skip kode

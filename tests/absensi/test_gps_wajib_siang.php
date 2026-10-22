@@ -20,5 +20,10 @@ foreach ($wajib as $level => $exp) {
     $check("level $level wajib GPS siang", AbsensiController::gpsSiangWajib($level), $exp);
 }
 
+// Keputusan Elvan 22 Okt: Marketing (4) absen di titik WORKSHOP, sama dengan teknisi.
+foreach ([3 => true, 4 => true, 5 => true, 6 => true, 2 => false, 7 => false] as $level => $exp) {
+    $check("level $level pakai titik workshop", in_array($level, AbsensiController::LEVEL_WORKSHOP, true), $exp);
+}
+
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
 exit($fail ? 1 : 0);
