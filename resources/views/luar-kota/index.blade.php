@@ -130,7 +130,8 @@ body { background: #0f172a; color: #e2e8f0; }
         @foreach($ajuanMenunggu as $aj)
         @php
             $kedaluwarsa = !$aj->tanggal_mulai->isToday();
-            $bisaProses  = !$kedaluwarsa && (int) auth()->user()->level === 1 && (int) $aj->user_id !== (int) auth()->id();
+            // Sama dengan penjaga server di LuarKotaController::setujui/tolak
+            $bisaProses  = !\App\Models\LuarKota::alasanTolakProses($aj->status, $aj->tanggal_mulai->toDateString(), (int) $aj->user_id, (int) auth()->id(), today()->toDateString(), (int) $aj->karyawan?->level, (int) auth()->user()->level);
         @endphp
         <div style="padding:10px 0;border-top:1px solid rgba(255,255,255,0.06);">
             <div style="font-size:14px;font-weight:600;">{{ $aj->karyawan?->name }} — {{ $aj->lokasi }}</div>

@@ -288,6 +288,9 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
       Opsi "longgarkan radius siang admin" BELUM diputuskan.
       Marketing (4) kini juga BOLEH mengajukan (`LuarKota::LEVEL_BOLEH_AJUKAN = [2,4,7]`), disetujui Owner; lapor
       siang marketing TETAP bebas (bukan `LEVEL_GPS_SIANG`); Admin/Supervisor tetap bisa aktifkan manual utk marketing.
+      REVISI penyetuju AJUAN (21 Okt, sumber tunggal `LuarKota::alasanTolakProses`): ajuan Admin Ops (2) -> Owner saja;
+      ajuan Marketing (4) & Toko Besi (7) -> Owner ATAU Admin Ops (route `level:1,2`). Notif ikut aturan ini.
+      Aktifkan MANUAL/edit utk level 2 & 7 tetap Owner saja (`alasanTolakBuatManual`, belum diubah).
    4. **Asumsi yang belum dibuktikan:** (a) "staff toko besi" = level 7 (tak ada level khusus staf toko); (b) hasil
       SHOW kolom `luar_kota.status` terpotong di phpMyAdmin (`...'menunggu','di...`) — dianggap `'ditolak'`, terbukti
       saat ajuan pertama ditolak; (c) log kode absen 20 Okt: "Muhammad ilham" muncul 2x (1 terkirim, 1 skip kode

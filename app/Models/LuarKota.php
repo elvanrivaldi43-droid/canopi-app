@@ -99,11 +99,15 @@ class LuarKota extends Model
         return null;
     }
 
-    public static function alasanTolakProses(string $status, string $tanggal, int $pemilikId, int $aktorId, string $hariIni): ?string
+    // Penyetuju (keputusan Elvan 21 Okt): ajuan Admin Ops (2) -> Owner saja;
+    // ajuan Marketing (4) & Toko Besi (7) -> Owner atau Admin Ops.
+    public static function alasanTolakProses(string $status, string $tanggal, int $pemilikId, int $aktorId, string $hariIni, int $pemilikLevel, int $aktorLevel): ?string
     {
         if ($status !== 'menunggu')  return 'Ajuan ini sudah diproses.';
         if ($tanggal !== $hariIni)   return 'Ajuan sudah kedaluwarsa (bukan untuk hari ini).';
         if ($pemilikId === $aktorId) return 'Tidak bisa memproses ajuan sendiri.';
+        if ($aktorLevel === 1)       return null;
+        if ($aktorLevel !== 2 || $pemilikLevel === 2) return 'Ajuan ini hanya bisa diproses Owner.';
         return null;
     }
 

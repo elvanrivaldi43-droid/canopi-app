@@ -603,7 +603,8 @@ class AbsensiController extends Controller
             'status'          => 'menunggu',
         ]);
 
-        $penerima = User::where('level', 1)->where('status', 'aktif')
+        // Penerima = yang boleh menyetujui (LuarKota::alasanTolakProses): ajuan Admin Ops -> Owner saja
+        $penerima = User::whereIn('level', (int) $user->level === 2 ? [1] : [1, 2])->where('status', 'aktif')
             ->where('id', '!=', $user->id)->whereNotNull('telegram_chat_id')->get();
         foreach ($penerima as $p) {
             app(TelegramService::class)->kirim($p->telegram_chat_id,
@@ -615,7 +616,7 @@ class AbsensiController extends Controller
                 . "Setujui/tolak di: app.kanopibsd.co.id/luar-kota");
         }
 
-        return back()->with('success', 'Ajuan terkirim. Tunggu persetujuan Owner.');
+        return back()->with('success', 'Ajuan terkirim. Tunggu persetujuan.');
     }
 
     public function formLaporProgress()

@@ -292,9 +292,10 @@ Route::middleware(['auth', 'level:1,2,3'])->prefix('luar-kota')->name('luar-kota
     Route::put('/{id}',         [App\Http\Controllers\LuarKotaController::class, 'update'])->name('update');
     Route::post('/{id}/selesai',[App\Http\Controllers\LuarKotaController::class, 'selesai'])->name('selesai');
     Route::post('/{id}/batal',  [App\Http\Controllers\LuarKotaController::class, 'batalkan'])->name('batalkan');
-    // Ajuan kerja di luar kantor: Owner SAJA (keputusan Elvan 21 Okt: cegah admin saling setujui).
-    Route::post('/{id}/setujui', [App\Http\Controllers\LuarKotaController::class, 'setujui'])->middleware('level:1')->name('setujui');
-    Route::post('/{id}/tolak',   [App\Http\Controllers\LuarKotaController::class, 'tolak'])->middleware('level:1')->name('tolak');
+    // Ajuan kerja di luar kantor: Owner & Admin Ops; ajuan SIAPA boleh diproses SIAPA dicek di
+    // LuarKota::alasanTolakProses (ajuan Admin Ops = Owner saja; Marketing & Toko Besi = Owner/Admin Ops).
+    Route::post('/{id}/setujui', [App\Http\Controllers\LuarKotaController::class, 'setujui'])->middleware('level:1,2')->name('setujui');
+    Route::post('/{id}/tolak',   [App\Http\Controllers\LuarKotaController::class, 'tolak'])->middleware('level:1,2')->name('tolak');
 });
 
 

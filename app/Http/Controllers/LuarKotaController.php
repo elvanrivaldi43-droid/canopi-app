@@ -177,7 +177,7 @@ class LuarKotaController extends Controller
     public function setujui($id)
     {
         $lk = LuarKota::with('karyawan')->findOrFail($id);
-        if ($alasan = LuarKota::alasanTolakProses($lk->status, $lk->tanggal_mulai->toDateString(), (int) $lk->user_id, (int) Auth::id(), today()->toDateString())) {
+        if ($alasan = LuarKota::alasanTolakProses($lk->status, $lk->tanggal_mulai->toDateString(), (int) $lk->user_id, (int) Auth::id(), today()->toDateString(), (int) $lk->karyawan?->level, (int) Auth::user()->level)) {
             return back()->with('error', $alasan);
         }
 
@@ -196,7 +196,7 @@ class LuarKotaController extends Controller
         $request->validate(['alasan' => 'required|string|max:255']);
 
         $lk = LuarKota::with('karyawan')->findOrFail($id);
-        if ($alasan = LuarKota::alasanTolakProses($lk->status, $lk->tanggal_mulai->toDateString(), (int) $lk->user_id, (int) Auth::id(), today()->toDateString())) {
+        if ($alasan = LuarKota::alasanTolakProses($lk->status, $lk->tanggal_mulai->toDateString(), (int) $lk->user_id, (int) Auth::id(), today()->toDateString(), (int) $lk->karyawan?->level, (int) Auth::user()->level)) {
             return back()->with('error', $alasan);
         }
 

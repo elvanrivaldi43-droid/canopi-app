@@ -27,14 +27,21 @@ $check('belum absen masuk -> ditolak',           $boleh(LuarKota::bolehAjukan(2,
 $check('sudah absen pulang -> ditolak',          $boleh(LuarKota::bolehAjukan(2, true, true, false)), false);
 $check('sudah ada aktif/menunggu -> ditolak',    $boleh(LuarKota::bolehAjukan(2, true, false, true)), false);
 
-// ── alasanTolakProses(status, tanggal, pemilikId, aktorId, hariIni) ──
+// ── alasanTolakProses(status, tanggal, pemilikId, aktorId, hariIni, pemilikLevel, aktorLevel) ──
 $h = '2026-10-20';
-$check('menunggu, hari ini, orang lain -> boleh',  $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 9, $h)), true);
-$check('ajuan sendiri -> ditolak',                 $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 5, $h)), false);
-$check('ajuan kemarin -> ditolak (kedaluwarsa)',   $boleh(LuarKota::alasanTolakProses('menunggu', '2026-10-19', 5, 9, $h)), false);
+$check('menunggu, hari ini, owner proses admin -> boleh', $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 9, $h, 2, 1)), true);
+$check('ajuan sendiri -> ditolak',                 $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 5, $h, 2, 2)), false);
+$check('ajuan kemarin -> ditolak (kedaluwarsa)',   $boleh(LuarKota::alasanTolakProses('menunggu', '2026-10-19', 5, 9, $h, 2, 1)), false);
 foreach (['aktif', 'ditolak', 'selesai', 'dibatalkan'] as $st) {
-    $check("status $st -> ditolak (sudah diproses)", $boleh(LuarKota::alasanTolakProses($st, $h, 5, 9, $h)), false);
+    $check("status $st -> ditolak (sudah diproses)", $boleh(LuarKota::alasanTolakProses($st, $h, 5, 9, $h, 2, 1)), false);
 }
+// Keputusan Elvan 21 Okt: ajuan Marketing (4) & Toko Besi (7) -> Owner ATAU Admin Ops; ajuan Admin Ops (2) -> Owner saja
+$check('admin ops proses ajuan marketing -> boleh',  $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 9, $h, 4, 2)), true);
+$check('owner proses ajuan marketing -> boleh',      $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 9, $h, 4, 1)), true);
+$check('admin ops proses ajuan admin lain -> ditolak', $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 9, $h, 2, 2)), false);
+$check('admin ops proses ajuan toko besi -> boleh',    $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 9, $h, 7, 2)), true);
+$check('supervisor proses ajuan toko besi -> ditolak', $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 9, $h, 7, 3)), false);
+$check('supervisor proses ajuan marketing -> ditolak', $boleh(LuarKota::alasanTolakProses('menunggu', $h, 5, 9, $h, 4, 3)), false);
 
 // ── Form Luar Kota manual tak boleh jadi jalan pintas (review 20 Okt) ──
 // alasanTolakBuatManual(userIds, levelTarget, aktorId, aktorLevel)
