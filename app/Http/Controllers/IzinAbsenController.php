@@ -52,12 +52,16 @@ class IzinAbsenController extends Controller
 
         $request->validate([
             'tipe'       => 'required|in:sakit,izin,cuti,dinas_luar',
-            'tanggal'    => 'required|date|after:today',
+            'tanggal'    => 'required|date',
             'alasan'     => 'required|string|max:500',
             'foto_surat' => 'nullable|image|mimes:jpg,jpeg,png|max:3072',
-        ], [
-            'tanggal.after' => 'Tanggal izin harus H+1 atau lebih',
         ]);
+
+        $tanggal = \Carbon\Carbon::parse($request->tanggal)->format('Y-m-d');
+        $sudahMasuk = Absensi::where('user_id', $user->id)->whereDate('tanggal', today())->whereNotNull('jam_masuk')->exists();
+        if ($alasan = IzinAbsen::alasanTolakTanggal($request->tipe, $tanggal, today()->format('Y-m-d'), $sudahMasuk)) {
+            return back()->withInput()->with('error', $alasan);
+        }
 
         // Cek cuti harus min H-3
         if ($request->tipe === 'cuti') {

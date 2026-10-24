@@ -111,10 +111,10 @@
     {{-- Tanggal --}}
     <div class="card-dark">
       <div class="section-label">Tanggal Izin</div>
-      <input type="date" name="tanggal" class="form-control"
-             min="{{ $tanggalMin }}" max="{{ $tanggalMax }}"
+      <input type="date" name="tanggal" id="inputTanggal" class="form-control"
+             min="{{ old('tipe')=='sakit' ? today()->format('Y-m-d') : $tanggalMin }}" max="{{ $tanggalMax }}"
              value="{{ old('tanggal', $tanggalMin) }}" required>
-      <div style="color:#64748b; font-size:11px; margin-top:6px;">Minimal besok ({{ \Carbon\Carbon::parse($tanggalMin)->translatedFormat('d F Y') }})</div>
+      <div id="hintTanggal" style="color:#64748b; font-size:11px; margin-top:6px;">{{ old('tipe')=='sakit' ? 'Sakit boleh untuk hari ini' : 'Minimal besok ('.\Carbon\Carbon::parse($tanggalMin)->translatedFormat('d F Y').')' }}</div>
     </div>
 
     {{-- Alasan --}}
@@ -145,6 +145,18 @@ function pilihTipe(tipe, el) {
   el.classList.add('selected');
   el.querySelector('input').checked = true;
   document.getElementById('fotoBox').style.display = tipe === 'sakit' ? 'block' : 'none';
+  // Sakit boleh hari ini (default hari ini); jenis lain minimal besok.
+  var tgl = document.getElementById('inputTanggal');
+  var hariIni = '{{ today()->format('Y-m-d') }}', besok = '{{ $tanggalMin }}';
+  if (tipe === 'sakit') {
+    if (tgl.min !== hariIni) tgl.value = hariIni;
+    tgl.min = hariIni;
+    document.getElementById('hintTanggal').textContent = 'Sakit boleh untuk hari ini';
+  } else {
+    tgl.min = besok;
+    if (tgl.value < besok) tgl.value = besok;
+    document.getElementById('hintTanggal').textContent = 'Minimal besok ({{ \Carbon\Carbon::parse($tanggalMin)->translatedFormat('d F Y') }})';
+  }
 }
 </script>
 </body>

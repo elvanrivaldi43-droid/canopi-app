@@ -35,6 +35,25 @@ class IzinAbsen extends Model
         'rejected' => '#EF4444',
     ];
 
+    // Keputusan Elvan 24 Okt 2026: sakit boleh hari ini, jenis lain minimal H+1.
+    public static function tanggalMinimal(string $tipe, string $hariIni): string
+    {
+        return $tipe === 'sakit' ? $hariIni : date('Y-m-d', strtotime($hariIni . ' +1 day'));
+    }
+
+    // null = tanggal boleh. Sakit hari ini setelah absen masuk ditolak: kalau lolos,
+    // updateAbsensiDariIzin menimpa hari yang sudah dikerjakan jadi sakit tak dibayar.
+    public static function alasanTolakTanggal(string $tipe, string $tanggal, string $hariIni, bool $sudahMasukHariIni): ?string
+    {
+        if ($tanggal < self::tanggalMinimal($tipe, $hariIni)) {
+            return $tipe === 'sakit' ? 'Tanggal sakit tidak boleh sebelum hari ini.' : 'Tanggal izin harus H+1 atau lebih';
+        }
+        if ($tipe === 'sakit' && $tanggal === $hariIni && $sudahMasukHariIni) {
+            return 'Kamu sudah absen masuk hari ini. Minta Owner koreksi absensimu jadi Sakit.';
+        }
+        return null;
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

@@ -295,6 +295,9 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
       (100 m), sama dgn teknisi; lapor siang tetap bebas. Di-push pagi atas perintah Elvan: marketing yg masuk di
       kantor 22 Okt harus pulang lewat workshop / diberi Luar Kota hari itu. Toko Besi masih titik kantor —
       Elvan belum konfirmasi apakah toko besi satu lokasi dgn kantor.
+      24 Okt: izin SAKIT boleh diajukan untuk HARI INI (dulu semua jenis minimal H+1); izin/cuti tetap H+1.
+      Aturan di `IzinAbsen::alasanTolakTanggal`. Sakit hari ini DITOLAK bila sudah absen masuk (kalau lolos,
+      hari kerja tertimpa jadi sakit tak dibayar) -> jalur Koreksi Owner. Batas jam 22:00 tetap berlaku utk semua.
    4. **Asumsi yang belum dibuktikan:** (a) "staff toko besi" = level 7 (tak ada level khusus staf toko); (b) hasil
       SHOW kolom `luar_kota.status` terpotong di phpMyAdmin (`...'menunggu','di...`) — dianggap `'ditolak'`, terbukti
       saat ajuan pertama ditolak; (c) log kode absen 20 Okt: "Muhammad ilham" muncul 2x (1 terkirim, 1 skip kode

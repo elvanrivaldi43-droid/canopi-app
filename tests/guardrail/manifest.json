@@ -20,6 +20,12 @@
       "manual": false
     },
     {
+      "path": "tests/absensi/test_izin_sakit_hari_ini.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/absensi/test_jam_individu.php",
       "runner": "php",
       "requires_db": false,
