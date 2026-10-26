@@ -298,6 +298,11 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
       24 Okt: izin SAKIT boleh diajukan untuk HARI INI (dulu semua jenis minimal H+1); izin/cuti tetap H+1.
       Aturan di `IzinAbsen::alasanTolakTanggal`. Sakit hari ini DITOLAK bila sudah absen masuk (kalau lolos,
       hari kerja tertimpa jadi sakit tak dibayar) -> jalur Koreksi Owner. Batas jam 22:00 tetap berlaku utk semua.
+      26 Okt: IZIN PULANG CEPAT (spec/plan `docs/superpowers/*/2026-10-26-izin-pulang-cepat*`). Pulang < jam pulang
+      jadwal = setengah hari, KECUALI diizinkan atasan & pulang >= 14:00 (`AbsensiController::statusSaatPulang`), tanpa
+      toleransi. Penyetuju: teknisi/driver -> Mandor/Owner; lainnya -> Owner. Darurat setelah pulang = Koreksi Owner.
+      Denda checkpoint tak dicatat bila sudah pulang sebelum batasnya. SQL `docs/sql/2026-10-26-absensi-pulang-cepat.sql`.
+      BELUM divalidasi di HP; UMUMKAN ke karyawan (pulang 5 menit lebih awal tanpa izin = setengah hari).
    4. **Asumsi yang belum dibuktikan:** (a) "staff toko besi" = level 7 (tak ada level khusus staf toko); (b) hasil
       SHOW kolom `luar_kota.status` terpotong di phpMyAdmin (`...'menunggu','di...`) — dianggap `'ditolak'`, terbukti
       saat ajuan pertama ditolak; (c) log kode absen 20 Okt: "Muhammad ilham" muncul 2x (1 terkirim, 1 skip kode
