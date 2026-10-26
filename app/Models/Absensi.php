@@ -28,6 +28,8 @@ class Absensi extends Model
         'kerja_hari_libur','upah_hari_libur',
         // Rincian asal potongan_telat (30 September) — lihat App\Services\RincianPotongan
         'rincian_potongan',
+        // Izin pulang cepat (26 Oktober)
+        'pulang_cepat_status','pulang_cepat_alasan','pulang_cepat_oleh',
     ];
 
     protected $casts = [

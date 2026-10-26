@@ -44,6 +44,13 @@
         </div>
     </div>
 
+    @if($peringatanSetengah)
+    <div style="padding:14px 16px;border-radius:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;color:#F59E0B;">{{ $peringatanSetengah }}</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:4px;">Kalau darurat, lapor ke Owner untuk dikoreksi.</div>
+    </div>
+    @endif
+
     {{-- Alert GPS di luar radius --}}
     <div x-show="gpsDiLuar" style="padding:14px 16px;border-radius:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);margin-bottom:16px;">
         <div style="font-size:13px;font-weight:600;color:#EF4444;margin-bottom:4px;">❌ Lokasi di luar radius!</div>
