@@ -1,6 +1,6 @@
 # Izin Pulang Cepat — Design
 
-Tanggal: 26 Okt 2026 · Status: menunggu review spec tertulis oleh Elvan
+Tanggal: 26 Okt 2026 · Status: disetujui Elvan 26 Okt (dengan revisi butir di bawah)
 
 ## Latar
 
@@ -19,6 +19,8 @@ HANYA bila total kerja < 225 menit (3j45m). Akibatnya masuk 07:00 pulang 11:00
 | Diizinkan, pulang >= 14:00 | Gaji penuh |
 | Penyetuju Teknisi (5) & Driver (6) | Mandor (3) atau Owner (1) |
 | Penyetuju Admin Ops (2), Mandor (3), Marketing (4), Toko Besi (7) | Owner saja |
+| Persetujuan setelah karyawan pulang | Ditolak sistem. Kejadian mendadak (celaka, duka, bencana) = lapor WA, **Owner Koreksi** manual — TANPA izin susulan di aplikasi (opsi 3, 26 Okt) |
+| Denda checkpoint setelah pulang | Tidak dicatat bila sudah pulang sebelum batasnya (disetujui 26 Okt) |
 
 Konsekuensi yang sudah dijelaskan ke Elvan: batas "jam 12" tak lagi berpengaruh ke
 uang — sebelum 14:00 hasilnya selalu setengah hari. Izin sebelum 14:00 tetap
