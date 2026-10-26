@@ -30,6 +30,7 @@ class AbsensiController extends Controller
     const LEVEL_GPS_SIANG     = [2, 7]; // keputusan Elvan 20 Okt 2026: level lain lapor siang bebas lokasi (cukup dicatat)
     const JAM_BUKA_ABSEN      = '06:30';
     const JAM_SETENGAH        = '10:00';
+    const JAM_PULANG_CEPAT_PENUH = '14:00'; // diizinkan & pulang >= ini = gaji penuh (Elvan 26 Okt)
     const JAM_MASUK_SIANG     = '13:00';
     const JAM_SKIP_SIANG      = '14:00';
     const TOLERANSI_SIANG     = 3;
@@ -576,6 +577,22 @@ class AbsensiController extends Controller
     public static function gpsSiangWajib(int $level): bool
     {
         return in_array($level, self::LEVEL_GPS_SIANG);
+    }
+
+    // Status saat absen pulang (spec 2026-10-26-izin-pulang-cepat). Tanpa toleransi menit.
+    public static function statusSaatPulang(string $statusSekarang, int $menitKerja, string $jamPulang, string $jamPulangJadwal, bool $diizinkan): string
+    {
+        if ($statusSekarang === 'setengah_hari' || $menitKerja < 225) return 'setengah_hari';
+        $jam = substr($jamPulang, 0, 5);
+        if ($jam >= substr($jamPulangJadwal, 0, 5)) return $statusSekarang;
+        if ($diizinkan && $jam >= self::JAM_PULANG_CEPAT_PENUH) return $statusSekarang;
+        return 'setengah_hari';
+    }
+
+    // Denda checkpoint tak dicatat bila sudah absen pulang sebelum batasnya (Elvan 26 Okt).
+    public static function dendaCheckpointBerlaku(?string $jamPulang, string $batas): bool
+    {
+        return !$jamPulang || substr($jamPulang, 0, 5) >= $batas;
     }
 
     public function ajukanLuarKantor(Request $request)

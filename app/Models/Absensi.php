@@ -39,6 +39,29 @@ class Absensi extends Model
     public function user() { return $this->belongsTo(User::class); }
     public function dikoreksiOleh() { return $this->belongsTo(User::class, 'dikoreksi_oleh'); }
 
+    // ─── Izin pulang cepat (spec 2026-10-26) ───────────────────────────
+    const LEVEL_PULANG_CEPAT_MANDOR = [5, 6]; // Teknisi & Driver: Mandor juga boleh menyetujui
+
+    public static function bolehAjukanPulangCepat(bool $sudahMasuk, bool $sudahPulang, string $jamSekarang, string $jamPulangJadwal, ?string $statusAjuan): ?string
+    {
+        if (!$sudahMasuk)  return 'Absen masuk dulu.';
+        if ($sudahPulang)  return 'Kamu sudah absen pulang hari ini.';
+        if (substr($jamSekarang, 0, 5) >= substr($jamPulangJadwal, 0, 5)) return 'Sudah jam pulang, langsung absen pulang saja.';
+        if (in_array($statusAjuan, ['menunggu', 'disetujui'], true)) return 'Hari ini sudah ada ajuan pulang cepat.';
+        return null;
+    }
+
+    public static function alasanTolakProsesPulangCepat(?string $status, string $tanggal, string $hariIni, bool $sudahPulang, int $pemilikId, int $aktorId, int $pemilikLevel, int $aktorLevel): ?string
+    {
+        if ($status !== 'menunggu')  return 'Ajuan ini sudah diproses.';
+        if ($tanggal !== $hariIni)   return 'Ajuan sudah kedaluwarsa (bukan untuk hari ini).';
+        if ($sudahPulang)            return 'Karyawan sudah absen pulang. Kalau darurat, pakai Koreksi Owner.';
+        if ($pemilikId === $aktorId) return 'Tidak bisa memproses ajuan sendiri.';
+        if ($aktorLevel === 1)       return null;
+        if ($aktorLevel === 3 && in_array($pemilikLevel, self::LEVEL_PULANG_CEPAT_MANDOR, true)) return null;
+        return 'Ajuan ini hanya bisa diproses Owner.';
+    }
+
     public function statusLabel(): string {
         return match($this->status) {
             'hadir'         => '✅ Hadir',
