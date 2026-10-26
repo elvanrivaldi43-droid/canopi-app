@@ -39,6 +39,30 @@
   <div class="alert-success">{{ session('success') }}</div>
   @endif
 
+  @if(session('error'))
+  <div class="alert-success" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#fca5a5;">{{ session('error') }}</div>
+  @endif
+
+  @if($pulangCepat->count() > 0)
+  <div class="section-title">Pulang Cepat Menunggu ({{ $pulangCepat->count() }})</div>
+  @foreach($pulangCepat as $pc)
+  @php $tolakAlasan = \App\Models\Absensi::alasanTolakProsesPulangCepat($pc->pulang_cepat_status, $pc->tanggal->format('Y-m-d'), today()->format('Y-m-d'), (bool) $pc->jam_pulang, (int) $pc->user_id, (int) auth()->id(), (int) $pc->user?->level, (int) auth()->user()->level); @endphp
+  <div class="card-dark">
+    <div style="font-size:15px; font-weight:700; color:#f1f5f9;">{{ $pc->user?->name }}</div>
+    <div style="font-size:12px; color:#64748b;">{{ $pc->user?->jabatan }} · masuk {{ substr($pc->jam_masuk, 0, 5) }}</div>
+    <div style="font-size:13px; color:#e2e8f0; margin:8px 0 12px;">{{ $pc->pulang_cepat_alasan }}</div>
+    @if(!$tolakAlasan)
+    <div class="d-flex gap-2">
+      <form method="POST" action="{{ route('izin.pulang-cepat.setujui', $pc->id) }}" class="flex-fill">@csrf<button class="btn-approve w-100">Setujui</button></form>
+      <form method="POST" action="{{ route('izin.pulang-cepat.tolak', $pc->id) }}" class="flex-fill">@csrf<button class="btn-reject w-100">Tolak</button></form>
+    </div>
+    @else
+    <div style="font-size:12px; color:#64748b;">{{ $tolakAlasan }}</div>
+    @endif
+  </div>
+  @endforeach
+  @endif
+
   {{-- Pending --}}
   <div class="section-title">⏳ Menunggu Persetujuan ({{ $pending->count() }})</div>
 

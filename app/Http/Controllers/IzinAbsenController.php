@@ -161,7 +161,39 @@ class IzinAbsenController extends Controller
                             ->limit(20)
                             ->get();
 
-        return view('izin.approval', compact('pending','riwayat'));
+        $pulangCepat = Absensi::whereDate('tanggal', today())
+                              ->where('pulang_cepat_status', 'menunggu')
+                              ->with('user')->get();
+
+        return view('izin.approval', compact('pending','riwayat','pulangCepat'));
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PULANG CEPAT (spec 2026-10-26) — aturan di Absensi::alasanTolakProsesPulangCepat
+    // ═══════════════════════════════════════════════════════════
+
+    public function setujuiPulangCepat($id) { return $this->prosesPulangCepat($id, 'disetujui'); }
+    public function tolakPulangCepat($id)   { return $this->prosesPulangCepat($id, 'ditolak'); }
+
+    private function prosesPulangCepat($id, string $hasil)
+    {
+        $absen = Absensi::with('user')->findOrFail($id);
+        $aktor = Auth::user();
+        if ($alasan = Absensi::alasanTolakProsesPulangCepat($absen->pulang_cepat_status, $absen->tanggal->format('Y-m-d'), today()->format('Y-m-d'),
+                (bool) $absen->jam_pulang, (int) $absen->user_id, (int) $aktor->id, (int) $absen->user?->level, (int) $aktor->level)) {
+            return back()->with('error', $alasan);
+        }
+
+        $absen->update(['pulang_cepat_status' => $hasil, 'pulang_cepat_oleh' => $aktor->id]);
+
+        if ($absen->user?->telegram_chat_id) {
+            $pesan = $hasil === 'disetujui'
+                ? "Izin pulang cepat kamu DISETUJUI oleh {$aktor->name}. Gaji penuh hanya bila pulang jam " . AbsensiController::JAM_PULANG_CEPAT_PENUH . " ke atas."
+                : "Izin pulang cepat kamu DITOLAK oleh {$aktor->name}. Pulang sebelum jadwal dihitung setengah hari.";
+            app(TelegramService::class)->kirim($absen->user->telegram_chat_id, $pesan);
+        }
+
+        return back()->with('success', 'Ajuan pulang cepat ' . $absen->user?->name . ' ' . $hasil . '.');
     }
 
     // ═══════════════════════════════════════════════════════════

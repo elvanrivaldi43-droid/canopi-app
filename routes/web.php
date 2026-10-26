@@ -148,6 +148,8 @@ Route::middleware('auth')->prefix('izin')->name('izin.')->group(function () {
         Route::patch('/{izin}/approve', [IzinAbsenController::class, 'approve'])->name('approve');
         Route::patch('/{izin}/reject',  [IzinAbsenController::class, 'reject'])->name('reject');
         Route::post('/dinas-luar',      [IzinAbsenController::class, 'dinasLuar'])->name('dinas-luar');
+        Route::post('/pulang-cepat/{absensi}/setujui', [IzinAbsenController::class, 'setujuiPulangCepat'])->name('pulang-cepat.setujui');
+        Route::post('/pulang-cepat/{absensi}/tolak',   [IzinAbsenController::class, 'tolakPulangCepat'])->name('pulang-cepat.tolak');
     });
 });
 

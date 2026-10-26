@@ -25,7 +25,7 @@ foreach ($routes as $r) {
     if (!empty($r['name'])) $mw[$r['name']] = $r['middleware'] ?? [];
 }
 
-foreach (['izin.approval', 'izin.approve', 'izin.reject', 'izin.dinas-luar'] as $route) {
+foreach (['izin.approval', 'izin.approve', 'izin.reject', 'izin.dinas-luar', 'izin.pulang-cepat.setujui', 'izin.pulang-cepat.tolak'] as $route) {
     $check("`$route` dikunci level:1,3", in_array('level:1,3', $mw[$route] ?? [], true), true);
 }
 
@@ -37,6 +37,13 @@ foreach (['izin.index', 'izin.create', 'izin.store'] as $route) {
     }
     $check("`$route` TIDAK dikunci level", $adaLevel, false);
 }
+
+// Ajukan pulang cepat = semua karyawan (cek level di server, bukan middleware)
+$adaLevel = false;
+foreach ($mw['absensi.ajukan-pulang-cepat'] ?? ['level:<ROUTE TIDAK ADA>'] as $m) {
+    if (str_starts_with((string) $m, 'level:')) $adaLevel = true;
+}
+$check('`absensi.ajukan-pulang-cepat` TIDAK dikunci level', $adaLevel, false);
 
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
 exit($fail ? 1 : 0);
