@@ -638,6 +638,35 @@ class AbsensiController extends Controller
         return back()->with('success', 'Ajuan terkirim. Tunggu persetujuan.');
     }
 
+    public function ajukanPulangCepat(Request $request)
+    {
+        $user = Auth::user();
+        $request->validate(['alasan' => 'required|string|max:255']);
+        $absen = Absensi::where('user_id', $user->id)->whereDate('tanggal', today())->first();
+
+        if ($alasan = Absensi::bolehAjukanPulangCepat((bool) $absen?->jam_masuk, (bool) $absen?->jam_pulang, now()->format('H:i'), $user->jam_pulang ?? '17:00', $absen?->pulang_cepat_status)) {
+            return back()->with('error', $alasan);
+        }
+
+        $absen->update(['pulang_cepat_status' => 'menunggu', 'pulang_cepat_alasan' => $request->alasan, 'pulang_cepat_oleh' => null]);
+
+        // Penerima = yang boleh menyetujui (Absensi::alasanTolakProsesPulangCepat)
+        $level = in_array((int) $user->level, Absensi::LEVEL_PULANG_CEPAT_MANDOR, true) ? [1, 3] : [1];
+        $penerima = User::whereIn('level', $level)->where('status', 'aktif')
+            ->where('id', '!=', $user->id)->whereNotNull('telegram_chat_id')->get();
+        foreach ($penerima as $p) {
+            app(TelegramService::class)->kirim($p->telegram_chat_id,
+                "*AJUAN PULANG CEPAT*\n"
+                . "Dari: {$user->name}\n"
+                . "Alasan: {$request->alasan}\n"
+                . "Tanggal: " . today()->format('d/m/Y') . "\n"
+                . "---\n"
+                . "Setujui/tolak di: app.kanopibsd.co.id/izin/approval");
+        }
+
+        return back()->with('success', 'Ajuan pulang cepat terkirim. Tunggu persetujuan.');
+    }
+
     public function formLaporProgress()
     {
         $user  = Auth::user();

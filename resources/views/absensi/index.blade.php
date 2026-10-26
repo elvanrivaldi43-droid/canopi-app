@@ -194,6 +194,30 @@
             @endif
         </div>
         @endif
+
+        @if($absenHariIni?->jam_masuk && !$absenHariIni->jam_pulang && now()->format('H:i') < substr($user->jam_pulang ?? '17:00', 0, 5))
+        <div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+            @if($absenHariIni->pulang_cepat_status === 'menunggu')
+            <div style="font-size:13px;color:#93C5FD;">Ajuan pulang cepat menunggu persetujuan atasan.</div>
+            @elseif($absenHariIni->pulang_cepat_status === 'disetujui')
+            <div style="font-size:13px;color:#6EE7B7;">Diizinkan pulang cepat. Gaji penuh hanya bila pulang jam {{ \App\Http\Controllers\AbsensiController::JAM_PULANG_CEPAT_PENUH }} ke atas.</div>
+            @else
+                @if($absenHariIni->pulang_cepat_status === 'ditolak')
+                <div style="font-size:12px;color:#FCA5A5;margin-bottom:8px;">Ajuan pulang cepat sebelumnya ditolak.</div>
+                @endif
+            <form method="POST" action="{{ route('absensi.ajukan-pulang-cepat') }}" onsubmit="this.querySelector('button').disabled=true">
+                @csrf
+                <label for="alasanPulang" style="display:block;font-size:12px;color:#94A3B8;margin-bottom:6px;">Perlu pulang sebelum jam {{ substr($user->jam_pulang ?? '17:00', 0, 5) }}? Tanpa izin = setengah hari.</label>
+                <input id="alasanPulang" name="alasan" required maxlength="255" placeholder="Alasan, mis. demam tinggi"
+                       style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #334155;background:#0F172A;color:#E2E8F0;font-size:16px;margin-bottom:8px;">
+                <button type="submit"
+                        style="width:100%;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:14px;color:#0F1117;background:#FCD34D;min-height:44px;cursor:pointer;">
+                    Ajukan Pulang Cepat
+                </button>
+            </form>
+            @endif
+        </div>
+        @endif
     </div>
 
     {{-- Stats Bulan Ini --}}
