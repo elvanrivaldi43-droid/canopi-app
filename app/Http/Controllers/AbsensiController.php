@@ -586,7 +586,7 @@ class AbsensiController extends Controller
     {
         if ($statusSekarang === 'setengah_hari' || $menitKerja < 225) return 'setengah_hari';
         $jam = substr($jamPulang, 0, 5);
-        if ($jam >= substr($jamPulangJadwal, 0, 5)) return $statusSekarang;
+        if ($jam >= substr($jamPulangJadwal ?: '17:00', 0, 5)) return $statusSekarang; // '' = celah gaji penuh
         if ($diizinkan && $jam >= self::JAM_PULANG_CEPAT_PENUH) return $statusSekarang;
         return 'setengah_hari';
     }
@@ -644,7 +644,7 @@ class AbsensiController extends Controller
         $request->validate(['alasan' => 'required|string|max:255']);
         $absen = Absensi::where('user_id', $user->id)->whereDate('tanggal', today())->first();
 
-        if ($alasan = Absensi::bolehAjukanPulangCepat((bool) $absen?->jam_masuk, (bool) $absen?->jam_pulang, now()->format('H:i'), $user->jam_pulang ?? '17:00', $absen?->pulang_cepat_status)) {
+        if ($alasan = Absensi::bolehAjukanPulangCepat((bool) $absen?->jam_masuk, (bool) $absen?->jam_pulang, now()->format('H:i'), $user->jam_pulang ?: '17:00', $absen?->pulang_cepat_status)) {
             return back()->with('error', $alasan);
         }
 
@@ -807,7 +807,7 @@ class AbsensiController extends Controller
         $absenHariIni  = $absen;
         $luarKotaAktif = LuarKota::getAktif($user->id);
 
-        $statusNanti = self::statusSaatPulang($absen->status ?? 'hadir', $this->hitungMenitKerja($absen->jam_masuk, now()->format('H:i:s')), now()->format('H:i:s'), $user->jam_pulang ?? '17:00', $absen->pulang_cepat_status === 'disetujui');
+        $statusNanti = self::statusSaatPulang($absen->status ?? 'hadir', $this->hitungMenitKerja($absen->jam_masuk, now()->format('H:i:s')), now()->format('H:i:s'), $user->jam_pulang ?: '17:00', $absen->pulang_cepat_status === 'disetujui');
         $peringatanSetengah = $absen->status !== 'setengah_hari' && $statusNanti === 'setengah_hari'
             ? ($absen->pulang_cepat_status === 'disetujui'
                 ? 'Diizinkan pulang cepat, tapi pulang sebelum jam '.self::JAM_PULANG_CEPAT_PENUH.' tetap dihitung SETENGAH HARI.'
@@ -844,7 +844,7 @@ class AbsensiController extends Controller
         $menitKerja   = $this->hitungMenitKerja($absen->jam_masuk,$jamPulang);
         // Pulang sebelum jadwal = setengah hari kecuali diizinkan & >= 14:00 (spec 2026-10-26).
         $setengahHari = $absen->status!=='setengah_hari'
-            && self::statusSaatPulang($absen->status ?? 'hadir', $menitKerja, $jamPulang, $user->jam_pulang ?? '17:00', $absen->pulang_cepat_status === 'disetujui') === 'setengah_hari';
+            && self::statusSaatPulang($absen->status ?? 'hadir', $menitKerja, $jamPulang, $user->jam_pulang ?: '17:00', $absen->pulang_cepat_status === 'disetujui') === 'setengah_hari';
 
         // Jam lembur DICATAT di sini, tapi NOMINALNYA tidak dibayar di sini.
         // Dulu nominalnya ikut dijumlahkan ke `gaji_hari_ini` DAN `lembur_jam` juga
@@ -879,7 +879,7 @@ class AbsensiController extends Controller
         $umHariIni  = $statusBaru==='setengah_hari'?$tarifUM*0.5:$tarifUM;
         // TANPA nominal lembur — lembur dibayar sekali saja, di slip.
         $gajiBersih = $statusBaru==='setengah_hari'
-            ?$tarifHarian*0.5-($absen->potongan_telat??0)
+            ?app(KerjaHariLiburService::class)->gajiLupaPulang($tarifHarian, (float) ($absen->potongan_telat??0)) // mentok Rp 0 (31 Ags)
             :($absen->gaji_hari_ini??0);
 
         $absen->update([

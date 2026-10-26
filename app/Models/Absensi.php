@@ -48,7 +48,7 @@ class Absensi extends Model
     {
         if (!$sudahMasuk)  return 'Absen masuk dulu.';
         if ($sudahPulang)  return 'Kamu sudah absen pulang hari ini.';
-        if (substr($jamSekarang, 0, 5) >= substr($jamPulangJadwal, 0, 5)) return 'Sudah jam pulang, langsung absen pulang saja.';
+        if (substr($jamSekarang, 0, 5) >= substr($jamPulangJadwal ?: '17:00', 0, 5)) return 'Sudah jam pulang, langsung absen pulang saja.';
         if (in_array($statusAjuan, ['menunggu', 'disetujui'], true)) return 'Hari ini sudah ada ajuan pulang cepat.';
         return null;
     }

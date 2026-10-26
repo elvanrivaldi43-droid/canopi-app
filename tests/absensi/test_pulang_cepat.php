@@ -60,5 +60,14 @@ $check('kemarin kedaluwarsa',                   is_string($p(5, 1, 'menunggu', '
 $check('sudah diproses ditolak',                is_string($p(5, 1, 'disetujui')), true);
 $check('tanpa ajuan ditolak',                   is_string($p(5, 1, null)), true);
 
+// Final review 26 Okt: jam pulang jadwal kosong ('') jangan jadi celah gaji penuh -> fallback 17:00
+$check('jadwal kosong, pulang 12:00 tanpa izin = setengah', A::statusSaatPulang('hadir', 300, '12:00:00', '', false), 'setengah_hari');
+$check('jadwal kosong, ajukan jam 10 lolos', Absensi::bolehAjukanPulangCepat(true, false, '10:00', '', null), null);
+
+// Final review 26 Okt: gaji setengah hari saat absen pulang WAJIB mentok Rp 0 (aturan 31 Ags) -> lewat gajiLupaPulang
+$src = file_get_contents(__DIR__ . '/../../app/Http/Controllers/AbsensiController.php');
+preg_match('/function absenPulang\(.*?\n    }\n/s', $src, $m);
+$check('absenPulang pakai gajiLupaPulang (mentok 0)', str_contains($m[0] ?? '', 'gajiLupaPulang('), true);
+
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
 exit($fail ? 1 : 0);
