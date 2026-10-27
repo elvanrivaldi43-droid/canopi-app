@@ -260,6 +260,35 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
 
 ### Utang aktif / resume point
 
+**>>> TITIK LANJUT 27 Okt 2026 (akhir sesi) — baca ini dulu, lalu blok 20 Okt di bawahnya <<<**
+   Repo bersih, HEAD `a64572e` = `origin/main`, deploy sukses, tak ada kerja setengah jalan. LIVE sesi ini:
+   - `1983e3c` (24 Okt) Izin SAKIT boleh untuk HARI INI; izin/cuti tetap H+1 (cuti H-3). Aturan `IzinAbsen::alasanTolakTanggal`
+     + `tanggalMinimal`. Sakit hari ini DITOLAK bila sudah absen masuk (kalau lolos, `updateAbsensiDariIzin` menimpa hari
+     kerja jadi sakit tak dibayar) -> Koreksi Owner. Batas jam 22:00 tetap utk semua jenis. Tes `test_izin_sakit_hari_ini.php`.
+   - `0fb8d7f..a64572e` (26-27 Okt) IZIN PULANG CEPAT — spec/plan `docs/superpowers/{specs,plans}/2026-10-26-izin-pulang-cepat*`,
+     SQL `docs/sql/2026-10-26-absensi-pulang-cepat.sql` SUDAH dijalankan Elvan (3 kolom `absensi.pulang_cepat_*`, VARCHAR).
+     Keputusan Elvan (jangan didebat ulang): pulang < `users.jam_pulang` = SETENGAH HARI, kecuali DIIZINKAN & pulang
+     >= 14:00 (`AbsensiController::statusSaatPulang`, `JAM_PULANG_CEPAT_PENUH`); TANPA toleransi menit; aturan lama
+     <225 menit tetap. Tanpa izin = setengah hari (Owner boleh Koreksi bila bukti kuat). Penyetuju: Teknisi/Driver ->
+     Mandor atau Owner; Admin/Mandor/Marketing/Toko -> Owner saja; tak pernah diri sendiri (`Absensi::alasanTolakProsesPulangCepat`,
+     juga MENYARING daftar di `izin/approval` -> Mandor tak melihat ajuan Owner-only). Persetujuan DITOLAK setelah karyawan
+     absen pulang; darurat (celaka/duka/bencana) = lapor WA + Koreksi Owner, TANPA izin susulan (opsi 3). Denda checkpoint
+     Lapor Progress/Kembali Kerja tak dicatat bila sudah pulang sebelum batasnya (`dendaCheckpointBerlaku`). Gaji
+     setengah hari saat pulang kini mentok Rp 0 lewat `gajiLupaPulang` (dulu bisa minus — temuan final review).
+     Tombol pulang TIDAK dikunci; form pulang menampilkan peringatan setengah hari. Tes `tests/absensi/test_pulang_cepat.php`.
+   1. **Belum divalidasi Elvan di HP:** (a) izin sakit hari ini: pilih Sakit -> tanggal terisi hari ini; (b) teknisi ajukan
+      pulang cepat -> Mandor & Owner dapat Telegram; (c) Mandor setujui -> teknisi dapat Telegram; (d) form pulang
+      sebelum 14:00 memperingatkan setengah hari, sesudah 14:00 tidak; (e) tanpa izin -> "Belum diizinkan atasan";
+      (f) akun Mandor tak melihat ajuan Admin. **Pengumuman aturan pulang cepat ke karyawan — pastikan sudah.**
+   2. **Ruling yang kuambil sendiri (konfirmasi Elvan bila perlu):** karyawan mode Luar Kota ikut aturan pulang cepat
+      yang sama; ajuan menunggu tak bisa dibatalkan, ditolak boleh diajukan ulang.
+   3. **Minor ditunda (final review):** kotak "Ajukan Pulang Cepat" tetap tampil utk yang sudah setengah_hari sejak masuk
+      (izin tak mengubah uang) & utk Owner (tak ada penyetuju); baris izin/sakit hasil Koreksi sebelum pulang + jam masuk
+      -> pulang cepat jadi setengah_hari; `absenPulang` tak menolak POST ulang (lama, tak menguntungkan siapa pun).
+   4. **Pelajaran:** urutkan manifest dengan sisip manual — `json.dump` + sort ulang mengacak entri lain (urutan aslinya
+      tidak murni abjad). Penjelasan form izin sudah lama bilang "Sakit: kapan saja" padahal server menolak — cek teks
+      UI vs aturan server saat ada laporan "katanya tidak bisa".
+
 **>>> TITIK LANJUT 20 Okt 2026 (akhir sesi) — baca ini dulu <<<**
    Butir 1 & 2 titik lanjut 30 Sep sudah divalidasi Elvan (cron kode absen jalan, 0c/0d oke). LIVE hari ini:
    - `16d129a` Lapor progress & Kembali Kerja (siang) wajib di titik lokasi HANYA level 2 (Admin Ops) & 7 (Toko
@@ -295,14 +324,7 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
       (100 m), sama dgn teknisi; lapor siang tetap bebas. Di-push pagi atas perintah Elvan: marketing yg masuk di
       kantor 22 Okt harus pulang lewat workshop / diberi Luar Kota hari itu. Toko Besi masih titik kantor —
       Elvan belum konfirmasi apakah toko besi satu lokasi dgn kantor.
-      24 Okt: izin SAKIT boleh diajukan untuk HARI INI (dulu semua jenis minimal H+1); izin/cuti tetap H+1.
-      Aturan di `IzinAbsen::alasanTolakTanggal`. Sakit hari ini DITOLAK bila sudah absen masuk (kalau lolos,
-      hari kerja tertimpa jadi sakit tak dibayar) -> jalur Koreksi Owner. Batas jam 22:00 tetap berlaku utk semua.
-      26 Okt: IZIN PULANG CEPAT (spec/plan `docs/superpowers/*/2026-10-26-izin-pulang-cepat*`). Pulang < jam pulang
-      jadwal = setengah hari, KECUALI diizinkan atasan & pulang >= 14:00 (`AbsensiController::statusSaatPulang`), tanpa
-      toleransi. Penyetuju: teknisi/driver -> Mandor/Owner; lainnya -> Owner. Darurat setelah pulang = Koreksi Owner.
-      Denda checkpoint tak dicatat bila sudah pulang sebelum batasnya. SQL `docs/sql/2026-10-26-absensi-pulang-cepat.sql`.
-      BELUM divalidasi di HP; UMUMKAN ke karyawan (pulang 5 menit lebih awal tanpa izin = setengah hari).
+      (Izin sakit hari ini & izin pulang cepat 24-27 Okt: lihat TITIK LANJUT 27 Okt di atas.)
    4. **Asumsi yang belum dibuktikan:** (a) "staff toko besi" = level 7 (tak ada level khusus staf toko); (b) hasil
       SHOW kolom `luar_kota.status` terpotong di phpMyAdmin (`...'menunggu','di...`) — dianggap `'ditolak'`, terbukti
       saat ajuan pertama ditolak; (c) log kode absen 20 Okt: "Muhammad ilham" muncul 2x (1 terkirim, 1 skip kode
