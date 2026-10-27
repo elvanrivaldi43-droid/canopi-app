@@ -69,5 +69,11 @@ $src = file_get_contents(__DIR__ . '/../../app/Http/Controllers/AbsensiControlle
 preg_match('/function absenPulang\(.*?\n    }\n/s', $src, $m);
 $check('absenPulang pakai gajiLupaPulang (mentok 0)', str_contains($m[0] ?? '', 'gajiLupaPulang('), true);
 
+// Elvan 26 Okt: daftar persetujuan hanya menampilkan ajuan yang BOLEH diproses penonton
+// (Mandor tak melihat ajuan Admin/Marketing/Toko/Mandor) -> disaring pakai aturan yang sama.
+$srcIzin = file_get_contents(__DIR__ . '/../../app/Http/Controllers/IzinAbsenController.php');
+preg_match('/function approval\(.*?\n    }\n/s', $srcIzin, $m2);
+$check('approval menyaring pulang cepat dgn alasanTolakProsesPulangCepat', str_contains($m2[0] ?? '', 'alasanTolakProsesPulangCepat('), true);
+
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
 exit($fail ? 1 : 0);

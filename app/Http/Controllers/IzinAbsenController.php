@@ -163,7 +163,10 @@ class IzinAbsenController extends Controller
 
         $pulangCepat = Absensi::whereDate('tanggal', today())
                               ->where('pulang_cepat_status', 'menunggu')
-                              ->with('user')->get();
+                              ->with('user')->get()
+                              // Hanya yang boleh diproses penonton (Elvan 26 Okt): Mandor tak melihat ajuan Owner-only.
+                              ->filter(fn($a) => Absensi::alasanTolakProsesPulangCepat($a->pulang_cepat_status, $a->tanggal->format('Y-m-d'), today()->format('Y-m-d'),
+                                  (bool) $a->jam_pulang, (int) $a->user_id, (int) Auth::id(), (int) $a->user?->level, (int) Auth::user()->level) === null);
 
         return view('izin.approval', compact('pending','riwayat','pulangCepat'));
     }
