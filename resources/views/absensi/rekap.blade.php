@@ -231,7 +231,7 @@
 
             <div style="margin-bottom:12px;">
                 <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:6px;">Potongan Telat/Siang (Rp)</label>
-                <input type="number" name="potongan_telat" id="inputPotongan" min="0" step="1000"
+                <input type="number" name="potongan_telat" id="inputPotongan" min="0" step="any"
                     style="background:#0f172a;border:1px solid #475569;color:#f1f5f9;border-radius:8px;padding:10px;width:100%;font-size:13px;">
             </div>
 

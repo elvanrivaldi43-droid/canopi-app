@@ -996,13 +996,13 @@ class AbsensiController extends Controller
             // mengembalikan null — nominal lama tertinggal di baris berstatus baru, dan
             // barisnya hilang dari semua statistik/KPI tanpa error apa pun.
             'status'         => KerjaHariLiburService::aturanStatusKoreksi(),
-            'potongan_telat' => 'nullable|integer|min:0',
+            'potongan_telat' => 'nullable|numeric|min:0',
             'alasan'         => 'required|string',
         ]);
 
         $absen         = Absensi::findOrFail($id);
         $user          = $absen->user;
-        $potonganTelat = $request->filled('potongan_telat') ? (int) $request->potongan_telat : ($absen->potongan_telat ?? 0);
+        $potonganTelat = $request->filled('potongan_telat') ? round((float) $request->potongan_telat, 2) : ($absen->potongan_telat ?? 0);
         $svcLibur      = app(KerjaHariLiburService::class);
 
         // Baris kerja hari libur dikoreksi memakai SNAPSHOT tarif saat diaktifkan —
