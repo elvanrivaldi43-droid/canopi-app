@@ -223,7 +223,7 @@ class PenggajianController extends Controller
     }
 
     // Dipakai bayar() dan bayarSemua() — dulu cuma bayar per slip yang kirim notif.
-    public static function notifSudahDibayar(SlipGaji $slip): void
+    private static function notifSudahDibayar(SlipGaji $slip): void
     {
         $user = $slip->user;
         if (!$user) return;
