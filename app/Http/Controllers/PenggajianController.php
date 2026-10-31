@@ -186,7 +186,7 @@ class PenggajianController extends Controller
     {
         try {
             $this->gajiService->prosesBayar($slip, Auth::id());
-            $this->notifSudahDibayar($slip);
+            self::notifSudahDibayar($slip);
 
             return back()->with('success', "Gaji {$slip->user->name} berhasil diproses.");
         } catch (\Exception $e) {
@@ -212,7 +212,7 @@ class PenggajianController extends Controller
         foreach ($slips as $slip) {
             try {
                 $this->gajiService->prosesBayar($slip, Auth::id());
-                $this->notifSudahDibayar($slip);
+                self::notifSudahDibayar($slip);
                 $berhasil++;
             } catch (\Exception $e) {
                 // skip yang error
@@ -223,7 +223,7 @@ class PenggajianController extends Controller
     }
 
     // Dipakai bayar() dan bayarSemua() — dulu cuma bayar per slip yang kirim notif.
-    private function notifSudahDibayar(SlipGaji $slip): void
+    public static function notifSudahDibayar(SlipGaji $slip): void
     {
         $user = $slip->user;
         if (!$user) return;
