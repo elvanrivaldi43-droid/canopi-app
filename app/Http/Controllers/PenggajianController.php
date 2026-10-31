@@ -186,17 +186,7 @@ class PenggajianController extends Controller
     {
         try {
             $this->gajiService->prosesBayar($slip, Auth::id());
-
-            $user = $slip->user;
-            if ($user) {
-                $pesan = "💰 *SLIP GAJI*\n"
-                       . "Hai {$user->name}!\n"
-                       . "{$slip->periodeLabel()} {$slip->namaBulan()} {$slip->tahun}\n"
-                       . "Gaji bersih: Rp " . number_format($slip->gaji_bersih, 0, ',', '.') . "\n"
-                       . "---\n"
-                       . "Lihat slip lengkap di: app.kanopibsd.co.id/penggajian/slip-saya";
-                app(TelegramService::class)->kirim($user->telegram_chat_id, $pesan);
-            }
+            $this->notifSudahDibayar($slip);
 
             return back()->with('success', "Gaji {$slip->user->name} berhasil diproses.");
         } catch (\Exception $e) {
@@ -222,6 +212,7 @@ class PenggajianController extends Controller
         foreach ($slips as $slip) {
             try {
                 $this->gajiService->prosesBayar($slip, Auth::id());
+                $this->notifSudahDibayar($slip);
                 $berhasil++;
             } catch (\Exception $e) {
                 // skip yang error
@@ -229,6 +220,23 @@ class PenggajianController extends Controller
         }
 
         return back()->with('success', "✅ {$berhasil} slip berhasil dibayar.");
+    }
+
+    // Dipakai bayar() dan bayarSemua() — dulu cuma bayar per slip yang kirim notif.
+    private function notifSudahDibayar(SlipGaji $slip): void
+    {
+        $user = $slip->user;
+        if (!$user) return;
+
+        $pesan = "💰 *SUDAH DIBAYAR*\n"
+               . "Hai {$user->name}!\n"
+               . "{$slip->periodeLabel()} {$slip->namaBulan()} {$slip->tahun} sudah dibayar.\n"
+               . "Jumlah: Rp " . number_format($slip->gaji_bersih, 0, ',', '.') . "\n"
+               . "Silakan cek di rekening yang terdaftar di akun kamu.\n"
+               . "Jika ada yang keliru, silakan hubungi Owner.\n"
+               . "---\n"
+               . "Lihat slip lengkap di: app.kanopibsd.co.id/penggajian/slip-saya";
+        app(TelegramService::class)->kirim($user->telegram_chat_id, $pesan);
     }
 
     public function slipSaya()
