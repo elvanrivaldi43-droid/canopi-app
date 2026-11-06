@@ -18,6 +18,7 @@ use App\Http\Controllers\KpiController;
 use App\Http\Controllers\MasterMaterialController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TelegramWebhookController;
+use App\Http\Controllers\PenugasanController;
 
 
 // Halaman utama → redirect ke login
@@ -517,4 +518,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/rab-opsi/simpan-penawaran', [\App\Http\Controllers\RabOpsiController::class, 'simpanPenawaran']);
     Route::get('/penawaran/{id}', [\App\Http\Controllers\PenawaranController::class, 'show']);
     Route::post('/penawaran/{id}/deal', [\App\Http\Controllers\PenawaranController::class, 'deal']);
+});
+
+// ─── PENUGASAN HARIAN: rencana kerja besok (Owner / Mandor Bertugas; dicek di controller) ───
+Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(function () {
+    Route::get('/rencana',               [PenugasanController::class, 'rencana'])->name('rencana');
+    Route::post('/rencana',              [PenugasanController::class, 'simpan'])->name('simpan');
+    Route::post('/hadir/{userId}',       [PenugasanController::class, 'tandaiHadir'])->name('hadir');
+    Route::post('/mandor-bertugas',      [PenugasanController::class, 'mandorBertugas'])->middleware('level:1')->name('mandor');
 });
