@@ -97,6 +97,21 @@ $check('tolak pemilik belum terhubung', A::alasanTolakJawaban('55', null, true) 
 $check('tolak penekan kosong', A::alasanTolakJawaban(null, '55', true) !== null, true);
 $check('tolak lewat 06:00', A::alasanTolakJawaban('55', '55', false), 'Batas jawab jam 06:00 sudah lewat. Hubungi mandor.');
 
+// adaDiRencana (adaPenugasan, adaKonfirmasi) — Mandor Bertugas TIDAK otomatis dianggap di rencana
+$check('diRencana penugasan', A::adaDiRencana(true, false), true);
+$check('diRencana konfirmasi saja', A::adaDiRencana(false, true), true);
+$check('diRencana tidak ada', A::adaDiRencana(false, false), false);
+
+// keputusanKode + adaDiRencana: diam TAK PERNAH dianggap hadir
+$check('kode: rencana, ditugaskan, diam', A::keputusanKode(true, A::adaDiRencana(true, true), null), 'tanpa_jawaban');
+$check('kode: rencana, tak ditugaskan', A::keputusanKode(true, A::adaDiRencana(false, false), null), 'kirim');
+$check('kode: tanpa rencana tersimpan', A::keputusanKode(false, A::adaDiRencana(true, true), null), 'kirim');
+
+// pesanTanpaJawaban
+$check('ringkasan kosong', A::pesanTanpaJawaban([]), null);
+$check('ringkasan isi', A::pesanTanpaJawaban(['Andi', 'Budi']),
+    "Tidak dapat kode absen hari ini karena tak menjawab konfirmasi: Andi, Budi.\nMereka bisa dibuatkan kode manual oleh Owner (menu Kode Absen Hari Ini).");
+
 // --- tambah kasus di sini ---
 
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";

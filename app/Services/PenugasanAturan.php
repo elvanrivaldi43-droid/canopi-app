@@ -134,6 +134,22 @@ class PenugasanAturan
         };
     }
 
+    // Orang dianggap "ada di rencana" bila punya tugas atau baris konfirmasi.
+    // Mandor Bertugas SENGAJA tidak otomatis masuk: rencana tanpa tugas utk dirinya
+    // menghapus baris konfirmasinya, dan diam-tanpa-baris tak boleh menghanguskan kodenya.
+    public static function adaDiRencana(bool $adaPenugasan, bool $adaKonfirmasi): bool
+    {
+        return $adaPenugasan || $adaKonfirmasi;
+    }
+
+    // Ringkasan pagi ke Mandor Bertugas + Owner; null bila tak ada yang terlewat.
+    public static function pesanTanpaJawaban(array $nama): ?string
+    {
+        if (!$nama) return null;
+        return 'Tidak dapat kode absen hari ini karena tak menjawab konfirmasi: ' . implode(', ', $nama) . ".\n"
+             . 'Mereka bisa dibuatkan kode manual oleh Owner (menu Kode Absen Hari Ini).';
+    }
+
     private static function lebihMaju(array $urut, ?string $due, ?string $terakhir): ?string
     {
         if ($due === null) return null;
