@@ -71,13 +71,13 @@ class PenugasanAturan
         return self::lebihMaju(self::URUT_MANDOR, $due, $terakhir);
     }
 
-    // Pengingat pekerja yang jatuh tempo; tak ada pesan 00:00-04:59 maupun >= 06:00.
+    // Pengingat pekerja yang jatuh tempo; tak ada pesan 22:00-04:59 maupun >= 06:00.
     public static function pengingatPekerja(string $jam, ?string $jawaban, ?string $terakhir): ?string
     {
         if ($jawaban !== null) return null;
 
         $due = match (true) {
-            $jam >= '21:30'                  => '2130',
+            $jam >= '21:30' && $jam < '22:00' => '2130',
             $jam >= '05:00' && $jam < '05:45' => '0500',
             $jam >= '05:45' && $jam < '06:00' => '0545',
             default                          => null,
@@ -87,9 +87,37 @@ class PenugasanAturan
     }
 
     // Pertanyaan konfirmasi hadir (dipakai simpan() dan cron pengingat).
-    public static function pesanTanya(string $kataHari, string $tglLabel, array $labelTugas): string
+    // $ulang = rencana berubah setelah pekerja sempat menjawab (jawabannya direset).
+    public static function pesanTanya(string $kataHari, string $tglLabel, array $labelTugas, bool $ulang = false): string
     {
-        return "$kataHari $tglLabel kamu di " . implode(' + ', $labelTugas) . '. Bersedia hadir?';
+        return ($ulang ? "Rencana berubah — jawaban sebelumnya dibatalkan, mohon jawab lagi.\n" : '')
+            . "$kataHari $tglLabel kamu di " . implode(' + ', $labelTugas) . '. Bersedia hadir?';
+    }
+
+    // Tanggal kerja yang sedang direncanakan/dijawab ('Y-m-d'). Sebelum 06:00 = hari ini
+    // (jawaban hari ini masih terbuka sampai 06:00, lihat bolehJawab); sejak 06:00 = besok.
+    public static function tanggalKerja(\DateTimeInterface $sekarang): string
+    {
+        $d = \DateTimeImmutable::createFromInterface($sekarang);
+        return ($d->format('H:i') < '06:00' ? $d : $d->modify('+1 day'))->format('Y-m-d');
+    }
+
+    public static function kataHari(string $tanggalKerja, \DateTimeInterface $sekarang): string
+    {
+        return $tanggalKerja === $sekarang->format('Y-m-d') ? 'Hari ini' : 'Besok';
+    }
+
+    // Kabar ke Mandor+Owner saat pekerja berbalik Tidak Hadir -> Hadir; null utk transisi lain.
+    public static function pesanBerubahHadir(?string $lama, string $baru, string $nama, string $kataHari, string $tglLabel): ?string
+    {
+        if ($lama !== 'tidak_hadir' || $baru !== 'hadir') return null;
+        return "$nama berubah: HADIR " . strtolower($kataHari) . " ($tglLabel) — batalkan pengganti bila sudah dicari";
+    }
+
+    // Owner dikabari 'Mandor tidak masuk' hanya sekali (bukan tiap simpan ulang).
+    public static function perluKabariMandorTidakMasuk(bool $mandorTidakMasuk, ?string $jawabanLama): bool
+    {
+        return $mandorTidakMasuk && $jawabanLama !== 'tidak_hadir';
     }
 
     public static function tombolHadir(int $konfirmasiId): array

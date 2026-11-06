@@ -120,6 +120,45 @@ $check('tahap selesai + lanjut', A::statusTahapDariLaporan('selesai', 'lanjut'),
 $check('tahap sedang + lanjut', A::statusTahapDariLaporan('sedang', 'lanjut'), null);
 $check('tahap selesai + selesai', A::statusTahapDariLaporan('selesai', 'selesai'), null);
 
+// tanggalKerja: sebelum 06:00 = hari ini (masih bisa dijawab), sejak 06:00 = besok
+$check('tglKerja 23:59', A::tanggalKerja(new DateTime('2026-11-06 23:59')), '2026-11-07');
+$check('tglKerja 00:30', A::tanggalKerja(new DateTime('2026-11-07 00:30')), '2026-11-07');
+$check('tglKerja 05:59', A::tanggalKerja(new DateTime('2026-11-07 05:59:59')), '2026-11-07');
+$check('tglKerja 06:00', A::tanggalKerja(new DateTime('2026-11-07 06:00')), '2026-11-08');
+$check('tglKerja akhir bulan', A::tanggalKerja(new DateTime('2026-11-30 20:00')), '2026-12-01');
+
+// kataHari
+$check('kata hari ini', A::kataHari('2026-11-07', new DateTime('2026-11-07 05:30')), 'Hari ini');
+$check('kata besok', A::kataHari('2026-11-08', new DateTime('2026-11-07 21:00')), 'Besok');
+
+// pengingatPekerja: jendela 2130 berhenti di 22:00 (tak ada pesan pekerja 22:00-04:59)
+$check('p 21:59', A::pengingatPekerja('21:59', null, null), '2130');
+$check('p 22:00 diam', A::pengingatPekerja('22:00', null, null), null);
+$check('p 23:00 diam', A::pengingatPekerja('23:00', null, null), null);
+$check('p 05:00 tanpa 2130', A::pengingatPekerja('05:00', null, null), '0500');
+$check('p 05:45', A::pengingatPekerja('05:45', null, null), '0545');
+
+// pesanTanya (+ awalan bila rencana berubah setelah dijawab)
+$check('tanya biasa', A::pesanTanya('Besok', '07 November 2026', ['A - Las (penuh)']),
+    'Besok 07 November 2026 kamu di A - Las (penuh). Bersedia hadir?');
+$check('tanya ulang', A::pesanTanya('Hari ini', '07 November 2026', ['A - Las (penuh)', 'B - Cat (setengah hari)'], true),
+    "Rencana berubah — jawaban sebelumnya dibatalkan, mohon jawab lagi.\nHari ini 07 November 2026 kamu di A - Las (penuh) + B - Cat (setengah hari). Bersedia hadir?");
+
+// pesanBerubahHadir: hanya transisi tidak_hadir -> hadir
+$check('berubah hadir', A::pesanBerubahHadir('tidak_hadir', 'hadir', 'Andi', 'Besok', '07 November 2026'),
+    'Andi berubah: HADIR besok (07 November 2026) — batalkan pengganti bila sudah dicari');
+$check('berubah hadir hari ini', A::pesanBerubahHadir('tidak_hadir', 'hadir', 'Andi', 'Hari ini', '07 November 2026'),
+    'Andi berubah: HADIR hari ini (07 November 2026) — batalkan pengganti bila sudah dicari');
+$check('berubah dari null', A::pesanBerubahHadir(null, 'hadir', 'Andi', 'Besok', 'x'), null);
+$check('berubah hadir->hadir', A::pesanBerubahHadir('hadir', 'hadir', 'Andi', 'Besok', 'x'), null);
+$check('berubah ke tidak', A::pesanBerubahHadir('hadir', 'tidak_hadir', 'Andi', 'Besok', 'x'), null);
+
+// perluKabariMandorTidakMasuk: simpan ulang tak mengulang notif ke Owner
+$check('kabari pertama', A::perluKabariMandorTidakMasuk(true, null), true);
+$check('kabari dari hadir', A::perluKabariMandorTidakMasuk(true, 'hadir'), true);
+$check('kabari simpan ulang', A::perluKabariMandorTidakMasuk(true, 'tidak_hadir'), false);
+$check('kabari tak centang', A::perluKabariMandorTidakMasuk(false, null), false);
+
 // --- tambah kasus di sini ---
 
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
