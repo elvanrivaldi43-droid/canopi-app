@@ -458,6 +458,12 @@
       "manual": false
     },
     {
+      "path": "tests/penugasan/test_aturan.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/keamanan/test_kunci_keuangan.php",
       "runner": "php",
       "requires_db": false,

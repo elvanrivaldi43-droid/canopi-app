@@ -1,0 +1,72 @@
+<?php
+// FILE: tests/penugasan/test_aturan.php
+// Jalankan: php tests/penugasan/test_aturan.php
+//
+// Aturan murni Penugasan Harian (App\Services\PenugasanAturan). Task berikutnya
+// menambah kasus di bawah blok "// --- tambah kasus di sini ---".
+
+require __DIR__.'/../bootstrap.php';
+
+use App\Services\PenugasanAturan as A;
+
+$fail = false;
+$check = function (string $name, $got, $exp) use (&$fail) {
+    $ok = $got === $exp;
+    echo ($ok ? 'PASS' : 'FAIL') . " — $name (got " . var_export($got, true) . ", exp " . var_export($exp, true) . ")\n";
+    if (!$ok) $fail = true;
+};
+
+// orangHari / alasanTolakTugasOrang
+$check('orangHari setengah', A::orangHari('setengah'), 0.5);
+$check('orangHari penuh', A::orangHari('penuh'), 1.0);
+try { A::orangHari('x'); $check('orangHari x lempar', false, true); }
+catch (\InvalidArgumentException $e) { $check('orangHari x lempar', true, true); }
+$check('2 setengah ok', A::alasanTolakTugasOrang(['setengah', 'setengah']), null);
+$check('penuh+setengah ditolak', A::alasanTolakTugasOrang(['penuh', 'setengah']) !== null, true);
+$check('3 setengah ditolak', A::alasanTolakTugasOrang(['setengah', 'setengah', 'setengah']) !== null, true);
+$check('penuh sendiri ok', A::alasanTolakTugasOrang(['penuh']), null);
+$check('kosong ok', A::alasanTolakTugasOrang([]), null);
+
+// pengingatMandor
+$check('m 19:05', A::pengingatMandor('19:05', false, null), '1900');
+$check('m 19:05 anti ganda', A::pengingatMandor('19:05', false, '1900'), null);
+$check('m 21:10 lompat', A::pengingatMandor('21:10', false, '1900'), '2100');
+$check('m 22:00 owner', A::pengingatMandor('22:00', false, '2100'), 'owner');
+$check('m 22:30 selesai', A::pengingatMandor('22:30', false, 'owner'), null);
+$check('m sudah disimpan', A::pengingatMandor('21:10', true, null), null);
+$check('m 18:59', A::pengingatMandor('18:59', false, null), null);
+$check('m 20:30', A::pengingatMandor('20:30', false, '1900'), '2030');
+$check('m tak mundur', A::pengingatMandor('19:05', false, '2100'), null);
+
+// pengingatPekerja
+$check('p 21:35', A::pengingatPekerja('21:35', null, null), '2130');
+$check('p 23:00 anti ganda', A::pengingatPekerja('23:00', null, '2130'), null);
+$check('p 03:00 sepi', A::pengingatPekerja('03:00', null, '2130'), null);
+$check('p 05:01', A::pengingatPekerja('05:01', null, '2130'), '0500');
+$check('p 05:50', A::pengingatPekerja('05:50', null, '0500'), '0545');
+$check('p sudah jawab', A::pengingatPekerja('05:50', 'hadir', null), null);
+$check('p 06:01', A::pengingatPekerja('06:01', null, '0545'), null);
+$check('p 05:50 tak mundur', A::pengingatPekerja('05:10', null, '0545'), null);
+
+// bolehJawab
+$check('jawab 05:59:59', A::bolehJawab('2026-11-07', new DateTime('2026-11-07 05:59:59')), true);
+$check('jawab 06:00:00', A::bolehJawab('2026-11-07', new DateTime('2026-11-07 06:00:00')), false);
+$check('jawab malam sebelumnya', A::bolehJawab('2026-11-07', new DateTime('2026-11-06 20:00')), true);
+
+// keputusanKode
+$check('kode tanpa rencana', A::keputusanKode(false, false, null), 'kirim');
+$check('kode tak di rencana', A::keputusanKode(true, false, null), 'kirim');
+$check('kode hadir', A::keputusanKode(true, true, 'hadir'), 'kirim');
+$check('kode tidak hadir', A::keputusanKode(true, true, 'tidak_hadir'), 'catat_tidak_hadir');
+$check('kode tanpa jawaban', A::keputusanKode(true, true, null), 'tanpa_jawaban');
+
+// ikut
+$check('ikut 2', A::ikut(2), false);
+$check('ikut 5', A::ikut(5), true);
+$check('ikut 3', A::ikut(3), true);
+$check('ikut 7', A::ikut(7), false);
+
+// --- tambah kasus di sini ---
+
+echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
+exit($fail ? 1 : 0);
