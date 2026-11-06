@@ -14,9 +14,11 @@ use Illuminate\Support\Facades\DB;
 // tiap pekerja dikirimi tombol Hadir / Tidak Hadir lewat Telegram.
 class PenugasanController extends Controller
 {
-    private function besok(): Carbon
+    // Tanggal kerja yang direncanakan: sebelum 06:00 = hari ini, sejak 06:00 = besok
+    // (sama dgn cron-penugasan & batas jawab; jangan pakai today()+1 mentah).
+    private function tanggalKerja(): Carbon
     {
-        return today()->addDay();
+        return Carbon::parse(PenugasanAturan::tanggalKerja(now()));
     }
 
     private function mandorBertugasId(): ?int
@@ -76,7 +78,7 @@ class PenugasanController extends Controller
     {
         if (!$this->bolehAkses()) abort(403);
 
-        $tgl     = $this->besok();
+        $tgl     = $this->tanggalKerja();
         $users   = $this->pekerja();
         $tahap   = $this->tahapAktif();
         $mandorId = $this->mandorBertugasId();
@@ -94,7 +96,8 @@ class PenugasanController extends Controller
         $tahapIds = $tahap->pluck('id')->all();
 
         $besok = DB::table('penugasan_harian')->where('tanggal', $tgl->toDateString())->get()->groupBy('user_id');
-        $hariIni = DB::table('penugasan_harian')->where('tanggal', today()->toDateString())->get()->groupBy('user_id');
+        // Isian awal disalin dari hari kerja sebelumnya (bukan today(): sebelum 06:00 tanggal kerja = hari ini)
+        $hariIni = DB::table('penugasan_harian')->where('tanggal', $tgl->copy()->subDay()->toDateString())->get()->groupBy('user_id');
 
         $isi = [];        // user_id => [['tahap'=>,'porsi'=>], ...]
         $dariHariIni = []; // user_id => true bila isian disalin dari hari ini
@@ -128,7 +131,7 @@ class PenugasanController extends Controller
     {
         if (!$this->bolehAkses()) abort(403);
 
-        $tgl      = $this->besok();
+        $tgl      = $this->tanggalKerja();
         $tglStr   = $tgl->toDateString();
         $users    = $this->pekerja();
         $halangan = $this->halangan($users, $tgl);
@@ -170,7 +173,9 @@ class PenugasanController extends Controller
 
         // 2) Simpan (transaksi): tugas, konfirmasi, rencana
         $kirim = []; // user_id => list tugas yang perlu ditanyakan
-        DB::transaction(function () use ($users, $baru, $lama, $tglStr, $now, $mandorId, $mandorTidakMasuk, &$kirim) {
+        $ulang = []; // user_id => true bila jawaban lama (non-null) ikut direset
+        $jawabLamaMandor = null;
+        DB::transaction(function () use ($users, $baru, $lama, $tglStr, $now, $mandorId, $mandorTidakMasuk, &$kirim, &$ulang, &$jawabLamaMandor) {
             foreach ($users as $u) {
                 $tugas = $baru[$u->id];
                 $tugasLama = $lama->get($u->id, []);
@@ -186,7 +191,7 @@ class PenugasanController extends Controller
                 $kunci = ['tanggal' => $tglStr, 'user_id' => $u->id];
                 if ($u->id === $mandorId) {
                     // Mandor Bertugas otomatis hadir; 'tidak masuk' hanya diubah oleh dirinya sendiri
-                    $lamaJawab = DB::table('konfirmasi_hadir')->where($kunci)->value('jawaban');
+                    $lamaJawab = $jawabLamaMandor = DB::table('konfirmasi_hadir')->where($kunci)->value('jawaban');
                     $aksi = PenugasanAturan::statusMandor(auth()->id() === $mandorId, $mandorTidakMasuk, $lamaJawab, (bool) $tugas);
                     if ($aksi === 'hapus') {
                         DB::table('konfirmasi_hadir')->where($kunci)->delete();
@@ -199,6 +204,7 @@ class PenugasanController extends Controller
                     // keluar dari rencana -> kembali ke "tak ada di rencana" (kode normal)
                     DB::table('konfirmasi_hadir')->where($kunci)->delete();
                 } elseif (!$tugasLama || PenugasanAturan::perluTanyaUlang($tugasLama, $tugas)) {
+                    $ulang[$u->id] = DB::table('konfirmasi_hadir')->where($kunci)->value('jawaban') !== null;
                     DB::table('konfirmasi_hadir')->updateOrInsert($kunci, [
                         'jawaban' => null, 'dijawab_at' => null, 'pengingat' => null,
                         'dikirim_at' => $now, 'updated_at' => $now,
@@ -216,16 +222,17 @@ class PenugasanController extends Controller
             . ' (' . ($t['porsi'] === 'penuh' ? 'penuh' : 'setengah hari') . ')';
         $gagal = [];
         $telegram = new TelegramService();
+        $kataHari = PenugasanAturan::kataHari($tglStr, now());
         foreach ($kirim as $uid => $tugas) {
             $u = $users->firstWhere('id', $uid);
             $kid = DB::table('konfirmasi_hadir')->where(['tanggal' => $tglStr, 'user_id' => $uid])->value('id');
-            $pesan = PenugasanAturan::pesanTanya('Besok', $tgl->translatedFormat('d F Y'), array_map($tahapLabel, $tugas));
+            $pesan = PenugasanAturan::pesanTanya($kataHari, $tgl->translatedFormat('d F Y'), array_map($tahapLabel, $tugas), $ulang[$uid] ?? false);
             $ok = $telegram->kirimTombol($u->telegram_chat_id, $pesan, PenugasanAturan::tombolHadir((int) $kid));
             if (!$ok) $gagal[] = $u->name . ($u->telegram_chat_id ? '' : ' (belum sambung Telegram)');
         }
 
-        if ($mandorTidakMasuk) {
-            $this->kabariOwner("Mandor Bertugas " . auth()->user()->name . " menyatakan TIDAK MASUK besok " . $tgl->translatedFormat('d F Y') . ". Mohon tunjuk pengganti.");
+        if (PenugasanAturan::perluKabariMandorTidakMasuk($mandorTidakMasuk, $jawabLamaMandor)) {
+            $this->kabariOwner("Mandor Bertugas " . auth()->user()->name . " menyatakan TIDAK MASUK " . strtolower($kataHari) . " " . $tgl->translatedFormat('d F Y') . ". Mohon tunjuk pengganti.");
         }
 
         $resp = redirect()->route('penugasan.rencana')->with('success', 'Rencana besok tersimpan.');
@@ -241,7 +248,7 @@ class PenugasanController extends Controller
         if (!$this->bolehAkses()) abort(403);
 
         $n = DB::table('konfirmasi_hadir')
-            ->where('tanggal', $this->besok()->toDateString())->where('user_id', (int) $userId)
+            ->where('tanggal', $this->tanggalKerja()->toDateString())->where('user_id', (int) $userId)
             ->whereNull('jawaban')
             ->update(['jawaban' => 'hadir', 'dijawab_at' => now(), 'updated_at' => now()]);
 
@@ -257,6 +264,14 @@ class PenugasanController extends Controller
             return back()->withErrors(['Mandor tidak valid (harus level Supervisor/Mandor yang aktif).']);
         }
         DB::table('setting_penugasan')->where('id', 1)->update(['mandor_bertugas_id' => $id ?: null, 'updated_at' => now()]);
+        // Mandor baru yang sudah ada di rencana sbg pekerja (belum menjawab) kini "otomatis hadir":
+        // catat hadir supaya tetap dapat kode. Jawaban yang sudah ada TIDAK ditimpa.
+        if ($id) {
+            DB::table('konfirmasi_hadir')
+                ->where('tanggal', $this->tanggalKerja()->toDateString())->where('user_id', (int) $id)
+                ->whereNull('jawaban')
+                ->update(['jawaban' => 'hadir', 'dijawab_at' => now(), 'updated_at' => now()]);
+        }
         return back()->with('success', 'Mandor Bertugas diperbarui.');
     }
 

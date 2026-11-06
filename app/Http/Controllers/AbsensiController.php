@@ -819,6 +819,7 @@ class AbsensiController extends Controller
             $tugasHariIni = PenugasanController::tugasHariIni($user->id);
             $opsiTahap    = $tugasHariIni->isNotEmpty() ? PenugasanController::tahapAktif() : collect();
         } catch (\Throwable $e) {
+            \Log::error('tugasHariIni: '.$e->getMessage());
             $tugasHariIni = $opsiTahap = collect();
         }
 

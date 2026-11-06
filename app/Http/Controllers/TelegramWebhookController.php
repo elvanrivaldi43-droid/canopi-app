@@ -74,9 +74,21 @@ class TelegramWebhookController extends Controller
             ->update(['jawaban' => $tombol['jawaban'], 'dijawab_at' => now(), 'updated_at' => now()]);
         $tg->jawabTombol($cbId, $tombol['jawaban'] === 'hadir' ? 'Tercatat: Hadir' : 'Tercatat: Tidak Hadir (libur tanpa gaji)');
 
+        $tgl = \Carbon\Carbon::parse($row->tanggal);
+        $kataHari = strtolower(PenugasanAturan::kataHari($tgl->toDateString(), now()));
+        $mandorId = DB::table('setting_penugasan')->value('mandor_bertugas_id');
+        $mandorChat = $mandorId ? DB::table('users')->where('id', $mandorId)->value('telegram_chat_id') : null;
+
+        // Berbalik Tidak Hadir -> Hadir: kabari supaya pengganti yang sudah dicari bisa dibatalkan.
+        $balik = PenugasanAturan::pesanBerubahHadir($lama, $tombol['jawaban'], $pemilik->name, $kataHari, $tgl->translatedFormat('d F Y'));
+        if ($balik) {
+            if ($mandorChat) $tg->kirim((string) $mandorChat, $balik);
+            $tg->kirimOwner($balik);
+            return;
+        }
+
         if ($tombol['jawaban'] !== 'tidak_hadir' || $lama === 'tidak_hadir') return;
 
-        $tgl = \Carbon\Carbon::parse($row->tanggal);
         $tugas = DB::table('penugasan_harian as h')
             ->join('project_tahap as t', 't.id', '=', 'h.project_tahap_id')
             ->join('projects as p', 'p.id', '=', 't.project_id')
@@ -84,11 +96,9 @@ class TelegramWebhookController extends Controller
             ->get(['t.nama_tahap', 'p.nama_project', 'p.nama_customer'])
             ->map(fn($r) => ($r->nama_project ?: ($r->nama_customer ?: 'Project')) . ' - ' . $r->nama_tahap)
             ->implode(', ');
-        $pesan = "{$pemilik->name} TIDAK HADIR besok (" . $tgl->translatedFormat('d F Y') . ')'
+        $pesan = "{$pemilik->name} TIDAK HADIR {$kataHari} (" . $tgl->translatedFormat('d F Y') . ')'
             . ($tugas !== '' ? " — {$tugas}" : '') . '. Cari pengganti.';
 
-        $mandorId = DB::table('setting_penugasan')->value('mandor_bertugas_id');
-        $mandorChat = $mandorId ? DB::table('users')->where('id', $mandorId)->value('telegram_chat_id') : null;
         if ($mandorChat) $tg->kirim((string) $mandorChat, $pesan);
         $tg->kirimOwner($pesan);
     }
