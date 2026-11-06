@@ -21,6 +21,17 @@ class PenugasanAturan
         return in_array($level, self::LEVEL_IKUT, true);
     }
 
+    // True bila himpunan tugas (tahap+porsi) berbeda; urutan tak berpengaruh.
+    public static function perluTanyaUlang(array $tugasLama, array $tugasBaru): bool
+    {
+        $kunci = function (array $list) {
+            $k = array_map(fn($t) => $t['project_tahap_id'] . ':' . $t['porsi'], $list);
+            sort($k);
+            return $k;
+        };
+        return $kunci($tugasLama) !== $kunci($tugasBaru);
+    }
+
     public static function orangHari(string $porsi): float
     {
         return match ($porsi) {

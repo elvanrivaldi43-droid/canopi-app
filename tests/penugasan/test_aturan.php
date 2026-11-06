@@ -66,6 +66,13 @@ $check('ikut 5', A::ikut(5), true);
 $check('ikut 3', A::ikut(3), true);
 $check('ikut 7', A::ikut(7), false);
 
+// perluTanyaUlang
+$t = fn($id, $p) => ['project_tahap_id' => $id, 'porsi' => $p];
+$check('tanya sama', A::perluTanyaUlang([$t(1,'penuh')], [$t(1,'penuh')]), false);
+$check('tanya urutan beda', A::perluTanyaUlang([$t(1,'setengah'),$t(2,'setengah')], [$t(2,'setengah'),$t(1,'setengah')]), false);
+$check('tanya berubah', A::perluTanyaUlang([$t(1,'penuh')], [$t(1,'setengah'),$t(2,'setengah')]), true);
+$check('tanya dari kosong', A::perluTanyaUlang([], [$t(1,'penuh')]), true);
+
 // --- tambah kasus di sini ---
 
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
