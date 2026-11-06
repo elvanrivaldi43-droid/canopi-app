@@ -144,7 +144,14 @@ Proyek referensi: alderon 51m², harga jual Rp 41 juta.
 
 ## 📋 ROADMAP (urutan prioritas terkunci, jangan dibalik urutannya)
 
-1. **Selesaikan kalibrasi** (sedang jalan)
+> **URUTAN DIUBAH ELVAN 6 Nov 2026: SWE → Keuangan → RAB/kalibrasi PALING AKHIR.** RAB & cutting
+> list otomatis tetap tujuan akhir, tapi terlalu kompleks untuk sekarang. Sementara: project
+> diinput manual (`/projects/create` tanpa lead — sudah bisa), survei manual diketik admin, lalu
+> dibandingkan dengan aktual. Urutan kerja: (a) **Penugasan Harian** `docs/superpowers/specs/2026-11-06-penugasan-harian-design.md`
+> → (b) **Survei vs Aktual** `docs/superpowers/specs/2026-11-06-survei-manual-vs-aktual-design.md`
+> → SWE Fase 3/4 → Keuangan (butuh sesi /plan sendiri) → RAB. Daftar bernomor di bawah = urutan lama.
+
+1. **Selesaikan kalibrasi** (DIPINDAH ke paling akhir per 6 Nov — lihat catatan di atas)
 2. Consumable fixed+variabel (kalau sering ada project kecil)
 3. Tahap Perlindungan Lapangan — pemicu rantai tiang WF→scaffolding+takel, checklist wajib (talang→air rumah?/pohon?→cover jaring/bersih rutin)
 4. ~~Sesi Media R2~~ — **SELESAI 14 Agustus** untuk upload baru (foto absen 60 hari + foto/video lokasi via custom domain); data Cloudinary/lokal lama tidak dimigrasi otomatis
@@ -259,6 +266,23 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
   masih perlu dijalankan Bos ada di Utang aktif #7 di bawah.
 
 ### Utang aktif / resume point
+
+**>>> TITIK LANJUT 6 Nov 2026 (akhir sesi) — baca ini dulu <<<**
+   Sesi desain saja, NOL perubahan kode. Dua spec DISETUJUI Elvan (lihat catatan urutan di ROADMAP):
+   `docs/superpowers/specs/2026-11-06-penugasan-harian-design.md` (dikerjakan PERTAMA) dan
+   `docs/superpowers/specs/2026-11-06-survei-manual-vs-aktual-design.md` (KEDUA, bergantung pada yg pertama).
+   **Langkah berikutnya:** `superpowers:writing-plans` untuk Penugasan Harian (belum dibuat).
+   Inti yg wajib diingat (detail & keputusan terkunci ada di spec, jangan didebat ulang):
+   rencana malam oleh SATU "Mandor Bertugas" (Owner punya tombol ganti), pengingat 19:00/20:30/21:00,
+   22:00 lempar ke Owner; tukang/kenek/driver konfirmasi Hadir/Tidak Hadir via tombol Telegram s.d. 06:00
+   (tak menjawab = tak dapat kode -> alpha; Tidak Hadir = status absensi baru `tidak_hadir`, tanpa gaji);
+   rencana tak dibuat sama sekali = kode normal ke semua; orang kantor (level 2/4/7) tak berubah;
+   laporan sore per orang di form absen pulang (tak memblokir) = sumber data orang-hari.
+   **Wajib sebelum tombol Telegram live:** webhook `TelegramWebhookController` kini TIDAK memverifikasi
+   asal request -> pasang cek `X-Telegram-Bot-Api-Secret-Token`.
+   Butir 1 titik lanjut 27 Okt (validasi HP izin sakit + pulang cepat) **SUDAH divalidasi Elvan 6 Nov.**
+   Fakta terverifikasi: project manual tanpa lead aman (material tak pernah jadi `melebihi_rab` tanpa
+   `id_rab_item`; cutting list project manual = tombol tak muncul / 404 rapi).
 
 **>>> TITIK LANJUT 27 Okt 2026 (akhir sesi) — baca ini dulu, lalu blok 20 Okt di bawahnya <<<**
    Repo bersih, HEAD `a64572e` = `origin/main`, deploy sukses, tak ada kerja setengah jalan. LIVE sesi ini:
