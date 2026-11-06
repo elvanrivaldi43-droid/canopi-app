@@ -150,6 +150,14 @@ class PenugasanAturan
              . 'Mereka bisa dibuatkan kode manual oleh Owner (menu Kode Absen Hari Ini).';
     }
 
+    // Status baru tahap akibat laporan sore, atau null bila tak berubah.
+    public static function statusTahapDariLaporan(string $statusTahap, string $laporan): ?string
+    {
+        if ($laporan === 'selesai' && $statusTahap !== 'selesai') return 'selesai';
+        if ($laporan === 'lanjut' && $statusTahap === 'belum') return 'sedang';
+        return null;
+    }
+
     private static function lebihMaju(array $urut, ?string $due, ?string $terakhir): ?string
     {
         if ($due === null) return null;

@@ -112,6 +112,14 @@ $check('ringkasan kosong', A::pesanTanpaJawaban([]), null);
 $check('ringkasan isi', A::pesanTanpaJawaban(['Andi', 'Budi']),
     "Tidak dapat kode absen hari ini karena tak menjawab konfirmasi: Andi, Budi.\nMereka bisa dibuatkan kode manual oleh Owner (menu Kode Absen Hari Ini).");
 
+// statusTahapDariLaporan (statusTahap, laporan)
+$check('tahap belum + lanjut', A::statusTahapDariLaporan('belum', 'lanjut'), 'sedang');
+$check('tahap sedang + selesai', A::statusTahapDariLaporan('sedang', 'selesai'), 'selesai');
+$check('tahap belum + selesai', A::statusTahapDariLaporan('belum', 'selesai'), 'selesai');
+$check('tahap selesai + lanjut', A::statusTahapDariLaporan('selesai', 'lanjut'), null);
+$check('tahap sedang + lanjut', A::statusTahapDariLaporan('sedang', 'lanjut'), null);
+$check('tahap selesai + selesai', A::statusTahapDariLaporan('selesai', 'selesai'), null);
+
 // --- tambah kasus di sini ---
 
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
