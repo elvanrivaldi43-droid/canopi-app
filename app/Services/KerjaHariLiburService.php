@@ -417,6 +417,8 @@ class KerjaHariLiburService
             'hadir'       => $semua->whereIn('status', self::STATUS_BEKERJA)->count(),
             'alpha'       => $semua->where('status', 'alpha')->count(),
             'telat'       => $semua->where('status', 'telat')->count(),
+            // Konfirmasi 'tidak hadir' (Penugasan Harian): bukan hadir, bukan izin.
+            'tidak_hadir' => $semua->where('status', 'tidak_hadir')->count(),
             'izin'        => $semua->whereIn('status', ['sakit','izin','cuti','dinas_luar'])->count(),
             'kerja_libur' => $libur->count(),
             'upah_libur'  => (float) $libur->sum('upah_hari_libur'),

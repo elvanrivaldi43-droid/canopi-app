@@ -8,6 +8,12 @@
       "manual": false
     },
     {
+      "path": "tests/absensi/test_status_tidak_hadir.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/absensi/test_gate_buka_absen.php",
       "runner": "php",
       "requires_db": false,

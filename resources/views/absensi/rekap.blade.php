@@ -117,7 +117,7 @@
                         $absen = $k->absensi->first();
                         $levelColors = [2=>'#06b6d4',3=>'#8b5cf6',4=>'#f59e0b',5=>'#10b981',6=>'#3b82f6',7=>'#ec4899'];
                         $lc = $levelColors[$k->level] ?? '#64748b';
-                        $statusColors = ['hadir'=>'#10b981','telat'=>'#f59e0b','setengah_hari'=>'#8b5cf6','alpha'=>'#ef4444','sakit'=>'#06b6d4','izin'=>'#6366f1','cuti'=>'#06b6d4','dinas_luar'=>'#94a3b8'];
+                        $statusColors = ['hadir'=>'#10b981','telat'=>'#f59e0b','setengah_hari'=>'#8b5cf6','alpha'=>'#ef4444','sakit'=>'#06b6d4','izin'=>'#6366f1','cuti'=>'#06b6d4','dinas_luar'=>'#94a3b8','tidak_hadir'=>'#f97316'];
                         $sc = $statusColors[$absen?->status ?? ''] ?? '#64748b';
                     @endphp
                     <tr style="border-bottom:1px solid #1e293b;">

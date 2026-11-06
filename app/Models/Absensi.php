@@ -73,6 +73,7 @@ class Absensi extends Model
             'izin'          => '📋 Izin',
             'diliburkan'    => '😴 Diliburkan',
             'alpha'         => '❌ Alpha',
+            'tidak_hadir'   => 'Tidak Hadir',
             default         => '-'
         };
     }
@@ -86,6 +87,7 @@ class Absensi extends Model
             'izin'          => '#06B6D4',
             'diliburkan'    => '#94A3B8',
             'alpha'         => '#EF4444',
+            'tidak_hadir'   => '#F97316',
             default         => '#64748B'
         };
     }

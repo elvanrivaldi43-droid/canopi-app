@@ -107,8 +107,8 @@
         @php
           $totalUM = 0;
           $namaHari = ['Sunday'=>'Minggu','Monday'=>'Senin','Tuesday'=>'Selasa','Wednesday'=>'Rabu','Thursday'=>'Kamis','Friday'=>'Jumat','Saturday'=>'Sabtu'];
-          $namaStatus = ['hadir'=>'Hadir','telat'=>'Telat','setengah_hari'=>'½ Hari','alpha'=>'Alpha','sakit'=>'Sakit','izin'=>'Izin','cuti'=>'Cuti','dinas_luar'=>'Dinas','libur'=>'Libur'];
-          $warnaStatus = ['hadir'=>'#10b981','telat'=>'#f59e0b','setengah_hari'=>'#8b5cf6','alpha'=>'#ef4444','sakit'=>'#06b6d4','izin'=>'#6366f1','cuti'=>'#06b6d4','dinas_luar'=>'#94a3b8'];
+          $namaStatus = ['hadir'=>'Hadir','telat'=>'Telat','setengah_hari'=>'½ Hari','alpha'=>'Alpha','sakit'=>'Sakit','izin'=>'Izin','cuti'=>'Cuti','dinas_luar'=>'Dinas','tidak_hadir'=>'Tdk Hadir','libur'=>'Libur'];
+          $warnaStatus = ['hadir'=>'#10b981','telat'=>'#f59e0b','setengah_hari'=>'#8b5cf6','alpha'=>'#ef4444','sakit'=>'#06b6d4','izin'=>'#6366f1','cuti'=>'#06b6d4','dinas_luar'=>'#94a3b8','tidak_hadir'=>'#f97316'];
           $svcKerjaLibur = app(\App\Services\KerjaHariLiburService::class);
         @endphp
         @for($tgl = 1; $tgl <= 15; $tgl++)

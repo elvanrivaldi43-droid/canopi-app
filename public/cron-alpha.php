@@ -66,6 +66,12 @@ if ($jam >= '13:00' && $jam <= '13:15') {
                              ->where('status', 'alpha')
                              ->exists();
 
+        // Sudah menjawab 'tidak hadir' di konfirmasi malam sebelumnya (baris sudah ada)
+        $tidakHadir = Absensi::where('user_id', $k->id)
+                             ->whereDate('tanggal', $tanggal)
+                             ->where('status', 'tidak_hadir')
+                             ->exists();
+
         // Cek apakah hari ini jadwal libur karyawan itu
         $sedangLibur = app(LiburService::class)->isLibur($k, $tanggal);
 
@@ -76,7 +82,7 @@ if ($jam >= '13:00' && $jam <= '13:15') {
         $lewati       = $svcLibur->lewatiAlphaHariLibur($sedangLibur, $adaOtorisasi);
 
         // Hanya alpha jika: belum masuk sama sekali + tidak ada izin + belum alpha + tidak dilewati
-        if (!$sudahMasuk && !$adaIzin && !$sudahAlpha && !$lewati) {
+        if (!$sudahMasuk && !$adaIzin && !$sudahAlpha && !$lewati && !$tidakHadir) {
             Absensi::create(array_merge([
                 'user_id'             => $k->id,
                 'tanggal'             => $tanggal,
