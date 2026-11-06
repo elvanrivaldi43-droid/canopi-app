@@ -86,6 +86,22 @@ class PenugasanAturan
         return self::lebihMaju(self::URUT_PEKERJA, $due, $terakhir);
     }
 
+    // callback_data tombol: "hadir:{id}" / "tidak:{id}".
+    public static function parseTombol(string $data): ?array
+    {
+        if (!preg_match('/^(hadir|tidak):(\d+)$/', $data, $m)) return null;
+        return ['jawaban' => $m[1] === 'hadir' ? 'hadir' : 'tidak_hadir', 'id' => (int) $m[2]];
+    }
+
+    // Pesan penolakan, atau null bila jawaban boleh dicatat.
+    public static function alasanTolakJawaban(?string $chatPenekan, ?string $chatPemilik, bool $boleh): ?string
+    {
+        if ($chatPenekan === null || $chatPenekan === '' || $chatPemilik === null || $chatPemilik === '' || $chatPenekan !== $chatPemilik) {
+            return 'Tombol ini bukan untuk akun Telegram kamu.';
+        }
+        return $boleh ? null : 'Batas jawab jam 06:00 sudah lewat. Hubungi mandor.';
+    }
+
     // Jawaban terbuka sampai tanggal kerja 06:00:00 (tepat 06:00 sudah tutup).
     public static function bolehJawab(string $tanggalKerja, \DateTimeInterface $sekarang): bool
     {

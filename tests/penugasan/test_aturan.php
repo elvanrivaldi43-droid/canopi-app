@@ -83,6 +83,20 @@ $check('owner tanpa lama + tugas', A::statusMandor(false, false, null, true), 'h
 $check('owner tanpa lama + tanpa tugas', A::statusMandor(false, false, null, false), 'hapus');
 $check('mandor sendiri uncheck tanpa tugas', A::statusMandor(true, false, 'tidak_hadir', false), 'hapus');
 
+// parseTombol
+$check('tombol hadir', A::parseTombol('hadir:12'), ['jawaban'=>'hadir','id'=>12]);
+$check('tombol tidak', A::parseTombol('tidak:7'), ['jawaban'=>'tidak_hadir','id'=>7]);
+$check('tombol abc', A::parseTombol('hadir:abc'), null);
+$check('tombol lain', A::parseTombol('lain:1'), null);
+$check('tombol kosong', A::parseTombol(''), null);
+
+// alasanTolakJawaban (chatPenekan, chatPemilik, boleh)
+$check('tolak ok', A::alasanTolakJawaban('55', '55', true), null);
+$check('tolak chat beda', A::alasanTolakJawaban('55', '66', true) !== null, true);
+$check('tolak pemilik belum terhubung', A::alasanTolakJawaban('55', null, true) !== null, true);
+$check('tolak penekan kosong', A::alasanTolakJawaban(null, '55', true) !== null, true);
+$check('tolak lewat 06:00', A::alasanTolakJawaban('55', '55', false), 'Batas jawab jam 06:00 sudah lewat. Hubungi mandor.');
+
 // --- tambah kasus di sini ---
 
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";

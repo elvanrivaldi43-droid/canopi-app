@@ -86,6 +86,27 @@ class TelegramService
         }
     }
 
+    // Notifikasi ke Owner (bot owner, token/chat dari environment).
+    public function kirimOwner(string $pesan): bool
+    {
+        try {
+            $token = getenv('TELEGRAM_OWNER_TOKEN');
+            $chatId = getenv('TELEGRAM_OWNER_CHAT_ID');
+            if (!$token || !$chatId) return false;
+            $ch = curl_init("https://api.telegram.org/bot{$token}/sendMessage");
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => ['chat_id' => $chatId, 'text' => $pesan], CURLOPT_TIMEOUT => 20,
+            ]);
+            curl_exec($ch);
+            curl_close($ch);
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Telegram owner gagal: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     private function kirimRequest(string $token, string $chatId, string $pesan, bool $markdown, ?string $replyMarkup = null): array
     {
         $fields = [

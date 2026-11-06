@@ -265,19 +265,6 @@ class PenugasanController extends Controller
 
     private function kabariOwner(string $pesan): void
     {
-        try {
-            $token = getenv('TELEGRAM_OWNER_TOKEN');
-            $chatId = getenv('TELEGRAM_OWNER_CHAT_ID');
-            if (!$token || !$chatId) return;
-            $ch = curl_init("https://api.telegram.org/bot{$token}/sendMessage");
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => ['chat_id' => $chatId, 'text' => $pesan], CURLOPT_TIMEOUT => 20,
-            ]);
-            curl_exec($ch);
-            curl_close($ch);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Telegram owner penugasan gagal: ' . $e->getMessage());
-        }
+        app(\App\Services\TelegramService::class)->kirimOwner($pesan);
     }
 }
