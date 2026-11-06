@@ -32,6 +32,16 @@ class PenugasanAturan
         return $kunci($tugasLama) !== $kunci($tugasBaru);
     }
 
+    // Keputusan konfirmasi_hadir milik Mandor Bertugas saat rencana disimpan.
+    // 'tidak_hadir' hanya boleh diubah oleh Mandor sendiri; editor lain (Owner) membiarkannya.
+    // Hasil: 'hadir' | 'tidak_hadir' | 'biarkan' | 'hapus'
+    public static function statusMandor(bool $editorAdalahMandor, bool $centangTidakMasuk, ?string $jawabanLama, bool $adaTugas): string
+    {
+        if ($editorAdalahMandor && $centangTidakMasuk) return 'tidak_hadir';
+        if (!$editorAdalahMandor && $jawabanLama === 'tidak_hadir') return 'biarkan';
+        return $adaTugas ? 'hadir' : 'hapus';
+    }
+
     public static function orangHari(string $porsi): float
     {
         return match ($porsi) {

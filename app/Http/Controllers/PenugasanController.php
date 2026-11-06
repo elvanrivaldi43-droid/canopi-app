@@ -43,12 +43,13 @@ class PenugasanController extends Controller
     private function halangan($users, Carbon $tgl): array
     {
         $izin = DB::table('izin_absen')->where('status', 'approved')
-            ->whereDate('tanggal', $tgl->toDateString())->pluck('user_id')->all();
+            ->whereDate('tanggal', $tgl->toDateString())->pluck('tipe', 'user_id')->all();
+        $label = ['dinas_luar' => 'Dinas luar', 'sakit' => 'Sakit', 'cuti' => 'Cuti'];
         $libur = app(LiburService::class);
         $out = [];
         foreach ($users as $u) {
-            if (in_array($u->id, $izin)) {
-                $out[$u->id] = 'Izin';
+            if (isset($izin[$u->id])) {
+                $out[$u->id] = $label[$izin[$u->id]] ?? 'Izin';
             } elseif ($libur->isLibur($u, $tgl)) {
                 $out[$u->id] = 'Libur';
             }
@@ -183,18 +184,20 @@ class PenugasanController extends Controller
                 }
 
                 $kunci = ['tanggal' => $tglStr, 'user_id' => $u->id];
-                if (!$tugas) {
-                    // keluar dari rencana -> kembali ke "tak ada di rencana" (kode normal)
-                    // (Mandor Bertugas yang menyatakan tidak masuk tetap dicatat)
-                    if (!($u->id === $mandorId && $mandorTidakMasuk)) {
+                if ($u->id === $mandorId) {
+                    // Mandor Bertugas otomatis hadir; 'tidak masuk' hanya diubah oleh dirinya sendiri
+                    $lamaJawab = DB::table('konfirmasi_hadir')->where($kunci)->value('jawaban');
+                    $aksi = PenugasanAturan::statusMandor(auth()->id() === $mandorId, $mandorTidakMasuk, $lamaJawab, (bool) $tugas);
+                    if ($aksi === 'hapus') {
                         DB::table('konfirmasi_hadir')->where($kunci)->delete();
+                    } elseif ($aksi !== 'biarkan') {
+                        DB::table('konfirmasi_hadir')->updateOrInsert($kunci, [
+                            'jawaban' => $aksi, 'dijawab_at' => $now, 'updated_at' => $now,
+                        ]);
                     }
-                } elseif ($u->id === $mandorId) {
-                    // Mandor Bertugas otomatis hadir kecuali dia nyatakan tidak masuk
-                    DB::table('konfirmasi_hadir')->updateOrInsert($kunci, [
-                        'jawaban' => $mandorTidakMasuk ? 'tidak_hadir' : 'hadir',
-                        'dijawab_at' => $now, 'updated_at' => $now,
-                    ]);
+                } elseif (!$tugas) {
+                    // keluar dari rencana -> kembali ke "tak ada di rencana" (kode normal)
+                    DB::table('konfirmasi_hadir')->where($kunci)->delete();
                 } elseif (!$tugasLama || PenugasanAturan::perluTanyaUlang($tugasLama, $tugas)) {
                     DB::table('konfirmasi_hadir')->updateOrInsert($kunci, [
                         'jawaban' => null, 'dijawab_at' => null, 'pengingat' => null,
@@ -203,12 +206,6 @@ class PenugasanController extends Controller
                     $kirim[$u->id] = $tugas;
                 }
             }
-            // Mandor tidak masuk tanpa tugas: tetap catat
-            if ($mandorId && $mandorTidakMasuk && empty($baru[$mandorId])) {
-                DB::table('konfirmasi_hadir')->updateOrInsert(['tanggal' => $tglStr, 'user_id' => $mandorId],
-                    ['jawaban' => 'tidak_hadir', 'dijawab_at' => $now, 'updated_at' => $now]);
-            }
-
             DB::table('rencana_harian')->updateOrInsert(['tanggal' => $tglStr], [
                 'disimpan_oleh' => auth()->id(), 'disimpan_at' => $now, 'updated_at' => $now,
             ]);

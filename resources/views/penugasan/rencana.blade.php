@@ -74,10 +74,10 @@
                         @if($adalahMandor)<span style="font-size:11px;color:#38bdf8;font-weight:400;">Mandor Bertugas (otomatis hadir)</span>@endif
                     </div>
                     <div style="font-size:12px;">
-                        @if($hal === 'Izin')
-                            <span style="color:#F59E0B;">Izin</span>
-                        @elseif($hal === 'Libur')
+                        @if($hal === 'Libur')
                             <span style="color:#F59E0B;">Libur — aktifkan Kerja Hari Libur besok pagi bila perlu</span>
+                        @elseif($hal)
+                            <span style="color:#F59E0B;">{{ $hal }}</span>
                         @elseif($k)
                             <span style="color:{{ $k->jawaban === 'hadir' ? '#10B981' : ($k->jawaban ? '#EF4444' : '#94a3b8') }};">
                                 {{ $k->jawaban ? $labelJawab[$k->jawaban] : 'Menunggu jawaban' }}

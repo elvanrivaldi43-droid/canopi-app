@@ -73,6 +73,16 @@ $check('tanya urutan beda', A::perluTanyaUlang([$t(1,'setengah'),$t(2,'setengah'
 $check('tanya berubah', A::perluTanyaUlang([$t(1,'penuh')], [$t(1,'setengah'),$t(2,'setengah')]), true);
 $check('tanya dari kosong', A::perluTanyaUlang([], [$t(1,'penuh')]), true);
 
+// statusMandor (editor, centang, jawabanLama, adaTugas)
+$check('mandor owner+lama tidak_hadir+tugas', A::statusMandor(false, false, 'tidak_hadir', true), 'biarkan');
+$check('mandor owner+lama tidak_hadir+tanpa tugas', A::statusMandor(false, false, 'tidak_hadir', false), 'biarkan');
+$check('mandor sendiri hapus centang', A::statusMandor(true, false, 'tidak_hadir', true), 'hadir');
+$check('mandor sendiri centang', A::statusMandor(true, true, null, true), 'tidak_hadir');
+$check('mandor sendiri centang tanpa tugas', A::statusMandor(true, true, null, false), 'tidak_hadir');
+$check('owner tanpa lama + tugas', A::statusMandor(false, false, null, true), 'hadir');
+$check('owner tanpa lama + tanpa tugas', A::statusMandor(false, false, null, false), 'hapus');
+$check('mandor sendiri uncheck tanpa tugas', A::statusMandor(true, false, 'tidak_hadir', false), 'hapus');
+
 // --- tambah kasus di sini ---
 
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
