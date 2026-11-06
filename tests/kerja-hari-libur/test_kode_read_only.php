@@ -134,8 +134,8 @@ foreach ((array) $routes as $r) {
 $check('route `absensi.kirim-kode` terdaftar', isset($byName['absensi.kirim-kode']), true);
 $check('route `absensi.kirim-kode` memakai method POST',
     in_array('POST', explode('|', (string) ($byName['absensi.kirim-kode']['method'] ?? '')), true), true);
-$check('route `absensi.kirim-kode` dibatasi Owner + Mandor (level:1,3)',
-    in_array('level:1,3', $byName['absensi.kirim-kode']['middleware'] ?? [], true), true);
+$check('route `absensi.kirim-kode` dibatasi Owner saja (level:1, keputusan Elvan 6 Nov)',
+    in_array('level:1', $byName['absensi.kirim-kode']['middleware'] ?? [], true), true);
 $check('route `absensi.kirim-kode` tetap butuh login',
     in_array('auth', $byName['absensi.kirim-kode']['middleware'] ?? [], true), true);
 
@@ -154,8 +154,8 @@ $check('form kirim-kode memakai method POST',
     (bool) preg_match('/<form[^>]*method="POST"[^>]*action="\{\{\s*route\(\x27absensi\.kirim-kode\x27/', $srcView), true);
 $check('form kirim-kode menyertakan @csrf',
     substr_count($srcView, '@csrf'), 2); // 1 aktivasi hari libur + 1 kirim kode
-$check('tombol kirim-kode hanya muncul kalau kodenya belum ada',
-    (bool) preg_match('/@if\s*\(\s*!\s*\$d\[\x27kode\x27\]\s*\)/', $srcView), true);
+$check('tombol kirim-kode hanya muncul kalau kodenya belum ada & untuk Owner',
+    (bool) preg_match('/@if\s*\(\s*!\s*\$d\[\x27kode\x27\]\s*&&\s*auth\(\)->user\(\)->level\s*==\s*1\s*\)/', $srcView), true);
 
 // Aturan project: pakai SVG, jangan emoji baru di blade (emoji bisa korup di server).
 $posForm2 = strpos($srcView, "route('absensi.kirim-kode'");

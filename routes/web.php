@@ -135,7 +135,7 @@ Route::middleware('auth')->prefix('absensi')->name('absensi.')->group(function (
     // Buat & kirim kode absen manual untuk 1 karyawan (jaring pengaman kalau cron
     // pagi gagal / karyawan baru aktif setelah 06:30). Halaman kode absen sendiri
     // BACA SAJA — pembuatan kode harus lewat tindakan yang disengaja seperti ini.
-    Route::post('/kirim-kode/{userId}',       [AbsensiController::class, 'kirimKodeAbsen'])->middleware('level:1,3')->name('kirim-kode');
+    Route::post('/kirim-kode/{userId}',       [AbsensiController::class, 'kirimKodeAbsen'])->middleware('level:1')->name('kirim-kode');
 });
 
 // ─── IZIN KARYAWAN ─────────────────────────────────────────

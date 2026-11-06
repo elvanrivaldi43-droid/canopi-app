@@ -91,7 +91,8 @@
                                  tidak lagi membuat kode diam-diam — dulu itu bikin cron pagi
                                  melewati semua karyawan tanpa mengirim Telegram). Jadi
                                  pembuatannya lewat tombol yang ditekan sengaja. --}}
-                            @if(!$d['kode'])
+                            {{-- Owner saja (keputusan Elvan 6 Nov): jalan keluar resmi bagi yang tak menjawab konfirmasi Penugasan. --}}
+                            @if(!$d['kode'] && auth()->user()->level == 1)
                             <form method="POST" action="{{ route('absensi.kirim-kode', $d['id']) }}"
                                   onsubmit="return confirm('Buatkan kode absen hari ini untuk karyawan ini dan kirim ke Telegram-nya?');"
                                   style="margin-top:6px;">

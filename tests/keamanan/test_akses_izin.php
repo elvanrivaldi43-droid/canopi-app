@@ -45,5 +45,10 @@ foreach ($mw['absensi.ajukan-pulang-cepat'] ?? ['level:<ROUTE TIDAK ADA>'] as $m
 }
 $check('`absensi.ajukan-pulang-cepat` TIDAK dikunci level', $adaLevel, false);
 
+// Buat & Kirim Kode manual = Owner saja (6 Nov, Penugasan Harian): Mandor tak boleh
+// membuatkan kode bagi pekerja yang tak menjawab konfirmasi.
+$lvl = array_values(array_filter($mw['absensi.kirim-kode'] ?? [], fn($m) => str_starts_with((string) $m, 'level:')));
+$check('`absensi.kirim-kode` hanya level:1', $lvl, ['level:1']);
+
 echo $fail ? "\nADA YANG GAGAL\n" : "\nSEMUA PASS\n";
 exit($fail ? 1 : 0);

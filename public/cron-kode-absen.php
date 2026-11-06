@@ -27,6 +27,8 @@ use App\Models\KodeAbsen;
 use App\Models\Absensi;
 use App\Services\TelegramService;
 use App\Services\LiburService;
+use App\Services\PenugasanAturan;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 $log = [];
@@ -40,6 +42,50 @@ $tanggal = today();
 $offHariIni = Absensi::whereDate('tanggal', $tanggal)
                      ->whereIn('status', ['sakit', 'izin', 'cuti', 'dinas_luar'])
                      ->pluck('user_id');
+
+// ── Penugasan Harian: kode mengikuti konfirmasi malam ──
+// Hanya berlaku bila rencana BENAR-BENAR disimpan (disimpan_at terisi; baris kunci
+// pengingat bernilai NULL bukan rencana). Tanpa rencana -> semua dapat kode seperti biasa.
+$tglStr     = $tanggal->toDateString();
+$jawabanKonf  = collect(); // user_id => jawaban (null = belum menjawab)
+$adaPenugasan = collect(); // user_id => true
+$tanpaJawaban = [];
+// Gagal baca data penugasan -> gagal TERBUKA: kode dikirim normal ke semua (seperti sebelum fitur ini),
+// jangan sampai satu query rusak membuat seluruh karyawan tak dapat kode.
+try {
+    $adaRencana = DB::table('rencana_harian')->where('tanggal', $tglStr)->whereNotNull('disimpan_at')->exists();
+    if ($adaRencana) {
+        $jawabanKonf  = DB::table('konfirmasi_hadir')->where('tanggal', $tglStr)->pluck('jawaban', 'user_id');
+        $adaPenugasan = DB::table('penugasan_harian')->where('tanggal', $tglStr)->distinct()->pluck('user_id')->flip();
+    }
+} catch (\Throwable $e) {
+    $adaRencana   = false;
+    $jawabanKonf  = collect();
+    $adaPenugasan = collect();
+    $log[] = "✗ ERROR baca rencana (kode dikirim normal ke semua): " . $e->getMessage();
+}
+
+if ($adaRencana) {
+
+    // Jawab 'Tidak Hadir' = libur tanpa gaji, tanpa kode. firstOrCreate: baris yang sudah
+    // ada (izin/sakit/dll) TIDAK ditimpa; aman dijalankan ulang.
+    foreach ($jawabanKonf as $uid => $jwb) {
+        if ($jwb !== 'tidak_hadir') continue;
+        try {
+            $u = User::find($uid);
+            if ($u && !app(LiburService::class)->isLibur($u, $tanggal)) {
+                Absensi::firstOrCreate(
+                    ['user_id' => $uid, 'tanggal' => $tglStr],
+                    ['status' => 'tidak_hadir', 'gaji_hari_ini' => 0, 'uang_makan_hari_ini' => 0, 'potongan_telat' => 0]
+                );
+            }
+            $log[] = "⏭ Skip (jawab tidak hadir): " . ($u->name ?? "user #$uid");
+        } catch (\Throwable $e) {
+            $log[] = "✗ ERROR catat tidak hadir user #$uid: " . $e->getMessage();
+        }
+        $offHariIni->push($uid);
+    }
+}
 
 $karyawan = User::where('level', '!=', 1) // bukan owner
                 ->where('status', 'aktif')
@@ -57,6 +103,26 @@ foreach ($karyawan as $k) {
             $log[] = "⏭ Skip (jadwal libur): {$k->name}";
             $skip++;
             continue;
+        }
+
+        // Teknisi/Driver/Mandor yang ada di rencana wajib menjawab 'Hadir' untuk dapat kode.
+        // Diam TIDAK PERNAH dianggap hadir. Level lain jalan seperti biasa.
+        if (PenugasanAturan::ikut((int) $k->level)) {
+            $adaDiRencana = PenugasanAturan::adaDiRencana($adaPenugasan->has($k->id), $jawabanKonf->has($k->id));
+            $keputusan    = PenugasanAturan::keputusanKode($adaRencana, $adaDiRencana, $jawabanKonf->get($k->id));
+            if ($keputusan !== 'kirim') {
+                // 'catat_tidak_hadir' sudah disaring lewat $offHariIni; ini cuma jaga-jaga.
+                $log[] = $keputusan === 'tanpa_jawaban'
+                    ? "⏭ Skip (tak menjawab konfirmasi): {$k->name}"
+                    : "⏭ Skip (jawab tidak hadir): {$k->name}";
+                // Sudah dibuatkan kode manual oleh Owner -> jangan dilaporkan "tak dapat kode".
+                if ($keputusan === 'tanpa_jawaban'
+                    && !KodeAbsen::where(['tanggal' => $tglStr, 'user_id' => $k->id])->exists()) {
+                    $tanpaJawaban[] = $k->name;
+                }
+                $skip++;
+                continue;
+            }
         }
 
         // Satu jalur tulis dengan halaman "Kode Absen Hari Ini" dan tombol "Aktifkan
@@ -106,6 +172,21 @@ foreach ($karyawan as $k) {
     } catch (\Throwable $e) {
         $gagal++;
         $log[] = "✗ ERROR untuk {$k->name}: " . $e->getMessage();
+    }
+}
+
+// Satu ringkasan ke Mandor Bertugas + Owner: siapa tak dapat kode karena diam.
+// Gagal kirim tidak boleh menggagalkan cron.
+if ($pesanRingkas = PenugasanAturan::pesanTanpaJawaban($tanpaJawaban)) {
+    try {
+        $tg       = app(TelegramService::class);
+        $mandorId = DB::table('setting_penugasan')->where('id', 1)->value('mandor_bertugas_id');
+        $chat     = $mandorId ? User::where('id', $mandorId)->value('telegram_chat_id') : null;
+        if ($chat) $tg->kirim($chat, $pesanRingkas);
+        $tg->kirimOwner($pesanRingkas);
+        $log[] = "ℹ Ringkasan tak menjawab dikirim (" . count($tanpaJawaban) . " orang)";
+    } catch (\Throwable $e) {
+        $log[] = "✗ ERROR ringkasan tak menjawab: " . $e->getMessage();
     }
 }
 
