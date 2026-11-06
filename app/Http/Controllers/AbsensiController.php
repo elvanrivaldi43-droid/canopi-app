@@ -814,7 +814,15 @@ class AbsensiController extends Controller
                 : 'Belum diizinkan atasan. Pulang sekarang dihitung SETENGAH HARI.')
             : null;
 
-        return view('absensi.form-pulang', compact('user','lokasi','absen','absenHariIni','adaLembur','luarKotaAktif','peringatanSetengah'));
+        // Laporan kerja sore: gagal baca tak boleh menghalangi absen pulang.
+        try {
+            $tugasHariIni = PenugasanController::tugasHariIni($user->id);
+            $opsiTahap    = $tugasHariIni->isNotEmpty() ? PenugasanController::tahapAktif() : collect();
+        } catch (\Throwable $e) {
+            $tugasHariIni = $opsiTahap = collect();
+        }
+
+        return view('absensi.form-pulang', compact('user','lokasi','absen','absenHariIni','adaLembur','luarKotaAktif','peringatanSetengah','tugasHariIni','opsiTahap'));
     }
 
     public function absenPulang(Request $request)

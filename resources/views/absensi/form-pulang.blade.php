@@ -107,6 +107,54 @@
         <div style="font-size:12px;color:#94A3B8;">Jika kurang dari 50% jam kerja, akan dihitung Setengah Hari.</div>
     </div>
 
+    {{-- Laporan kerja hari ini (terpisah dari absen pulang; tak pernah memblokirnya) --}}
+    @if($tugasHariIni->isNotEmpty())
+    @php
+        $namaPrj = fn($r) => $r->nama_project ?: ($r->nama_customer ?: 'Project #'.$r->project_id);
+        $awalLaporan = $tugasHariIni->map(fn($t) => [
+            'id' => $t->id, 'laporan' => $t->laporan ?: '', 'project_tahap_id' => $t->project_tahap_id,
+            'porsi' => $t->porsi, 'catatan' => $t->catatan ?? '',
+        ])->values();
+    @endphp
+    <div class="stat-card" style="margin-bottom:16px;padding:14px 16px;" x-data="laporanKerja(@js($awalLaporan))">
+        <div style="font-size:11px;color:#64748B;margin-bottom:10px;">LAPORAN KERJA HARI INI</div>
+        @foreach($tugasHariIni as $i => $t)
+        <div style="padding:10px 0;{{ $i ? 'border-top:1px solid rgba(148,163,184,0.2);' : '' }}">
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                @foreach(['selesai' => 'Selesai', 'lanjut' => 'Lanjut besok'] as $val => $lbl)
+                <button type="button" @click="rows[{{ $i }}].laporan='{{ $val }}'"
+                        style="flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid rgba(201,168,76,0.4);"
+                        :style="rows[{{ $i }}].laporan==='{{ $val }}' ? 'background:#C9A84C;color:#0F1117;' : 'background:transparent;color:#C9A84C;'">{{ $lbl }}</button>
+                @endforeach
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <select x-model.number="rows[{{ $i }}].project_tahap_id" style="flex:1;min-width:0;padding:8px;border-radius:8px;font-size:16px;">
+                    @if(!$opsiTahap->contains('id', $t->project_tahap_id))
+                    <option value="{{ $t->project_tahap_id }}">{{ $namaPrj($t) }} - {{ $t->nama_tahap }}</option>
+                    @endif
+                    @foreach($opsiTahap as $o)
+                    <option value="{{ $o->id }}">{{ $namaPrj($o) }} - {{ $o->nama_tahap }}</option>
+                    @endforeach
+                </select>
+                <select x-model="rows[{{ $i }}].porsi" style="padding:8px;border-radius:8px;font-size:16px;">
+                    <option value="penuh">Penuh</option>
+                    <option value="setengah">Setengah</option>
+                </select>
+            </div>
+            <textarea x-model="rows[{{ $i }}].catatan" rows="2" maxlength="1000" placeholder="Catatan (opsional)"
+                      style="width:100%;padding:8px;border-radius:8px;font-size:16px;box-sizing:border-box;"></textarea>
+        </div>
+        @endforeach
+        <button type="button" @click="kirim()" :disabled="sibuk"
+                style="width:100%;margin-top:6px;padding:12px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;color:#0F1117;background:linear-gradient(135deg,#C9A84C,#A8872E);"
+                :style="sibuk ? 'opacity:0.5;cursor:not-allowed;' : ''">
+            <span x-text="sibuk ? 'Mengirim...' : 'Kirim Laporan'"></span>
+        </button>
+        <div x-show="pesan" x-text="pesan" style="margin-top:8px;font-size:12px;font-weight:600;" :style="ok ? 'color:#10B981' : 'color:#EF4444'"></div>
+        <div style="margin-top:6px;font-size:11px;color:#64748B;">Laporan terpisah dari absen pulang; absen pulang tetap bisa walau belum lapor.</div>
+    </div>
+    @endif
+
     {{-- Form Submit --}}
     <form method="POST" action="{{ route('absensi.pulang') }}" id="formAbsenPulang">
         @csrf
@@ -132,6 +180,29 @@
 </div>
 
 <script>
+function laporanKerja(rows) {
+    return {
+        rows: rows, sibuk: false, pesan: '', ok: false,
+        kirim() {
+            if (this.sibuk) return;
+            if (this.rows.some(r => !r.laporan)) { this.ok = false; this.pesan = 'Pilih Selesai atau Lanjut besok untuk tiap tugas.'; return; }
+            this.sibuk = true; this.pesan = '';
+            fetch('{{ route('penugasan.laporan') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                body: JSON.stringify({ tugas: this.rows })
+            })
+            .then(r => r.json().catch(() => ({})))
+            .then(d => {
+                this.ok = !!d.success;
+                this.pesan = d.message || (d.errors ? Object.values(d.errors)[0][0] : 'Laporan gagal dikirim, coba lagi.');
+            })
+            .catch(() => { this.ok = false; this.pesan = 'Koneksi bermasalah. Laporan belum terkirim.'; })
+            .finally(() => { this.sibuk = false; });
+        }
+    };
+}
+
 function absenPulang() {
     const jamMasuk = '{{ substr($absenHariIni->jam_masuk, 0, 5) }}';
     const jamPulangNormal = '{{ auth()->user()->jam_pulang ? substr(auth()->user()->jam_pulang, 0, 5) : "17:00" }}';

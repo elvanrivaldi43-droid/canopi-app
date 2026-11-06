@@ -57,7 +57,7 @@ class PenugasanController extends Controller
         return $out;
     }
 
-    private function tahapAktif()
+    public static function tahapAktif()
     {
         return DB::table('project_tahap as t')
             ->join('projects as p', 'p.id', '=', 't.project_id')
@@ -67,7 +67,7 @@ class PenugasanController extends Controller
             ->get(['t.id', 't.project_id', 't.nama_tahap', 't.status', 'p.nama_project', 'p.nama_customer']);
     }
 
-    private function namaProject($row): string
+    public static function namaProject($row): string
     {
         return $row->nama_project ?: ($row->nama_customer ?: 'Project #' . $row->project_id);
     }
@@ -258,6 +258,77 @@ class PenugasanController extends Controller
         }
         DB::table('setting_penugasan')->where('id', 1)->update(['mandor_bertugas_id' => $id ?: null, 'updated_at' => now()]);
         return back()->with('success', 'Mandor Bertugas diperbarui.');
+    }
+
+    // Tugas hari ini milik user (untuk form absen pulang), plus nama project/tahap.
+    public static function tugasHariIni(int $userId)
+    {
+        return DB::table('penugasan_harian as h')
+            ->join('project_tahap as t', 't.id', '=', 'h.project_tahap_id')
+            ->leftJoin('projects as p', 'p.id', '=', 't.project_id')
+            ->where('h.tanggal', today()->toDateString())->where('h.user_id', $userId)
+            ->orderBy('h.id')
+            ->get(['h.id', 'h.project_tahap_id', 'h.porsi', 'h.laporan', 'h.catatan', 't.nama_tahap', 't.project_id', 'p.nama_project', 'p.nama_customer']);
+    }
+
+    // Laporan kerja sore (dari form absen pulang). Hanya baris milik sendiri, hari ini.
+    // TIDAK terkait absen pulang: gagal lapor tak pernah menghalangi pulang.
+    public function laporan(Request $request)
+    {
+        $request->validate([
+            'tugas'                    => 'required|array|min:1',
+            'tugas.*.id'               => 'required|integer',
+            'tugas.*.laporan'          => 'required|in:selesai,lanjut',
+            'tugas.*.project_tahap_id' => 'required|integer',
+            'tugas.*.porsi'            => 'required|in:penuh,setengah',
+            'tugas.*.catatan'          => 'nullable|string|max:1000',
+        ]);
+
+        $hariIni = today()->toDateString();
+        $milik = DB::table('penugasan_harian')->where('tanggal', $hariIni)->where('user_id', auth()->id())
+            ->get()->keyBy('id');
+        $masuk = collect($request->input('tugas'))->keyBy(fn($t) => (int) $t['id']);
+
+        foreach ($masuk->keys() as $id) {
+            if (!isset($milik[$id])) {
+                return response()->json(['success' => false, 'message' => 'Tugas tidak ditemukan untuk hari ini.'], 422);
+            }
+        }
+
+        // Porsi akhir semua tugas hari ini (yang tak dikirim tetap porsi lamanya)
+        $porsi = $milik->map(fn($r) => $masuk[$r->id]['porsi'] ?? $r->porsi)->values()->all();
+        if ($alasan = PenugasanAturan::alasanTolakTugasOrang($porsi)) {
+            return response()->json(['success' => false, 'message' => "$alasan dalam sehari. Periksa pilihan Penuh / Setengah."], 422);
+        }
+
+        $aktif = self::tahapAktif()->keyBy('id');
+        foreach ($masuk as $id => $t) {
+            $tid = (int) $t['project_tahap_id'];
+            if ($tid !== (int) $milik[$id]->project_tahap_id && !isset($aktif[$tid])) {
+                return response()->json(['success' => false, 'message' => 'Tahap pilihan tidak valid atau sudah selesai.'], 422);
+            }
+        }
+
+        DB::transaction(function () use ($masuk, $hariIni) {
+            $now = now();
+            foreach ($masuk as $id => $t) {
+                $tid = (int) $t['project_tahap_id'];
+                DB::table('penugasan_harian')->where('id', $id)->update([
+                    'laporan' => $t['laporan'], 'catatan' => $t['catatan'] ?? null, 'dilaporkan_at' => $now,
+                    'project_tahap_id' => $tid, 'porsi' => $t['porsi'], 'updated_at' => $now,
+                ]);
+
+                $tahap = DB::table('project_tahap')->where('id', $tid)->lockForUpdate()->first();
+                $status = $tahap ? PenugasanAturan::statusTahapDariLaporan($tahap->status, $t['laporan']) : null;
+                if (!$status) continue;
+                $ubah = ['status' => $status, 'updated_at' => $now];
+                if (!$tahap->tanggal_mulai_aktual) $ubah['tanggal_mulai_aktual'] = $hariIni;
+                if ($status === 'selesai') $ubah['tanggal_selesai_aktual'] = $hariIni;
+                DB::table('project_tahap')->where('id', $tid)->update($ubah);
+            }
+        });
+
+        return response()->json(['success' => true, 'message' => 'Laporan kerja tersimpan.']);
     }
 
     private function kabariOwner(string $pesan): void

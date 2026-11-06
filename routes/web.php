@@ -525,5 +525,6 @@ Route::middleware(['auth'])->prefix('penugasan')->name('penugasan.')->group(func
     Route::get('/rencana',               [PenugasanController::class, 'rencana'])->name('rencana');
     Route::post('/rencana',              [PenugasanController::class, 'simpan'])->name('simpan');
     Route::post('/hadir/{userId}',       [PenugasanController::class, 'tandaiHadir'])->name('hadir');
+    Route::post('/laporan',              [PenugasanController::class, 'laporan'])->name('laporan'); // siapa pun, hanya baris miliknya hari ini
     Route::post('/mandor-bertugas',      [PenugasanController::class, 'mandorBertugas'])->middleware('level:1')->name('mandor');
 });
