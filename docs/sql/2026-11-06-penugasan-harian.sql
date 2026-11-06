@@ -61,7 +61,13 @@ CREATE TABLE IF NOT EXISTS `konfirmasi_hadir` (
 
 -- Verifikasi: SHOW TABLES LIKE '%penugasan%';
 
--- ── BAGIAN C: menunggu daftar ENUM lengkap dari Elvan ──
--- absensi.status adalah ENUM (NULL=YES, DEFAULT 'alpha'). Perlu:
---   ALTER TABLE absensi MODIFY status ENUM(<daftar asli persis>, 'tidak_hadir') NULL DEFAULT 'alpha';
--- JANGAN dijalankan sebelum daftar diisi.
+-- ── BAGIAN C: tambah 'tidak_hadir' ke ENUM absensi.status ──
+-- Definisi asli (dikonfirmasi Elvan): enum('hadir','telat','setengah_hari','alpha',
+-- 'sakit','izin','cuti','dinas_luar') NULL DEFAULT 'alpha'. Urutan lama dipertahankan,
+-- 'tidak_hadir' ditaruh paling akhir. Aman diulang (hasil definisi selalu sama).
+-- Catatan: 'diliburkan' (dipakai label di model) TIDAK ada di ENUM DB — celah lama,
+-- sengaja tidak ditambahkan di sini.
+ALTER TABLE `absensi` MODIFY `status` ENUM('hadir','telat','setengah_hari','alpha','sakit','izin','cuti','dinas_luar','tidak_hadir') NULL DEFAULT 'alpha';
+
+-- Verifikasi:
+SHOW COLUMNS FROM absensi LIKE 'status';
