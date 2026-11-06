@@ -22,6 +22,13 @@ if (($_GET['cek'] ?? '') !== '') {
     die('OK');
 }
 
+// Sebelum 06:00 WIB konfirmasi Penugasan masih terbuka: baris tidak_hadir yang ditulis
+// sekarang akan bertahan walau pekerja lalu berbalik Hadir. Keluar tanpa efek samping.
+if (now()->format('H:i') < '06:00') {
+    header('Content-Type: text/plain');
+    die('Terlalu pagi');
+}
+
 use App\Models\User;
 use App\Models\KodeAbsen;
 use App\Models\Absensi;

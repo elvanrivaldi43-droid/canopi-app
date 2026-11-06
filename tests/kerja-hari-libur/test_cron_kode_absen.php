@@ -99,6 +99,12 @@ $check('satu karyawan error tidak menggagalkan sisanya (try/catch per karyawan)'
     (bool) preg_match('/foreach\s*\(\$karyawan as \$k\)\s*\{\s*try\s*\{/s', $cron), true);
 $check('kunci rahasia cron tetap dicek lewat CronAuth/.env (jangan jadi endpoint publik)',
     str_contains($cron, 'CronAuth::valid(') && str_contains($cron, '403'), true);
+$check('cron menolak jalan sebelum 06:00 WIB (konfirmasi Penugasan masih terbuka)',
+    str_contains($cron, "now()->format('H:i') < '06:00'") && str_contains($cron, 'Terlalu pagi'), true);
+$check('penjaga 06:00 sesudah cek kunci & mode cek, sebelum efek samping apa pun',
+    $posisi($cron, "die('OK')") < $posisi($cron, 'Terlalu pagi')
+    && $posisi($cron, 'Terlalu pagi') < $posisi($cron, 'barisHariIniUntuk')
+    && $posisi($cron, 'Terlalu pagi') < $posisi($cron, 'Absensi::'), true);
 $check('kunci cron TIDAK tertulis di kode (repo publik)',
     str_contains($cron, 'canopi_cron_2026'), false);
 

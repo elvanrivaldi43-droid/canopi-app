@@ -28,14 +28,19 @@ use Illuminate\Support\Facades\DB;
 $log = [];
 $now = now();
 $jam = $now->format('H:i');
-$tgl = $now->format('H') >= 12 ? $now->copy()->addDay()->startOfDay() : $now->copy()->startOfDay();
-$tglStr = $tgl->toDateString();
-$kataHari = $tgl->isSameDay($now) ? 'Hari ini' : 'Besok';
+// Tanggal kerja SAMA dengan halaman Rencana & batas jawab: sebelum 06:00 = hari ini, sejak 06:00 = besok.
+$tglStr = PenugasanAturan::tanggalKerja($now);
+$tgl = \Carbon\Carbon::parse($tglStr);
+$kataHari = PenugasanAturan::kataHari($tglStr, $now);
 $telegram = new TelegramService();
 $link = url('/penugasan/rencana');
 $log[] = "Jam $jam, tanggal kerja $tglStr";
 
 // ── 1) Pengingat Mandor (hanya sesudah 12:00) ──
+// Gerbang 12:00 sengaja dipertahankan walau pengingatMandor() baru jatuh tempo >= 19:00:
+// pengingat Mandor = urusan menyusun rencana MALAM untuk besok. Run pagi (00:00-11:59)
+// tak boleh pernah menegur Mandor / mengabari Owner, sekalipun jam di aturan diubah kelak.
+// Pengingat PEKERJA tidak digerbang di sini (05:00/05:45 justru pagi).
 try {
     $libur = LiburNasional::where('tanggal_mulai', '<=', $tglStr)->where('tanggal_selesai', '>=', $tglStr)->exists();
     if ($now->format('H') < 12) {
