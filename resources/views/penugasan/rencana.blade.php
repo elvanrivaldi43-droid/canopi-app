@@ -38,7 +38,7 @@
         <div style="font-size:13px;color:#94a3b8;">Rencana kerja untuk {{ $tanggal->translatedFormat('l, d F Y') }}</div>
         <div style="font-size:12px;color:#64748b;margin-top:4px;">
             Setiap orang maksimal 1 hari kerja (satu tugas penuh, atau dua tugas setengah hari). Pekerja yang diberi tugas dapat pesan Telegram untuk konfirmasi Hadir / Tidak Hadir.
-            @if($tersimpan) Terakhir disimpan {{ \Carbon\Carbon::parse($tersimpan->disimpan_at)->translatedFormat('d M H:i') }}. @endif
+            @if($tersimpan && $tersimpan->disimpan_at) Terakhir disimpan {{ \Carbon\Carbon::parse($tersimpan->disimpan_at)->translatedFormat('d M H:i') }}. @endif
         </div>
     </div>
 

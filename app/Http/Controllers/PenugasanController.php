@@ -219,11 +219,8 @@ class PenugasanController extends Controller
         foreach ($kirim as $uid => $tugas) {
             $u = $users->firstWhere('id', $uid);
             $kid = DB::table('konfirmasi_hadir')->where(['tanggal' => $tglStr, 'user_id' => $uid])->value('id');
-            $pesan = 'Besok ' . $tgl->translatedFormat('d F Y') . ' kamu di ' . implode(' + ', array_map($tahapLabel, $tugas)) . '. Bersedia hadir?';
-            $ok = $telegram->kirimTombol($u->telegram_chat_id, $pesan, [[
-                ['text' => 'Hadir', 'callback_data' => "hadir:$kid"],
-                ['text' => 'Tidak Hadir', 'callback_data' => "tidak:$kid"],
-            ]]);
+            $pesan = PenugasanAturan::pesanTanya('Besok', $tgl->translatedFormat('d F Y'), array_map($tahapLabel, $tugas));
+            $ok = $telegram->kirimTombol($u->telegram_chat_id, $pesan, PenugasanAturan::tombolHadir((int) $kid));
             if (!$ok) $gagal[] = $u->name . ($u->telegram_chat_id ? '' : ' (belum sambung Telegram)');
         }
 

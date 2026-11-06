@@ -86,6 +86,20 @@ class PenugasanAturan
         return self::lebihMaju(self::URUT_PEKERJA, $due, $terakhir);
     }
 
+    // Pertanyaan konfirmasi hadir (dipakai simpan() dan cron pengingat).
+    public static function pesanTanya(string $kataHari, string $tglLabel, array $labelTugas): string
+    {
+        return "$kataHari $tglLabel kamu di " . implode(' + ', $labelTugas) . '. Bersedia hadir?';
+    }
+
+    public static function tombolHadir(int $konfirmasiId): array
+    {
+        return [[
+            ['text' => 'Hadir', 'callback_data' => "hadir:$konfirmasiId"],
+            ['text' => 'Tidak Hadir', 'callback_data' => "tidak:$konfirmasiId"],
+        ]];
+    }
+
     // callback_data tombol: "hadir:{id}" / "tidak:{id}".
     public static function parseTombol(string $data): ?array
     {
