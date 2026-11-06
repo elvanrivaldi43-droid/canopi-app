@@ -267,19 +267,46 @@ sebelum kalibrasi karena murni UI, tak menyentuh angka kalibrasi):
 
 ### Utang aktif / resume point
 
-**>>> TITIK LANJUT 6 Nov 2026 (akhir sesi) — baca ini dulu <<<**
-   Sesi desain saja, NOL perubahan kode. Dua spec DISETUJUI Elvan (lihat catatan urutan di ROADMAP):
+**>>> TITIK LANJUT 6 Nov 2026 malam (akhir sesi) — baca ini dulu <<<**
+   **PENUGASAN HARIAN: KODE SELESAI + LOLOS REVIEW, tapi BELUM di-push & BELUM live.** Semua commit hanya
+   di VPS lokal (`git log origin/main..HEAD`), crontab VPS BELUM dipasang. Dua spec DISETUJUI Elvan:
    `docs/superpowers/specs/2026-11-06-penugasan-harian-design.md` (dikerjakan PERTAMA) dan
-   `docs/superpowers/specs/2026-11-06-survei-manual-vs-aktual-design.md` (KEDUA, bergantung pada yg pertama).
-   **Langkah berikutnya:** `superpowers:writing-plans` untuk Penugasan Harian (belum dibuat).
+   `docs/superpowers/specs/2026-11-06-survei-manual-vs-aktual-design.md` (KEDUA, bergantung pada yg pertama —
+   plan-nya BELUM dibuat). Plan Penugasan Harian: `docs/superpowers/plans/2026-11-06-penugasan-harian.md`
+   (9 task, semua selesai via subagent-driven-development + review per task + final review + 1 fix wave).
+   SQL `docs/sql/2026-11-06-penugasan-harian.sql` SUDAH dijalankan Elvan 6 Nov 17:01 (4 tabel baru +
+   `absensi.status` ENUM ditambah `tidak_hadir`). Ledger lengkap (ruling, minor ditunda) ada di
+   `.superpowers/sdd/2026-11-06-penugasan-harian/progress.md` (git-ignored; bila hilang, andalkan git log).
+   **URUTAN GO-LIVE (JANGAN diloncat):**
+   1. Elvan isi `TELEGRAM_WEBHOOK_SECRET` (`openssl rand -hex 24`) di `.env` server, lalu daftarkan ulang webhook
+      `setWebhook?url=https://app.kanopibsd.co.id/telegram/karyawan/webhook&secret_token=<SECRET>&allowed_updates=["message","callback_query"]`.
+      Cek `getWebhookInfo` bersih. TANPA ini, push membuat `/start` sambung akun 403.
+   2. Elvan cek phpMyAdmin: `SHOW COLUMNS FROM absensi LIKE 'tanggal'` harus DATE; `SHOW INDEX FROM konfirmasi_hadir`
+      memuat `uniq_konfirmasi_tgl_user`; `SELECT * FROM setting_penugasan` ada baris id=1.
+   3. Push; cek live pakai curl (POST `/penugasan/rencana` tanpa token -> 419; POST webhook tanpa header -> 403;
+      `cron-penugasan.php?key=...&cek=1` -> OK). Jangan percaya Actions hijau saja.
+   4. Smoke test di DB asli dgn SATU pekerja kooperatif (checklist 10 langkah ada di final review; ringkas: tombol
+      Hadir/Tidak/Hadir, simpan ulang sama = tak tanya ulang, ubah porsi = tanya ulang, centang mandor tidak masuk,
+      Owner simpan tak menimpa, hapus orang dari rencana, paginya baca `/root/cron-logs/kode-absen.log`).
+   5. BARU pasang crontab (cadangkan dulu): UTC `0 12`, `30 13`, `0 14`, `30 14`, `0 15`, `0 22`, `45 22` setiap hari ->
+      `cron-penugasan.php` (pola baris sama dgn cron lain, log `/root/cron-logs/penugasan.log`); uji `&cek=1` dulu.
+   6. Umumkan aturan ke karyawan + mandor (mandor tak lagi punya tombol Kirim Kode — Owner saja).
+   **TUAS DARURAT (kalau bot/webhook mati di malam ada rencana -> semua tukang tak dapat kode -> alpha jam 13:00):**
+   sebelum 13:00 jalankan di phpMyAdmin `UPDATE rencana_harian SET disimpan_at=NULL WHERE tanggal=CURDATE();` lalu
+   picu ulang `cron-kode-absen.php` (idempoten; tanpa rencana = semua dapat kode). Alternatif: Owner "Buat & Kirim Kode".
+   **Minor yang SENGAJA ditunda** (lihat ledger): tahap sama di 2 baris; `dikirim_at` walau kirim gagal; Koreksi Owner
+   belum menawarkan `tidak_hadir`; label "Tdk Hadir" di slip; notif ganda bila 2x tekan "Tidak" berbarengan; dashboard
+   menghitung `tidak_hadir` sbg "belum"; notif Owner 22:00 hanya bila rencana benar2 kosong; pengingat tetap jalan di hari
+   semua orang libur; dark mode kartu laporan; snapshot peran (spec berbeda: proyek 2 menurunkan peran dari jabatan —
+   putuskan di proyek 2). Temuan lama: model `Absensi` punya label `diliburkan` tapi ENUM DB tak memuatnya.
+   **Setelah go-live stabil:** plan & kerjakan proyek 2 (Survei vs Aktual) — data orang-hari dari laporan sore.
    Inti yg wajib diingat (detail & keputusan terkunci ada di spec, jangan didebat ulang):
    rencana malam oleh SATU "Mandor Bertugas" (Owner punya tombol ganti), pengingat 19:00/20:30/21:00,
    22:00 lempar ke Owner; tukang/kenek/driver konfirmasi Hadir/Tidak Hadir via tombol Telegram s.d. 06:00
    (tak menjawab = tak dapat kode -> alpha; Tidak Hadir = status absensi baru `tidak_hadir`, tanpa gaji);
    rencana tak dibuat sama sekali = kode normal ke semua; orang kantor (level 2/4/7) tak berubah;
    laporan sore per orang di form absen pulang (tak memblokir) = sumber data orang-hari.
-   **Wajib sebelum tombol Telegram live:** webhook `TelegramWebhookController` kini TIDAK memverifikasi
-   asal request -> pasang cek `X-Telegram-Bot-Api-Secret-Token`.
+   Webhook kini memverifikasi `X-Telegram-Bot-Api-Secret-Token` (kode sudah ada; langkah 1 go-live di atas).
    Butir 1 titik lanjut 27 Okt (validasi HP izin sakit + pulang cepat) **SUDAH divalidasi Elvan 6 Nov.**
    Fakta terverifikasi: project manual tanpa lead aman (material tak pernah jadi `melebihi_rab` tanpa
    `id_rab_item`; cutting list project manual = tombol tak muncul / 404 rapi).
