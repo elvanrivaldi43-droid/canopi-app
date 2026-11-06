@@ -87,8 +87,8 @@ $check('owner (level 1) tidak dikirimi kode',
     (bool) preg_match("/where\('level',\s*'!=',\s*1\)/", $cron), true);
 $check('hanya karyawan berstatus aktif',
     (bool) preg_match("/where\('status',\s*'aktif'\)/", $cron), true);
-$check('karyawan izin/sakit/cuti/dinas luar dikecualikan',
-    (bool) preg_match("/whereIn\('status',\s*\['sakit',\s*'izin',\s*'cuti',\s*'dinas_luar'\]\)/", $cron), true);
+$check('karyawan izin/sakit/cuti/dinas luar/tidak hadir dikecualikan',
+    (bool) preg_match("/whereIn\('status',\s*\['sakit',\s*'izin',\s*'cuti',\s*'dinas_luar',\s*'tidak_hadir'\]\)/", $cron), true);
 $check('daftar pengecualian izin dipakai untuk menyaring karyawan',
     (bool) preg_match("/whereNotIn\('id',\s*\\\$offHariIni\)/", $cron), true);
 $check('karyawan yang hari itu jadwal libur tetap dilewati',

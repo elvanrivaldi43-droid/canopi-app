@@ -40,7 +40,7 @@ $tanggal = today();
 
 // Karyawan yang izin/sakit/cuti/dinas luar hari ini gak usah dikasih kode absen
 $offHariIni = Absensi::whereDate('tanggal', $tanggal)
-                     ->whereIn('status', ['sakit', 'izin', 'cuti', 'dinas_luar'])
+                     ->whereIn('status', ['sakit', 'izin', 'cuti', 'dinas_luar', 'tidak_hadir'])
                      ->pluck('user_id');
 
 // ── Penugasan Harian: kode mengikuti konfirmasi malam ──
