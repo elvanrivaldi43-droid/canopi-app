@@ -36,9 +36,12 @@
 
     <div class="stat-card" style="padding:16px;margin-bottom:16px;">
         <div style="font-size:13px;color:#94a3b8;">Rencana kerja untuk {{ $tanggal->translatedFormat('l, d F Y') }}</div>
-        <div style="font-size:12px;color:#64748b;margin-top:4px;">
-            Setiap orang maksimal 1 hari kerja (satu tugas penuh, atau dua tugas setengah hari). Pekerja yang diberi tugas dapat pesan Telegram untuk konfirmasi Hadir / Tidak Hadir.
-            @if($tersimpan && $tersimpan->disimpan_at) Terakhir disimpan {{ \Carbon\Carbon::parse($tersimpan->disimpan_at)->translatedFormat('d M H:i') }}. @endif
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;border:1px solid #ef4444;border-left-width:4px;border-radius:8px;background:rgba(239,68,68,.10);font-size:14px;font-weight:600;line-height:1.45;color:#ef4444;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>
+                Setiap orang maksimal 1 hari kerja (satu tugas penuh, atau dua tugas setengah hari). Pekerja yang diberi tugas dapat pesan Telegram untuk konfirmasi Hadir / Tidak Hadir.
+                @if($tersimpan && $tersimpan->disimpan_at) <span style="display:block;margin-top:4px;font-weight:400;">Terakhir disimpan {{ \Carbon\Carbon::parse($tersimpan->disimpan_at)->translatedFormat('d M H:i') }}.</span> @endif
+            </div>
         </div>
     </div>
 
