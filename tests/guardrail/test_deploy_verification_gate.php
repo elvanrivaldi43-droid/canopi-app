@@ -38,7 +38,8 @@ $runtimeLama = substr($deploy, $runtimePosisi);
 // memutus koneksi di tengah -- 2 kegagalan dalam sehari, guardrail hijau keduanya).
 // Hash tetap dikunci supaya blok ini tak bisa diubah diam-diam; kalau memang perlu
 // diubah lagi, ubah SADAR berikut hash-nya.
-$expectedRuntimeHash = '448cbb644e01bbbf96f2946f23ebc1d69d65cc745b742d55fcd2fd55281530ef';
+// Diperbarui 26 Nov 2026: protocol ftp -> ftps + security: loose (Niagahoster menolak FTP polos: 421).
+$expectedRuntimeHash = '576435eb1c00cae59c3eeaf6c43886757c67185728f649c3d9939e09b7be6fd6';
 dgPastikan(
     hash('sha256', $runtimeLama) === $expectedRuntimeHash,
     'blok FTP/cache lama berubah; Task 5 hanya boleh menambah verification dependency'
@@ -74,7 +75,10 @@ dgPastikan(
 dgPastikan(str_contains($deploy, 'server: ${{ secrets.FTP_SERVER }}'), 'FTP server secret lama hilang');
 dgPastikan(str_contains($deploy, 'username: ${{ secrets.FTP_USERNAME }}'), 'FTP username secret lama hilang');
 dgPastikan(str_contains($deploy, 'password: ${{ secrets.FTP_PASSWORD }}'), 'FTP password secret lama hilang');
-dgPastikan(str_contains($deploy, 'protocol: ftp'), 'protocol FTP lama berubah');
+// 26 Nov 2026: Niagahoster menolak FTP polos (421 cleartext sessions not accepted) -> ftps eksplisit.
+dgPastikan(substr_count($deploy, "protocol: ftps\n") === 3, 'ketiga percobaan upload wajib protocol: ftps');
+dgPastikan(substr_count($deploy, 'security: loose') === 3, 'ketiga percobaan upload wajib security: loose');
+dgPastikan(!preg_match('/protocol: ftp\s*\n/', $deploy), 'protocol FTP polos tak boleh kembali (server menolaknya)');
 dgPastikan(str_contains($deploy, 'port: 21'), 'port FTP lama berubah');
 dgPastikan(str_contains($deploy, "branches:\n      - main"), 'deploy wajib tetap hanya dipicu main');
 
