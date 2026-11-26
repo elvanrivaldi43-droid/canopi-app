@@ -6,34 +6,52 @@ class TelegramService
 {
     public function kirim(?string $chatId, string $pesan): bool
     {
+        return $this->kirimDenganHasil($chatId, $pesan) === 'terkirim';
+    }
+
+    // Hasil pengiriman dibedakan 3 (lihat klasifikasiHasil): cron kode absen perlu tahu
+    // "pasti belum terkirim" (aman diulang) vs "tak pasti" (bisa jadi sudah sampai; jangan
+    // diulang supaya karyawan tak menerima dua kode). $timeout detik per permintaan.
+    public function kirimDenganHasil(?string $chatId, string $pesan, int $timeout = 20): string
+    {
         if (!$chatId) {
-            return false;
+            return 'ditolak';
         }
 
         $token = getenv('TELEGRAM_KARYAWAN_TOKEN');
         if (!$token) {
             \Illuminate\Support\Facades\Log::error('TelegramService: TELEGRAM_KARYAWAN_TOKEN tidak diset');
-            return false;
+            return 'ditolak';
         }
 
         try {
-            $data = $this->kirimRequest($token, $chatId, $pesan, true);
+            $data = $this->kirimRequest($token, $chatId, $pesan, true, null, $timeout);
 
             // Markdown yang tak seimbang (_, *, [, `) bikin Telegram tolak SELURUH pesan.
             // Coba ulang sekali tanpa parse_mode biar pesan tetap terkirim (plain text).
             if (!($data['ok'] ?? false) && str_contains(strtolower($data['description'] ?? ''), "can't parse entities")) {
-                $data = $this->kirimRequest($token, $chatId, $pesan, false);
+                $data = $this->kirimRequest($token, $chatId, $pesan, false, null, $timeout);
             }
 
             if (!($data['ok'] ?? false)) {
                 \Illuminate\Support\Facades\Log::error('TelegramService gagal kirim: ' . ($data['description'] ?? 'unknown error'));
             }
 
-            return $data['ok'] ?? false;
+            return self::klasifikasiHasil($data);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('TelegramService gagal kirim: ' . $e->getMessage());
-            return false;
+            return 'tak_pasti';
         }
+    }
+
+    // 'terkirim' = Telegram menjawab ok:true. 'ditolak' = Telegram menjawab ok:false
+    // (mis. 502 Bad Gateway, 429): pesan pasti tidak diproses. 'tak_pasti' = tak ada jawaban
+    // terbaca (timeout/putus): pesan MUNGKIN sudah sampai.
+    public static function klasifikasiHasil(array $data): string
+    {
+        if (($data['ok'] ?? null) === true) return 'terkirim';
+        if (array_key_exists('ok', $data)) return 'ditolak';
+        return 'tak_pasti';
     }
 
     // $tombol = [[['text'=>..,'callback_data'=>..], ...]] (inline_keyboard).
@@ -107,7 +125,7 @@ class TelegramService
         }
     }
 
-    private function kirimRequest(string $token, string $chatId, string $pesan, bool $markdown, ?string $replyMarkup = null): array
+    private function kirimRequest(string $token, string $chatId, string $pesan, bool $markdown, ?string $replyMarkup = null, int $timeout = 20): array
     {
         $fields = [
             'chat_id' => $chatId,
@@ -125,7 +143,7 @@ class TelegramService
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => $fields,
-            CURLOPT_TIMEOUT        => 20,
+            CURLOPT_TIMEOUT        => $timeout,
         ]);
         $result = curl_exec($ch);
         curl_close($ch);

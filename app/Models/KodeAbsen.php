@@ -44,6 +44,20 @@ class KodeAbsen extends Model
         );
     }
 
+    // Keputusan cron setelah mencoba mengirim kode (hasil dari TelegramService::kirimDenganHasil):
+    // 'catat'    = terkirim, biarkan barisnya.
+    // 'batalkan' = pasti tidak terkirim: hapus baris supaya cron berikutnya mengirim ulang
+    //              (tanpa ini barisnya dianggap "sudah dikirim" selamanya; insiden 26 Nov).
+    // 'tahan'    = tak pasti (mungkin sudah sampai): biarkan barisnya, JANGAN kirim ulang, lapor Owner.
+    public static function aksiSetelahKirim(string $hasil): string
+    {
+        return match ($hasil) {
+            'terkirim' => 'catat',
+            'ditolak'  => 'batalkan',
+            default    => 'tahan',
+        };
+    }
+
     /**
      * BACA SAJA — kode hari ini kalau memang sudah ada, null kalau belum. TIDAK MEMBUAT.
      *

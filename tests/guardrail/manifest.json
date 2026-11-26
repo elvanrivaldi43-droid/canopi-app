@@ -320,6 +320,12 @@
       "manual": false
     },
     {
+      "path": "tests/telegram/test_hasil_kirim.php",
+      "runner": "php",
+      "requires_db": false,
+      "manual": false
+    },
+    {
       "path": "tests/telegram/test_telegram_service.php",
       "runner": "php",
       "requires_db": false,

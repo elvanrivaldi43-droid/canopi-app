@@ -103,9 +103,19 @@ $terkirim = 0;
 $gagal    = 0;
 $sudahAda = 0;
 $skip     = 0;
+$takPasti  = []; // kirim tanpa jawaban Telegram: mungkin sudah sampai, JANGAN diulang otomatis
+$mulai     = microtime(true);
+const BATAS_DETIK = 90; // di bawah batas tunggu cron (curl --max-time 120) dan server
 
 foreach ($karyawan as $k) {
     try {
+        // Telegram lambat (Bad Gateway ~16 dtk per pesan) bisa menghabiskan waktu cron lalu dipotong
+        // server tanpa hasil. Berhenti rapi: yang belum disentuh tak punya baris kode, jadi cron
+        // cadangan 06:45 mengirimnya.
+        if (microtime(true) - $mulai > BATAS_DETIK) {
+            $log[] = "⏳ Waktu habis, dihentikan sebelum: {$k->name} dan seterusnya (dilanjutkan cron berikutnya)";
+            break;
+        }
         if (app(LiburService::class)->isLibur($k, $tanggal)) {
             $log[] = "⏭ Skip (jadwal libur): {$k->name}";
             $skip++;
@@ -167,14 +177,23 @@ foreach ($karyawan as $k) {
                . "Berlaku untuk hari ini saja.\n"
                . "_CanopiBSD System_";
 
-        $result = app(TelegramService::class)->kirim($k->telegram_chat_id, $pesan);
+        $hasil = app(TelegramService::class)->kirimDenganHasil($k->telegram_chat_id, $pesan, 10);
 
-        if ($result) {
-            $terkirim++;
-            $log[] = "✓ Terkirim ke: {$k->name}";
-        } else {
-            $gagal++;
-            $log[] = "✗ Gagal ke: {$k->name}";
+        switch (KodeAbsen::aksiSetelahKirim($hasil)) {
+            case 'catat':
+                $terkirim++;
+                $log[] = "✓ Terkirim ke: {$k->name}";
+                break;
+            case 'batalkan':
+                // Pasti tidak terkirim: hapus baris supaya cron berikutnya mengirim ulang.
+                $baris->delete();
+                $gagal++;
+                $log[] = "✗ Ditolak Telegram, kode dibatalkan dan dicoba lagi nanti: {$k->name}";
+                break;
+            default:
+                $takPasti[] = $k->name;
+                $gagal++;
+                $log[] = "? Tak pasti (tak ada jawaban Telegram), TIDAK dikirim ulang: {$k->name} — kode: {$kode}";
         }
     } catch (\Throwable $e) {
         $gagal++;
@@ -194,6 +213,16 @@ if ($pesanRingkas = PenugasanAturan::pesanTanpaJawaban($tanpaJawaban)) {
         $log[] = "ℹ Ringkasan tak menjawab dikirim (" . count($tanpaJawaban) . " orang)";
     } catch (\Throwable $e) {
         $log[] = "✗ ERROR ringkasan tak menjawab: " . $e->getMessage();
+    }
+}
+
+if ($takPasti) {
+    try {
+        app(TelegramService::class)->kirimOwner("Kode absen: pengiriman TAK PASTI ke " . implode(', ', $takPasti)
+            . ". Pesan mungkin sudah sampai, jadi tidak dikirim ulang. Tanyakan ke yang bersangkutan; kodenya ada di Kode Absen Hari Ini.");
+        $log[] = "ℹ Laporan tak pasti dikirim ke Owner (" . count($takPasti) . " orang)";
+    } catch (\Throwable $e) {
+        $log[] = "✗ ERROR laporan tak pasti: " . $e->getMessage();
     }
 }
 
